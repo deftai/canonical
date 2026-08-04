@@ -16,6 +16,7 @@ tasks:
     # Run from USER_WORKING_DIR, NOT an absolute CANON_ROOT `dir:` -- Windows go-task
     # doubles absolute dirs onto the invocation cwd.
     dir: '{{.USER_WORKING_DIR}}'
+    silent: true
     cmds:
       - |
         set -eu
@@ -30,6 +31,7 @@ tasks:
     # Warm-dist skip: when packages/cli/dist/bin.js is newer than sources, skip
     # rebuild. Override with CANON_FORCE_TS_BUILD=1; force-skip with CANON_SKIP_TS_BUILD=1.
     dir: '{{.USER_WORKING_DIR}}'
+    silent: true
     cmds:
       - |
         set -eu
@@ -47,6 +49,7 @@ tasks:
     desc: "Run a canon verb from vendored bin.js (source checkout) or global canon (npm consumer deposit)."
     # Run from the operator project root so verbs resolve USER_WORKING_DIR correctly.
     dir: '{{.USER_WORKING_DIR}}'
+    silent: true
     # Operator free-text must not be interpolated into the shell script body --
     # JSON env transport + argv-spawn in tasks/engine-invoke.cjs.
     env:
