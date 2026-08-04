@@ -1,11 +1,160 @@
 version: '3'
 
-# Solo-path verbs (Stream G fills; one canonical example shape below).
-# EVERY task: dir USER_WORKING_DIR, deps on :engine:_ts-build, ENGINE_CMD with
-# {{.CLI_ARGS}} forwarded bare and --project-root appended. NO sources:/generates:.
+# Solo-path verbs (Stream G). EVERY task: dir USER_WORKING_DIR, deps on
+# engine:_ts-build, ENGINE_CMD with {{.CLI_ARGS}} forwarded bare and
+# --project-root appended. NO sources:/generates:.
+# NOTE: no leading colon on engine:* refs -- with `flatten: true` on this
+# include, a leading-colon (root-absolute) reference does not resolve to the
+# internal `engine` namespace and go-task reports "Task does not exist".
+# Bare `engine:_ts-build` / `engine:invoke` resolves correctly (verified).
 
 tasks:
-  placeholder:
-    internal: true
+  "setup":
+    desc: "One-time per clone: wire git hooks and probe toolchain presence."
+    dir: '{{.USER_WORKING_DIR}}'
+    deps:
+      - task: engine:_ts-build
     cmds:
-      - 'true'
+      - task: engine:invoke
+        vars:
+          ENGINE_CMD: 'setup {{.CLI_ARGS}} --project-root "{{.USER_WORKING_DIR}}"'
+
+  "orient":
+    desc: "Mutation-session readiness snapshot: git status, briefs/, core tools."
+    dir: '{{.USER_WORKING_DIR}}'
+    deps:
+      - task: engine:_ts-build
+    cmds:
+      - task: engine:invoke
+        vars:
+          ENGINE_CMD: 'orient {{.CLI_ARGS}} --project-root "{{.USER_WORKING_DIR}}"'
+
+  "check":
+    desc: "Project quality gate: format, lint, build, test, state:validate, verify:encoding."
+    dir: '{{.USER_WORKING_DIR}}'
+    deps:
+      - task: engine:_ts-build
+    cmds:
+      - task: engine:invoke
+        vars:
+          ENGINE_CMD: 'check {{.CLI_ARGS}} --project-root "{{.USER_WORKING_DIR}}"'
+
+  "state:validate":
+    desc: "Validate all briefs/**/*.json for schema shape and lifecycle consistency."
+    dir: '{{.USER_WORKING_DIR}}'
+    deps:
+      - task: engine:_ts-build
+    cmds:
+      - task: engine:invoke
+        vars:
+          ENGINE_CMD: 'state:validate {{.CLI_ARGS}} --project-root "{{.USER_WORKING_DIR}}"'
+
+  "verify:branch":
+    desc: "Exit 1 if HEAD is the default branch, unless overridden by policy or env."
+    dir: '{{.USER_WORKING_DIR}}'
+    deps:
+      - task: engine:_ts-build
+    cmds:
+      - task: engine:invoke
+        vars:
+          ENGINE_CMD: 'verify:branch {{.CLI_ARGS}} --project-root "{{.USER_WORKING_DIR}}"'
+
+  "verify:encoding":
+    desc: "Scan tracked text files for BOM, U+FFFD, mojibake, and non-ASCII punctuation."
+    dir: '{{.USER_WORKING_DIR}}'
+    deps:
+      - task: engine:_ts-build
+    cmds:
+      - task: engine:invoke
+        vars:
+          ENGINE_CMD: 'verify:encoding {{.CLI_ARGS}} --project-root "{{.USER_WORKING_DIR}}"'
+
+  "verify:forward-coverage":
+    desc: "Require a staged test file for each staged new source file."
+    dir: '{{.USER_WORKING_DIR}}'
+    deps:
+      - task: engine:_ts-build
+    cmds:
+      - task: engine:invoke
+        vars:
+          ENGINE_CMD: 'verify:forward-coverage {{.CLI_ARGS}} --project-root "{{.USER_WORKING_DIR}}"'
+
+  "work:next":
+    desc: "Print the next work item from briefs/plan.json or briefs/pending/."
+    dir: '{{.USER_WORKING_DIR}}'
+    deps:
+      - task: engine:_ts-build
+    cmds:
+      - task: engine:invoke
+        vars:
+          ENGINE_CMD: 'work:next {{.CLI_ARGS}} --project-root "{{.USER_WORKING_DIR}}"'
+
+  "triage":
+    desc: "Record a decision (accept/reject/defer/duplicate) on a candidate."
+    dir: '{{.USER_WORKING_DIR}}'
+    deps:
+      - task: engine:_ts-build
+    cmds:
+      - task: engine:invoke
+        vars:
+          ENGINE_CMD: 'triage {{.CLI_ARGS}} --project-root "{{.USER_WORKING_DIR}}"'
+
+  "scope:new":
+    desc: "Create a proposed scope brief."
+    dir: '{{.USER_WORKING_DIR}}'
+    deps:
+      - task: engine:_ts-build
+    cmds:
+      - task: engine:invoke
+        vars:
+          ENGINE_CMD: 'scope:new {{.CLI_ARGS}} --project-root "{{.USER_WORKING_DIR}}"'
+
+  "scope:start":
+    desc: "Make a scope implementable in one transaction: promote and activate."
+    dir: '{{.USER_WORKING_DIR}}'
+    deps:
+      - task: engine:_ts-build
+    cmds:
+      - task: engine:invoke
+        vars:
+          ENGINE_CMD: 'scope:start {{.CLI_ARGS}} --project-root "{{.USER_WORKING_DIR}}"'
+
+  "scope:complete":
+    desc: "Terminal success: mark a scope completed with delivery evidence."
+    dir: '{{.USER_WORKING_DIR}}'
+    deps:
+      - task: engine:_ts-build
+    cmds:
+      - task: engine:invoke
+        vars:
+          ENGINE_CMD: 'scope:complete {{.CLI_ARGS}} --project-root "{{.USER_WORKING_DIR}}"'
+
+  "scope:stop":
+    desc: "Non-happy terminal or pause: cancel, fail, block/unblock, or demote a scope."
+    dir: '{{.USER_WORKING_DIR}}'
+    deps:
+      - task: engine:_ts-build
+    cmds:
+      - task: engine:invoke
+        vars:
+          ENGINE_CMD: 'scope:stop {{.CLI_ARGS}} --project-root "{{.USER_WORKING_DIR}}"'
+
+  "render":
+    desc: "Generate ROADMAP.md or SPEC.md from lifecycle folders / briefs/spec.json."
+    dir: '{{.USER_WORKING_DIR}}'
+    deps:
+      - task: engine:_ts-build
+    cmds:
+      - task: engine:invoke
+        vars:
+          ENGINE_CMD: 'render {{.CLI_ARGS}} --project-root "{{.USER_WORKING_DIR}}"'
+
+  "policy":
+    desc: "Show or set policy.* fields."
+    dir: '{{.USER_WORKING_DIR}}'
+    deps:
+      - task: engine:_ts-build
+    cmds:
+      - task: engine:invoke
+        vars:
+          ENGINE_CMD: 'policy {{.CLI_ARGS}} --project-root "{{.USER_WORKING_DIR}}"'
