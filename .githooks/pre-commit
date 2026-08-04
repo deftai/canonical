@@ -1,6 +1,40 @@
 #!/bin/sh
-# STUB -- Stream C replaces per content/canonical-tasks.md `setup` spec.
-# Gates: verify:branch, verify:encoding --staged, verify:forward-coverage --staged,
-# state:validate (when briefs/ exists). Fail closed (exit 2) when engine unresolvable.
-echo "canon: pre-commit hook not yet implemented" >&2
-exit 2
+# canon pre-commit hook -- deposited by `canon setup` (content/canonical-tasks.md).
+# Runs verify:branch, verify:encoding --staged, verify:forward-coverage --staged,
+# and state:validate when briefs/ exists. Fails closed (exit 2) when the canon
+# CLI cannot be resolved -- never silently skips a gate.
+
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
+if [ -z "$REPO_ROOT" ]; then
+    echo "canon pre-commit: unable to resolve repo root via 'git rev-parse'." >&2
+    exit 1
+fi
+
+run_canon() {
+    if [ -n "$CANON_HOOKS_BIN" ]; then
+        "$CANON_HOOKS_BIN" "$@"
+        return $?
+    fi
+    if command -v canon >/dev/null 2>&1; then
+        canon "$@"
+        return $?
+    fi
+    if [ -f "$REPO_ROOT/pnpm-workspace.yaml" ] && [ -f "$REPO_ROOT/packages/cli/dist/bin.js" ]; then
+        node "$REPO_ROOT/packages/cli/dist/bin.js" "$@"
+        return $?
+    fi
+    echo "canon pre-commit: cannot resolve the canon CLI." >&2
+    echo "  Tried: \$CANON_HOOKS_BIN, 'canon' on PATH, node packages/cli/dist/bin.js (pnpm-workspace.yaml present)." >&2
+    echo "  Recovery: npm i -g @canonpack/cli, run 'pnpm run build' in this repo, or set CANON_HOOKS_BIN." >&2
+    exit 2
+}
+
+run_canon verify:branch --project-root "$REPO_ROOT" || exit $?
+
+run_canon verify:encoding --staged --project-root "$REPO_ROOT" || exit $?
+
+run_canon verify:forward-coverage --staged --project-root "$REPO_ROOT" || exit $?
+
+if [ -d "$REPO_ROOT/briefs" ]; then
+    run_canon state:validate --project-root "$REPO_ROOT" || exit $?
+fi
