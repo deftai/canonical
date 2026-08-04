@@ -87,15 +87,15 @@ export interface CommandRunResult {
 }
 
 /** Injectable command execution seam. Tests must never invoke this against a real package manager. */
-export type CommandRunner = (command: string) => CommandRunResult;
+export type CommandRunner = (command: string, cwd?: string) => CommandRunResult;
 
-/** Naive whitespace argv-split, then spawnSync(shell:false, stdio:"inherit"). */
-export const defaultCommandRunner: CommandRunner = (command) => {
+/** Naive whitespace argv-split, then spawnSync(shell:false, stdio:"inherit") in the project root. */
+export const defaultCommandRunner: CommandRunner = (command, cwd) => {
   const [cmd, ...args] = command.split(/\s+/).filter((s) => s.length > 0);
   if (cmd === undefined) {
     return { status: 1 };
   }
-  const result = spawnSync(cmd, args, { shell: false, stdio: "inherit" });
+  const result = spawnSync(cmd, args, { shell: false, stdio: "inherit", cwd });
   return { status: result.status ?? 1 };
 };
 
@@ -133,7 +133,7 @@ export async function runCheck(
   }
   const runner = opts.commandRunner ?? defaultCommandRunner;
   for (const command of resolved.commands) {
-    const result = runner(command);
+    const result = runner(command, projectRoot);
     if (result.status !== 0) {
       return {
         ok: false,
@@ -144,7 +144,7 @@ export async function runCheck(
     }
   }
   for (const stage of BUILTIN_STAGES) {
-    const code = await opts.dispatchFn([stage]);
+    const code = await opts.dispatchFn([stage, "--project-root", projectRoot]);
     if (code !== 0) {
       return {
         ok: false,

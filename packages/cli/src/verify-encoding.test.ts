@@ -38,7 +38,7 @@ describe("verify-encoding handler", () => {
 
   it("exits 1 with a file:line list when corruption is tracked", () => {
     const root = tempGitRepo();
-    writeFileSync(join(root, "broken.txt"), "bad � char\n");
+    writeFileSync(join(root, "broken.txt"), "bad \uFFFD char\n");
     git(root, "add", "-A");
     git(root, "commit", "-q", "-m", "add broken");
     const cap = captureStd();
@@ -53,7 +53,7 @@ describe("verify-encoding handler", () => {
     writeFileSync(join(root, "clean.txt"), "fine\n");
     git(root, "add", "-A");
     git(root, "commit", "-q", "-m", "clean");
-    writeFileSync(join(root, "clean.txt"), "bad � char\n");
+    writeFileSync(join(root, "clean.txt"), "bad \uFFFD char\n");
     const cap = captureStd();
     const code = run(["--project-root", root, "--staged"]);
     cap.restore();

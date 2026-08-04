@@ -47,6 +47,9 @@ export default defineConfig({
   },
   test: {
     include: ["packages/*/src/**/*.test.ts"],
+    // Many tests spawn real git in temp repos; under full-suite parallelism they
+    // routinely exceed the 5s default. Individually they run in <1s.
+    testTimeout: 30_000,
     coverage: {
       provider: "v8",
       include: ["packages/*/src/**/*.ts"],

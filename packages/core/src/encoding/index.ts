@@ -12,7 +12,7 @@ import { type GitRunner, stagedFiles, trackedFiles } from "../git/index.js";
  */
 
 /** U+FFFD REPLACEMENT CHARACTER -- the universal decode-failure marker. */
-const REPLACEMENT_CHAR = "�";
+const REPLACEMENT_CHAR = "\uFFFD";
 
 /** UTF-8 BOM byte sequence (EF BB BF). */
 const UTF8_BOM: readonly number[] = [0xef, 0xbb, 0xbf];
@@ -21,53 +21,53 @@ const UTF8_BOM: readonly number[] = [0xef, 0xbb, 0xbf];
  * Classic "UTF-8 bytes decoded as a single-byte codepage" corruption
  * sequences. Two families:
  *  - utf8-as-latin1: a UTF-8-encoded Latin-1-range codepoint (0xC3 0x80-0xBF)
- *    re-decoded one byte at a time renders as "Ã" + one extra character.
+ *    re-decoded one byte at a time renders as "\u00C3" + one extra character.
  *  - cp1252-as-utf8: a UTF-8-encoded "smart" punctuation codepoint from the
  *    U+2000 block, when its bytes are decoded as Windows-1252 and re-saved,
- *    then read back as UTF-8, renders as "â€" + one extra character.
+ *    then read back as UTF-8, renders as "\u00E2\u20AC" + one extra character.
  */
 export const MOJIBAKE_PATTERNS: ReadonlyMap<string, string> = new Map([
-  ["Ã©", "U+00E9 (é) mojibake: utf8-as-latin1"],
-  ["Ã¨", "U+00E8 (è) mojibake: utf8-as-latin1"],
-  ["Ã ", "U+00E0 (à) mojibake: utf8-as-latin1"],
-  ["Ã¢", "U+00E2 (â) mojibake: utf8-as-latin1"],
-  ["Ã®", "U+00EE (î) mojibake: utf8-as-latin1"],
-  ["Ã¯", "U+00EF (ï) mojibake: utf8-as-latin1"],
-  ["Ã´", "U+00F4 (ô) mojibake: utf8-as-latin1"],
-  ["Ã¹", "U+00F9 (ù) mojibake: utf8-as-latin1"],
-  ["Ã»", "U+00FB (û) mojibake: utf8-as-latin1"],
-  ["Ã±", "U+00F1 (ñ) mojibake: utf8-as-latin1"],
-  ["Ã§", "U+00E7 (ç) mojibake: utf8-as-latin1"],
-  ["Ã¼", "U+00FC (ü) mojibake: utf8-as-latin1"],
-  ["Ã¶", "U+00F6 (ö) mojibake: utf8-as-latin1"],
-  ["Ã¤", "U+00E4 (ä) mojibake: utf8-as-latin1"],
-  ["â€™", "U+2019 (’) mojibake: cp1252-as-utf8"],
-  ["â€˜", "U+2018 (‘) mojibake: cp1252-as-utf8"],
-  ["â€œ", "U+201C (“) mojibake: cp1252-as-utf8"],
-  ["â€\x9d", "U+201D (”) mojibake: cp1252-as-utf8"],
-  ["â€“", "U+2013 (–) mojibake: cp1252-as-utf8"],
-  ["â€”", "U+2014 (—) mojibake: cp1252-as-utf8"],
-  ["â€¦", "U+2026 (…) mojibake: cp1252-as-utf8"],
-  ["â€¢", "U+2022 (•) mojibake: cp1252-as-utf8"],
-  ["Â©", "U+00A9 (©) mojibake: cp1252-as-utf8"],
-  ["Â®", "U+00AE (®) mojibake: cp1252-as-utf8"],
-  ["Â°", "U+00B0 (°) mojibake: cp1252-as-utf8"],
-  ["Â§", "U+00A7 (§) mojibake: cp1252-as-utf8"],
+  ["\u00C3\u00A9", "U+00E9 (\u00E9) mojibake: utf8-as-latin1"],
+  ["\u00C3\u00A8", "U+00E8 (\u00E8) mojibake: utf8-as-latin1"],
+  ["\u00C3 ", "U+00E0 (\u00E0) mojibake: utf8-as-latin1"],
+  ["\u00C3\u00A2", "U+00E2 (\u00E2) mojibake: utf8-as-latin1"],
+  ["\u00C3\u00AE", "U+00EE (\u00EE) mojibake: utf8-as-latin1"],
+  ["\u00C3\u00AF", "U+00EF (\u00EF) mojibake: utf8-as-latin1"],
+  ["\u00C3\u00B4", "U+00F4 (\u00F4) mojibake: utf8-as-latin1"],
+  ["\u00C3\u00B9", "U+00F9 (\u00F9) mojibake: utf8-as-latin1"],
+  ["\u00C3\u00BB", "U+00FB (\u00FB) mojibake: utf8-as-latin1"],
+  ["\u00C3\u00B1", "U+00F1 (\u00F1) mojibake: utf8-as-latin1"],
+  ["\u00C3\u00A7", "U+00E7 (\u00E7) mojibake: utf8-as-latin1"],
+  ["\u00C3\u00BC", "U+00FC (\u00FC) mojibake: utf8-as-latin1"],
+  ["\u00C3\u00B6", "U+00F6 (\u00F6) mojibake: utf8-as-latin1"],
+  ["\u00C3\u00A4", "U+00E4 (\u00E4) mojibake: utf8-as-latin1"],
+  ["\u00E2\u20AC\u2122", "U+2019 (\u2019) mojibake: cp1252-as-utf8"],
+  ["\u00E2\u20AC\u02DC", "U+2018 (\u2018) mojibake: cp1252-as-utf8"],
+  ["\u00E2\u20AC\u0153", "U+201C (\u201C) mojibake: cp1252-as-utf8"],
+  ["\u00E2\u20AC\x9d", "U+201D (\u201D) mojibake: cp1252-as-utf8"],
+  ["\u00E2\u20AC\u201C", "U+2013 (\u2013) mojibake: cp1252-as-utf8"],
+  ["\u00E2\u20AC\u201D", "U+2014 (\u2014) mojibake: cp1252-as-utf8"],
+  ["\u00E2\u20AC\u00A6", "U+2026 (\u2026) mojibake: cp1252-as-utf8"],
+  ["\u00E2\u20AC\u00A2", "U+2022 (\u2022) mojibake: cp1252-as-utf8"],
+  ["\u00C2\u00A9", "U+00A9 (\u00A9) mojibake: cp1252-as-utf8"],
+  ["\u00C2\u00AE", "U+00AE (\u00AE) mojibake: cp1252-as-utf8"],
+  ["\u00C2\u00B0", "U+00B0 (\u00B0) mojibake: cp1252-as-utf8"],
+  ["\u00C2\u00A7", "U+00A7 (\u00A7) mojibake: cp1252-as-utf8"],
 ]);
 
 /** Non-ASCII punctuation flagged only inside machine-parsed files. */
 export const NON_ASCII_PUNCTUATION: ReadonlyMap<string, string> = new Map([
-  ["‘", "U+2018 left single quotation mark"],
-  ["’", "U+2019 right single quotation mark"],
-  ["“", "U+201C left double quotation mark"],
-  ["”", "U+201D right double quotation mark"],
-  ["–", "U+2013 en dash"],
-  ["—", "U+2014 em dash"],
-  ["…", "U+2026 horizontal ellipsis"],
-  ["→", "U+2192 rightwards arrow"],
-  ["←", "U+2190 leftwards arrow"],
-  ["↔", "U+2194 left right arrow"],
-  ["⇒", "U+21D2 rightwards double arrow"],
+  ["\u2018", "U+2018 left single quotation mark"],
+  ["\u2019", "U+2019 right single quotation mark"],
+  ["\u201C", "U+201C left double quotation mark"],
+  ["\u201D", "U+201D right double quotation mark"],
+  ["\u2013", "U+2013 en dash"],
+  ["\u2014", "U+2014 em dash"],
+  ["\u2026", "U+2026 horizontal ellipsis"],
+  ["\u2192", "U+2192 rightwards arrow"],
+  ["\u2190", "U+2190 leftwards arrow"],
+  ["\u2194", "U+2194 left right arrow"],
+  ["\u21D2", "U+21D2 rightwards double arrow"],
 ]);
 
 /** Filenames whose content is machine-parsed and must stay plain-ASCII punctuation. */
