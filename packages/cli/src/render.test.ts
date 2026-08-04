@@ -58,7 +58,7 @@ describe("canon render", () => {
     writeScopeFixture(root, "proposed", "2026-01-01-a.json", { title: "A" });
     const code = run(["roadmap", "--project-root", root]);
     expect(code).toBe(0);
-    expect(readFileSync(join(root, "ROADMAP.md"), "utf8")).toContain("| A | proposed | — | — |");
+    expect(readFileSync(join(root, "ROADMAP.md"), "utf8")).toContain("| A | proposed | - | - |");
   });
 
   it("--check exits 1 when ROADMAP.md is missing", () => {

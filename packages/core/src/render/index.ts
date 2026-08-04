@@ -86,12 +86,12 @@ const ROADMAP_SECTION_TITLES: Readonly<Record<LifecycleFolder, string>> = {
 
 function firstIssueOriginLink(scope: ScopeFile): string {
   const ref = (scope.references ?? []).find((r) => r.type === "issue");
-  return ref === undefined ? "—" : `[${ref.uri}](${ref.uri})`;
+  return ref === undefined ? "-" : `[${ref.uri}](${ref.uri})`;
 }
 
 function dependenciesCell(scope: ScopeFile): string {
   const deps = scope.dependencies ?? [];
-  return deps.length > 0 ? deps.join(", ") : "—";
+  return deps.length > 0 ? deps.join(", ") : "-";
 }
 
 function buildRoadmapContent(projectRoot: string): string {

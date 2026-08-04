@@ -68,7 +68,7 @@ describe("renderRoadmap: golden output", () => {
     ]);
     expect(written).toContain("## Proposed");
     expect(written).toContain("## Active");
-    expect(written).toContain("| Candidate | proposed | — | — |");
+    expect(written).toContain("| Candidate | proposed | - | - |");
     // filename-sorted: first.json's row precedes second.json's row within Active.
     const firstIdx = written.indexOf("| First story |");
     const secondIdx = written.indexOf("| Second story |");
@@ -77,7 +77,7 @@ describe("renderRoadmap: golden output", () => {
     expect(written).toContain(
       "| Second story | running | [https://github.com/x/y/issues/9](https://github.com/x/y/issues/9) | 2026-01-01-first.json |",
     );
-    expect(written).toContain("| First story | blocked | — | — |");
+    expect(written).toContain("| First story | blocked | - | - |");
   });
 
   it("--check passes when the committed file matches the regenerated output", () => {
