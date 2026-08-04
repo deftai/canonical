@@ -1,6 +1,46 @@
 #!/bin/sh
-# STUB -- Stream C replaces per content/canonical-tasks.md `setup` spec.
-# Refuses force-push/+refspec to the default branch and repo-delete operations.
-# ALLOW_DESTRUCTIVE_GIT=1 bypasses with an audit line.
-echo "canon: pre-push hook not yet implemented" >&2
-exit 2
+# canon pre-push hook -- deposited by `canon setup` (content/canonical-tasks.md).
+# Refuses to delete or force-update the default branch's ref. Reads the
+# standard pre-push stdin protocol: "local_ref local_sha remote_ref remote_sha".
+# ALLOW_DESTRUCTIVE_GIT=1 bypasses, but always prints an audit line to stderr.
+
+ZERO_SHA="0000000000000000000000000000000000000000"
+
+default_ref="$(git symbolic-ref --quiet refs/remotes/origin/HEAD 2>/dev/null)"
+if [ -n "$default_ref" ]; then
+    default_ref="refs/heads/${default_ref#refs/remotes/origin/}"
+elif git show-ref --verify --quiet refs/heads/main; then
+    default_ref="refs/heads/main"
+elif git show-ref --verify --quiet refs/heads/master; then
+    default_ref="refs/heads/master"
+else
+    default_ref="refs/heads/main"
+fi
+
+status=0
+while read -r local_ref local_sha remote_ref remote_sha; do
+    [ -z "$local_ref" ] && continue
+    [ "$remote_ref" = "$default_ref" ] || continue
+
+    destructive=0
+    reason=""
+    if [ "$local_sha" = "$ZERO_SHA" ]; then
+        destructive=1
+        reason="delete default branch ref '$remote_ref'"
+    elif [ "$remote_sha" != "$ZERO_SHA" ] && ! git merge-base --is-ancestor "$remote_sha" "$local_sha" 2>/dev/null; then
+        destructive=1
+        reason="force-update default branch ref '$remote_ref'"
+    fi
+
+    if [ "$destructive" = "1" ]; then
+        if [ "$ALLOW_DESTRUCTIVE_GIT" = "1" ]; then
+            echo "canon: destructive-git policy bypassed for this push" >&2
+            continue
+        fi
+        echo "canon pre-push: refusing to $reason." >&2
+        echo "  Bypass (audited): ALLOW_DESTRUCTIVE_GIT=1" >&2
+        status=1
+    fi
+done
+
+exit $status
