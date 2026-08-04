@@ -1,0 +1,11 @@
+version: '3'
+
+# Solo-path verbs (Stream G fills; one canonical example shape below).
+# EVERY task: dir USER_WORKING_DIR, deps on :engine:_ts-build, ENGINE_CMD with
+# {{.CLI_ARGS}} forwarded bare and --project-root appended. NO sources:/generates:.
+
+tasks:
+  placeholder:
+    internal: true
+    cmds:
+      - 'true'

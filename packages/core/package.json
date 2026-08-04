@@ -1,0 +1,38 @@
+{
+  "name": "@canonpack/core",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "MIT",
+  "dependencies": {
+    "@canonpack/types": "workspace:*"
+  },
+  "exports": {
+    "./args": { "types": "./dist/args/index.d.ts", "default": "./dist/args/index.js" },
+    "./briefs": { "types": "./dist/briefs/index.d.ts", "default": "./dist/briefs/index.js" },
+    "./branch": { "types": "./dist/branch/index.d.ts", "default": "./dist/branch/index.js" },
+    "./check": { "types": "./dist/check/index.d.ts", "default": "./dist/check/index.js" },
+    "./encoding": { "types": "./dist/encoding/index.d.ts", "default": "./dist/encoding/index.js" },
+    "./forward-coverage": { "types": "./dist/forward-coverage/index.d.ts", "default": "./dist/forward-coverage/index.js" },
+    "./fs": { "types": "./dist/fs/index.d.ts", "default": "./dist/fs/index.js" },
+    "./gh": { "types": "./dist/gh/index.d.ts", "default": "./dist/gh/index.js" },
+    "./git": { "types": "./dist/git/index.d.ts", "default": "./dist/git/index.js" },
+    "./hooks": { "types": "./dist/hooks/index.d.ts", "default": "./dist/hooks/index.js" },
+    "./init-deposit": { "types": "./dist/init-deposit/index.d.ts", "default": "./dist/init-deposit/index.js" },
+    "./issue-sync": { "types": "./dist/issue-sync/index.d.ts", "default": "./dist/issue-sync/index.js" },
+    "./orient": { "types": "./dist/orient/index.d.ts", "default": "./dist/orient/index.js" },
+    "./policy": { "types": "./dist/policy/index.d.ts", "default": "./dist/policy/index.js" },
+    "./pr": { "types": "./dist/pr/index.d.ts", "default": "./dist/pr/index.js" },
+    "./render": { "types": "./dist/render/index.d.ts", "default": "./dist/render/index.js" },
+    "./review-monitor": { "types": "./dist/review-monitor/index.d.ts", "default": "./dist/review-monitor/index.js" },
+    "./scope": { "types": "./dist/scope/index.d.ts", "default": "./dist/scope/index.js" },
+    "./swarm": { "types": "./dist/swarm/index.d.ts", "default": "./dist/swarm/index.js" },
+    "./test-support": { "types": "./dist/test-support/index.d.ts", "default": "./dist/test-support/index.js" },
+    "./triage": { "types": "./dist/triage/index.d.ts", "default": "./dist/triage/index.js" },
+    "./work-next": { "types": "./dist/work-next/index.d.ts", "default": "./dist/work-next/index.js" },
+    "./dist/*.js": { "types": "./dist/*.d.ts", "default": "./dist/*.js" }
+  },
+  "files": ["dist/**/*.js", "dist/**/*.d.ts"],
+  "publishConfig": {
+    "access": "public"
+  }
+}

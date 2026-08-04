@@ -1,0 +1,20 @@
+version: '3'
+
+# Canonical pack task surface. This file is BOTH the framework-repo root
+# Taskfile AND the file deposited into consumer projects at
+# .canonical/core/Taskfile.yml (consumers include it with flatten: true so
+# verbs stay bare: `task scope:new`, `task check`).
+
+includes:
+  engine:
+    taskfile: ./tasks/engine.yml
+    internal: true
+  solo:
+    taskfile: ./tasks/solo.yml
+    flatten: true
+  ship:
+    taskfile: ./tasks/ship.yml
+    flatten: true
+  swarm:
+    taskfile: ./tasks/swarm.yml
+    flatten: true

@@ -1,0 +1,9 @@
+version: '3'
+
+# Ship-path verbs: pr:watch, pr:finish, issue:sync (Stream G fills).
+
+tasks:
+  placeholder:
+    internal: true
+    cmds:
+      - 'true'

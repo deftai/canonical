@@ -1,0 +1,6 @@
+#!/bin/sh
+# STUB -- Stream C replaces per content/canonical-tasks.md `setup` spec.
+# Gates: verify:branch, verify:encoding --staged, verify:forward-coverage --staged,
+# state:validate (when briefs/ exists). Fail closed (exit 2) when engine unresolvable.
+echo "canon: pre-commit hook not yet implemented" >&2
+exit 2

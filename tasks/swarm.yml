@@ -1,0 +1,9 @@
+version: '3'
+
+# Multi-agent verbs: swarm:run, review-monitor (Stream G fills).
+
+tasks:
+  placeholder:
+    internal: true
+    cmds:
+      - 'true'

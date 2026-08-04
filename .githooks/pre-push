@@ -1,0 +1,6 @@
+#!/bin/sh
+# STUB -- Stream C replaces per content/canonical-tasks.md `setup` spec.
+# Refuses force-push/+refspec to the default branch and repo-delete operations.
+# ALLOW_DESTRUCTIVE_GIT=1 bypasses with an audit line.
+echo "canon: pre-push hook not yet implemented" >&2
+exit 2

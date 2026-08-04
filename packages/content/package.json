@@ -1,0 +1,14 @@
+{
+  "name": "@canonpack/content",
+  "version": "0.1.0",
+  "license": "MIT",
+  "description": "Canonical pack payload: rule md files + Taskfile + tasks + git hooks. Assembled at pack time; empty in git.",
+  "scripts": {
+    "prepack": "node --input-type=module -e \"import {cpSync,mkdirSync,readdirSync} from 'node:fs'; import {join} from 'node:path'; const root=join(import.meta.dirname??process.cwd(),'..','..'); const here=process.cwd(); for (const f of readdirSync(join(root,'content'))) cpSync(join(root,'content',f), join(here,f), {recursive:true}); cpSync(join(root,'Taskfile.yml'), join(here,'Taskfile.yml')); cpSync(join(root,'tasks'), join(here,'tasks'), {recursive:true}); cpSync(join(root,'.githooks'), join(here,'.githooks'), {recursive:true});\"",
+    "postpack": "node --input-type=module -e \"import {readdirSync,rmSync} from 'node:fs'; for (const f of readdirSync(process.cwd())) { if (f !== 'package.json') rmSync(f, {recursive:true, force:true}); }\""
+  },
+  "files": ["**/*", ".githooks/"],
+  "publishConfig": {
+    "access": "public"
+  }
+}

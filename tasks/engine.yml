@@ -1,0 +1,74 @@
+version: '3'
+
+# Engine resolution.
+#
+# Framework-source checkouts invoke the vendored `packages/cli/dist/bin.js`.
+# npm consumer deposits copy @canonpack/content only -- no bundled CLI --
+# so tasks fall back to the globally installed `canon` command.
+
+vars:
+  CANON_ROOT: '{{joinPath .TASKFILE_DIR ".."}}'
+
+tasks:
+  pm-run:
+    internal: true
+    desc: "Run a package.json script via pnpm (bare or Corepack pin) or explicit CANON_PACKAGE_MANAGER=npm."
+    # Run from USER_WORKING_DIR, NOT an absolute CANON_ROOT `dir:` -- Windows go-task
+    # doubles absolute dirs onto the invocation cwd.
+    dir: '{{.USER_WORKING_DIR}}'
+    cmds:
+      - |
+        set -eu
+        node "{{.TASKFILE_DIR}}/engine-pm-run.cjs" "{{.CANON_ROOT}}" "{{.PM_SCRIPT}}"
+
+  _ts-build:
+    internal: true
+    desc: "Build CLI dist from the framework source checkout; no-op on npm consumer deposits that ship no packages/ source."
+    # Guard on buildability, not source presence: a cold framework checkout has
+    # packages/cli/package.json AND a root `build` script. A clean npm consumer
+    # deposit ships no packages/ tree (guard false -> no-op).
+    # Warm-dist skip: when packages/cli/dist/bin.js is newer than sources, skip
+    # rebuild. Override with CANON_FORCE_TS_BUILD=1; force-skip with CANON_SKIP_TS_BUILD=1.
+    dir: '{{.USER_WORKING_DIR}}'
+    cmds:
+      - |
+        set -eu
+        if [ -f "{{.CANON_ROOT}}/packages/cli/package.json" ] \
+           && [ -f "{{.CANON_ROOT}}/package.json" ] \
+           && node -e "const fs=require('fs');const j=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));process.exit(j.scripts&&j.scripts.build?0:1)" "{{.CANON_ROOT}}/package.json"; then
+          if node "{{.TASKFILE_DIR}}/ts-build-fresh.cjs" "{{.CANON_ROOT}}"; then
+            exit 0
+          fi
+          node "{{.TASKFILE_DIR}}/engine-pm-run.cjs" "{{.CANON_ROOT}}" build --mark-warm
+        fi
+
+  invoke:
+    internal: true
+    desc: "Run a canon verb from vendored bin.js (source checkout) or global canon (npm consumer deposit)."
+    # Run from the operator project root so verbs resolve USER_WORKING_DIR correctly.
+    dir: '{{.USER_WORKING_DIR}}'
+    # Operator free-text must not be interpolated into the shell script body --
+    # JSON env transport + argv-spawn in tasks/engine-invoke.cjs.
+    env:
+      CANON_ENGINE_CMD_JSON: '{{ .ENGINE_CMD | toSlash | toJson }}'
+    cmds:
+      - |
+        set -eu
+        bin="{{.CANON_ROOT}}/packages/cli/dist/bin.js"
+        if [ -f "$bin" ]; then
+          node "{{.TASKFILE_DIR}}/engine-invoke.cjs" vendored "$bin"
+        elif command -v canon >/dev/null 2>&1; then
+          node "{{.TASKFILE_DIR}}/engine-invoke.cjs" global canon
+        else
+          root_pkg="{{.CANON_ROOT}}/package.json"
+          if [ -f "{{.CANON_ROOT}}/packages/cli/package.json" ] \
+             && [ -f "$root_pkg" ] \
+             && node -e "const fs=require('fs');const j=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));process.exit(j.scripts&&j.scripts.build?0:1)" "$root_pkg"; then
+            echo "canon: CLI artifact missing at $bin" >&2
+            echo "  Run \`pnpm run build\` first (framework source checkout)." >&2
+          else
+            echo "canon: neither $bin nor a global canon command is available." >&2
+            echo "  Install with: npm i -g @canonpack/cli" >&2
+          fi
+          exit 2
+        fi
