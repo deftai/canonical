@@ -33,8 +33,10 @@ pnpm run test      # vitest + coverage report
 
 ```sh
 # from this repo: pack + install globally
-# pnpm pack rewrites workspace:* deps to real versions (npm pack does NOT)
-for p in types core content cli; do (cd packages/$p && pnpm pack --pack-destination /tmp/canonpack); done
+# pnpm pack rewrites workspace:* deps to real versions (npm pack does NOT).
+# content has no deps and its postpack cleanup races pnpm's verifier -- use npm pack for it.
+for p in types core cli; do (cd packages/$p && pnpm pack --pack-destination /tmp/canonpack); done
+(cd packages/content && npm pack --pack-destination /tmp/canonpack)
 npm i -g /tmp/canonpack/canonpack-types-*.tgz /tmp/canonpack/canonpack-core-*.tgz /tmp/canonpack/canonpack-content-*.tgz /tmp/canonpack/canonpack-cli-*.tgz
 
 # in the target project
