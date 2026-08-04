@@ -9,6 +9,7 @@ Legend: `!` MUST · `~` SHOULD · `≉` SHOULD NOT · `⊗` MUST NOT · `?` MAY
 | File | Load when |
 |---|---|
 | [state.md](./state.md) | Any planning, work-state read/write, checkpoint, or resume |
+| [kickoff.md](./kickoff.md) | User describes a new app or feature to set up, or a scope you are starting lacks acceptance criteria |
 | [engineering.md](./engineering.md) | Implementing, debugging, or claiming work complete |
 | [scm.md](./scm.md) | Committing, opening/reviewing/merging PRs, or releasing |
 | [multi-agent.md](./multi-agent.md) | Spawning workers, running a cohort, or owning a long review-to-merge loop |
@@ -38,6 +39,7 @@ If `~/.config/canonical/USER.md` exists, its `Personal` section overrides addres
 
 - ! All durable work state lives under `briefs/` per [state.md](./state.md). Chat is not the system of record; ⊗ reconstruct in-progress/next/done from chat or issue bodies when `briefs/` exists.
 - ! One unit of work = one scope file. Transitions only via task verbs (`scope:start`, `scope:complete`, `scope:stop`, `triage`); status is authoritative, folder must match.
+- ! When the user describes a new app or a new feature, or a scope you are starting is underspecified, load [kickoff.md](./kickoff.md) and follow it -- interview first, then generate/refine briefs.
 - ! "What's next?" = `task work:next` (ordered plan first, then ranked pending). ⊗ Invent a queue from live GitHub alone; if state is empty, say so.
 - ⊗ Fix a discovered issue in-place mid-scope. File it (issue or proposed scope) and continue. Carve-out: a hard blocker may be fixed in-scope with the follow-up filed alongside.
 - ! An instruction set's final step is an exit condition — stop and return to the calling context. ⊗ Drift into adjacent work because it seems related or trivial.

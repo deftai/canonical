@@ -213,6 +213,12 @@ Open the project in your agent harness (Claude Code etc.). `AGENTS.md` already p
 
 > Build the hard-mode guess validation feature.
 
+Also test the kickoff flow in a SECOND fresh project (`mkdir`, `git init`, `canon init`, open agent):
+
+> I want to make a wordle app, help me set this up.
+
+▶ Per `kickoff.md` the agent should interview you (one numbered question per turn, Discuss/Back last), then generate `briefs/PROJECT.json`, `briefs/spec.json`, one proposed scope per must-have feature with acceptance items, validate, render the roadmap, and offer a triage menu. Then say "oh, and I also want hard mode" ▶ one new scope appears with acceptance criteria and a triage prompt. Then ask it to build a feature whose brief you emptied out ▶ it should stop and ask up to 3 questions before `scope:start`.
+
 Score the agent against this checklist:
 
 - [ ] Reads `canonical.md` and the load-when files before acting
