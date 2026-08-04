@@ -1,8 +1,11 @@
 {
-  "files": [],
-  "references": [
-    { "path": "packages/types" },
-    { "path": "packages/core" },
-    { "path": "packages/cli" }
-  ]
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "tsBuildInfoFile": "./dist/.tsbuildinfo",
+    "composite": false
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/**/*.test.ts", "dist"]
 }

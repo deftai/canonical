@@ -146,7 +146,7 @@ function buildDispatchSteps(input) {
 /** @param {string} root */
 function markWarm(root) {
   try {
-    const dist = path.join(root, "packages", "cli", "dist");
+    const dist = path.join(root, "dist", "cli");
     fs.mkdirSync(dist, { recursive: true });
     fs.writeFileSync(path.join(dist, ".canon-ts-build-stamp"), new Date().toISOString());
   } catch {

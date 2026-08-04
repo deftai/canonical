@@ -10,7 +10,7 @@
  *   2 — usage / config error
  *
  * Warm-dist skip avoids a full `tsc -b` (and its nested shell:true spawns) on
- * every `task <verb>` when packages/cli/dist/bin.js is already up to date.
+ * every `task <verb>` when dist/cli/bin.js is already up to date.
  */
 
 const fs = require("node:fs");
@@ -52,7 +52,7 @@ function main() {
     process.exit(0);
   }
 
-  const distDir = path.join(root, "packages", "cli", "dist");
+  const distDir = path.join(root, "dist", "cli");
   const bin = path.join(distDir, "bin.js");
   const stamp = path.join(distDir, ".canon-ts-build-stamp");
   if (!fs.existsSync(bin)) {
@@ -66,16 +66,8 @@ function main() {
   const markerMtime = fs.statSync(marker).mtimeMs;
   const candidates = [];
 
-  for (const pkg of ["cli", "core", "types"]) {
-    const pkgRoot = path.join(root, "packages", pkg);
-    if (!fs.existsSync(pkgRoot)) continue;
-    walkSourceFiles(path.join(pkgRoot, "src"), candidates);
-    for (const name of ["package.json", "tsconfig.json", "tsconfig.build.json"]) {
-      const fp = path.join(pkgRoot, name);
-      if (fs.existsSync(fp)) candidates.push(fp);
-    }
-  }
-  for (const name of ["package.json", "tsconfig.json", "tsconfig.base.json", "pnpm-workspace.yaml"]) {
+  walkSourceFiles(path.join(root, "src"), candidates);
+  for (const name of ["package.json", "tsconfig.json", "tsconfig.base.json"]) {
     const fp = path.join(root, name);
     if (fs.existsSync(fp)) candidates.push(fp);
   }

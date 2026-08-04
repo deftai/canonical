@@ -24,28 +24,6 @@ importers:
         specifier: ^3.2.0
         version: 3.2.7(@types/node@24.13.3)
 
-  packages/cli:
-    dependencies:
-      '@canonpack/content':
-        specifier: workspace:*
-        version: link:../content
-      '@canonpack/core':
-        specifier: workspace:*
-        version: link:../core
-      '@canonpack/types':
-        specifier: workspace:*
-        version: link:../types
-
-  packages/content: {}
-
-  packages/core:
-    dependencies:
-      '@canonpack/types':
-        specifier: workspace:*
-        version: link:../types
-
-  packages/types: {}
-
 packages:
 
   '@ampproject/remapping@2.3.0':

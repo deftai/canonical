@@ -1,15 +1,40 @@
 {
-  "name": "canonpack-engine",
-  "private": true,
+  "name": "@deftai/canonical",
   "version": "0.1.0",
+  "description": "The canonical pack: a compact, deterministic agent-workflow framework -- briefs-based state, 20 CLI verbs, fail-closed git gates. Install globally, run `canon init` in any project.",
+  "license": "MIT",
   "type": "module",
+  "bin": {
+    "canon": "./dist/cli/bin.js"
+  },
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.d.ts",
+    "content",
+    "tasks",
+    ".githooks",
+    "Taskfile.yml"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deftai/canonical.git"
+  },
+  "homepage": "https://github.com/deftai/canonical#readme",
+  "bugs": {
+    "url": "https://github.com/deftai/canonical/issues"
+  },
+  "keywords": ["ai-agent", "agent-workflow", "claude", "agents-md", "task-runner", "briefs"],
   "packageManager": "pnpm@11.8.0",
   "engines": {
     "node": ">=20"
   },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "scripts": {
-    "build": "tsc -b",
-    "clean": "tsc -b --clean",
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf dist",
     "test": "vitest run --coverage",
     "test:fast": "vitest run",
     "lint": "biome check .",
