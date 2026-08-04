@@ -79,7 +79,8 @@ export async function reconcile(
 
   let openIssues: IssuePayload[];
   try {
-    openIssues = ((await client.get(`${base}/issues?state=open`)) as IssuePayload[]) ?? [];
+    openIssues =
+      ((await client.get(`${base}/issues?state=open&per_page=100`)) as IssuePayload[]) ?? [];
     openIssues = openIssues.filter((i) => i.pull_request === undefined);
   } catch (err) {
     return {

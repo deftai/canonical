@@ -60,6 +60,14 @@ async function tryCloseIssue(
   try {
     const client = ghClient(seams);
     const repo = resolveRepo(projectRoot, seams);
+    // Only close issues that are still open (spec: "if an origin issue exists
+    // and is open") -- keeps scope:complete idempotent on the GitHub side.
+    const issue = (await client.get(`/repos/${repo.owner}/${repo.repo}/issues/${issueNumber}`)) as {
+      state?: string;
+    } | null;
+    if (issue === null || issue.state !== "open") {
+      return undefined;
+    }
     const commentBody =
       pr !== undefined ? `Closed via ${pr}` : `Closed by scope completion: ${relPath}`;
     await client.post(`/repos/${repo.owner}/${repo.repo}/issues/${issueNumber}/comments`, {
@@ -108,6 +116,17 @@ export async function scopeComplete(
   const scope = readResult.scope;
   const codeBearing = scope.kind === "story";
 
+  // Lifecycle gate: complete is active -> completed (content/state.md). A
+  // terminal or not-yet-started scope cannot be completed.
+  const status = scope.plan.status;
+  if (status !== "running" && status !== "blocked") {
+    return {
+      ok: false,
+      code: 1,
+      message: `cannot complete '${ref.relPath}': status is '${status}' (must be running or blocked -- start it first)`,
+    };
+  }
+
   if (opts.disposition === undefined) {
     if (codeBearing) {
       return {
@@ -136,13 +155,30 @@ export async function scopeComplete(
     const gitAvailable = isGitRepo(projectRoot, opts.runner);
     const branch =
       policy.deliveryBranch ?? (gitAvailable ? defaultBranch(projectRoot, opts.runner) : "main");
-    if (disposition === "delivered" && opts.sha !== undefined && gitAvailable) {
-      if (!isAncestorOf(projectRoot, opts.sha, branch, opts.runner)) {
+    if (disposition === "delivered") {
+      // "delivered" is an evidence-bearing claim (content/state.md): require a
+      // PR url or merge sha; verify sha ancestry against the delivery branch
+      // whenever git can check it.
+      if (opts.pr === undefined && opts.sha === undefined) {
         return {
           ok: false,
           code: 1,
-          message: `sha '${opts.sha}' is not an ancestor of delivery branch '${branch}'`,
+          message:
+            "missing delivery evidence: disposition 'delivered' requires --pr and/or --sha (merge evidence)",
         };
+      }
+      if (opts.sha !== undefined && gitAvailable) {
+        if (!isAncestorOf(projectRoot, opts.sha, branch, opts.runner)) {
+          return {
+            ok: false,
+            code: 1,
+            message: `sha '${opts.sha}' is not an ancestor of delivery branch '${branch}'`,
+          };
+        }
+      } else if (opts.sha === undefined) {
+        process.stderr.write(
+          "canon: scope-complete: warning -- 'delivered' recorded from --pr only; no sha to verify against the delivery branch\n",
+        );
       }
     }
     updated = {

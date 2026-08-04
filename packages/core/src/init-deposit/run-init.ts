@@ -102,6 +102,9 @@ export function runInit(projectRoot: string, opts: RunInitOptions = {}): RunInit
     atomicWriteText(projectRoot, "Taskfile.yml", taskfilePlan.content);
     written.push("Taskfile.yml");
   } else {
+    if (taskfilePlan.warning !== undefined) {
+      process.stderr.write(`canon: warning -- ${taskfilePlan.warning}\n`);
+    }
     skipped.push("Taskfile.yml");
   }
 

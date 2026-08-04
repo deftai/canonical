@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync, renameSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { basename, join } from "node:path";
 import type { LifecycleFolder, ScopeFile, ScopeStatus } from "@canonpack/types";
 import { LIFECYCLE_FOLDERS, SCOPE_FILENAME_RE, STATUS_FOLDER_MAP } from "@canonpack/types";
@@ -143,9 +143,12 @@ export function transitionScope(
     plan: { ...scope.plan, status: newStatus, updated: now.toISOString() },
   };
   const targetRel = `briefs/${targetFolder}/${ref.filename}`;
-  atomicWriteJson(projectRoot, ref.relPath, updated);
+  // Write the updated brief to the TARGET path first (atomicWriteJson mkdirs the
+  // folder), then remove the source. Worst case on a crash is a duplicate file
+  // (state:validate flags it) -- never a folder/status mismatch or a lost brief.
+  atomicWriteJson(projectRoot, targetRel, updated);
   if (targetFolder !== ref.folder) {
-    renameSync(ref.path, join(lifecycleDir(projectRoot, targetFolder), ref.filename));
+    rmSync(ref.path, { force: true });
   }
   return {
     path: join(lifecycleDir(projectRoot, targetFolder), ref.filename),

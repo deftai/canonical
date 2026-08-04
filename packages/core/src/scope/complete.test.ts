@@ -145,7 +145,8 @@ describe("scopeComplete", () => {
     const calls: { readonly method: string; readonly url: string; readonly body?: unknown }[] = [];
     const fetchFn = vi.fn(async (url: string | URL, init?: RequestInit) => {
       calls.push({ method: init?.method ?? "GET", url: String(url), body: init?.body });
-      return fakeResponse({ id: 1 });
+      // The pre-close GET reads `state` to confirm the issue is still open.
+      return fakeResponse({ id: 1, state: "open" });
     });
     const ghSeams: GhSeams = {
       env: { GH_TOKEN: "test-token" },

@@ -207,7 +207,9 @@ describe("issue-sync run()", () => {
       const code = await run(["reconcile", `--project-root=${root}`], {
         env: { GH_TOKEN: "t" },
         exec: fakeExec,
-        fetchFn: fakeFetch({ "GET /repos/acme/widgets/issues?state=open": { body: [] } }),
+        fetchFn: fakeFetch({
+          "GET /repos/acme/widgets/issues?state=open&per_page=100": { body: [] },
+        }),
       });
       expect(code).toBe(0);
     });
@@ -219,7 +221,7 @@ describe("issue-sync run()", () => {
         env: { GH_TOKEN: "t" },
         exec: fakeExec,
         fetchFn: fakeFetch({
-          "GET /repos/acme/widgets/issues?state=open": {
+          "GET /repos/acme/widgets/issues?state=open&per_page=100": {
             body: [{ number: 5, title: "Orphan", state: "open" }],
           },
         }),

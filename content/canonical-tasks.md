@@ -4,7 +4,8 @@ Deterministic verbs this pack expects. Build each as a `task` target: a pure fun
 
 Agents: if a verb is missing, fail closed, follow the pack's file rules by hand where they permit it, and report the verb is not installed — never fake a gate.
 
-Invocation: `task <verb> -- [args]` · Exit: `0` ok · `1` rejected/not ready · `2` misconfig/error · `--json` optional on every verb.
+Invocation: `task -x <verb> -- [args]` · Exit: `0` ok · `1` rejected/not ready · `2` misconfig/error · `--json` optional on every verb.
+The `-x` flag makes go-task propagate the verb's exact exit code; without it every failure surfaces as go-task's generic 201. Direct `canon <verb>` invocations always carry the exact code.
 
 ## Solo Path
 

@@ -69,13 +69,35 @@ export interface SwarmRunFinalizeResult {
 
 export type SwarmRunResult = SwarmRunStoriesResult | SwarmRunFinalizeResult;
 
+/**
+ * Reduce a file_scope entry to the literal path prefix it claims. A glob
+ * (`*` anywhere) claims everything under the path up to its first wildcard
+ * segment -- `src/**` claims all of `src/`, so it overlaps any entry that
+ * shares that prefix.
+ */
+function literalPrefix(entry: string): string {
+  const star = entry.indexOf("*");
+  if (star === -1) {
+    return entry;
+  }
+  const prefix = entry.slice(0, star);
+  const lastSlash = prefix.lastIndexOf("/");
+  return lastSlash === -1 ? "" : prefix.slice(0, lastSlash);
+}
+
 function pathOverlaps(a: string, b: string): boolean {
-  if (a === b) {
+  const la = literalPrefix(a);
+  const lb = literalPrefix(b);
+  // A wildcard reducing to the empty prefix claims the whole tree.
+  if ((a.includes("*") && la === "") || (b.includes("*") && lb === "")) {
     return true;
   }
-  const aDir = a.endsWith("/") ? a : `${a}/`;
-  const bDir = b.endsWith("/") ? b : `${b}/`;
-  return b.startsWith(aDir) || a.startsWith(bDir);
+  if (la === lb) {
+    return true;
+  }
+  const aDir = la.endsWith("/") ? la : `${la}/`;
+  const bDir = lb.endsWith("/") ? lb : `${lb}/`;
+  return lb.startsWith(aDir) || la.startsWith(bDir);
 }
 
 interface ResolvedStory {
@@ -263,23 +285,39 @@ function runFinalize(
 
   const now = options.now ?? new Date();
   const finalized: string[] = [];
+  const skipped: string[] = [];
   const allScopes = listScopes(projectRoot);
   for (const entry of stories) {
     const storyId = entry.story_id;
     if (typeof storyId !== "string") {
+      skipped.push(`(malformed manifest entry: missing story_id)`);
       continue;
     }
     const ref = allScopes.find((s) => s.filename === storyId);
     if (ref === undefined || ref.folder !== "active") {
+      skipped.push(`${storyId} (not in active/)`);
       continue;
     }
     const read = readScope(ref.path);
     if (!read.ok) {
+      skipped.push(`${storyId} (unreadable: ${read.message})`);
       continue;
     }
-    const newRef = transitionScope(projectRoot, ref, read.scope, "completed", now);
+    // Finalize is post-merge scope completion: record delivery evidence from
+    // the manifest before transitioning (content/state.md forbids completed
+    // code work with no delivery block).
+    const baseBranch = typeof entry.base_branch === "string" ? entry.base_branch : "main";
+    const withDelivery = {
+      ...read.scope,
+      delivery: { disposition: "delivered" as const, branch: baseBranch },
+    };
+    const newRef = transitionScope(projectRoot, ref, withDelivery, "completed", now);
     appendAudit(projectRoot, { kind: "swarm-finalize", scope: newRef.relPath }, now);
     finalized.push(newRef.relPath);
   }
-  return { mode: "finalize", code: 0, finalized };
+  const message =
+    skipped.length > 0
+      ? `finalized ${finalized.length}, skipped ${skipped.length}: ${skipped.join("; ")}`
+      : undefined;
+  return { mode: "finalize", code: 0, finalized, ...(message !== undefined ? { message } : {}) };
 }

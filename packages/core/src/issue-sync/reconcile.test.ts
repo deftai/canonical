@@ -60,7 +60,7 @@ describe("reconcile", () => {
       ],
     });
     const c = client({
-      "GET /repos/acme/widgets/issues?state=open": {
+      "GET /repos/acme/widgets/issues?state=open&per_page=100": {
         body: [{ number: 1, title: "Issue one", state: "open" }],
       },
       "GET /repos/acme/widgets/issues/1": {
@@ -91,7 +91,7 @@ describe("reconcile", () => {
       ],
     });
     const c = client({
-      "GET /repos/acme/widgets/issues?state=open": { body: [] },
+      "GET /repos/acme/widgets/issues?state=open&per_page=100": { body: [] },
       "GET /repos/acme/widgets/issues/1": {
         body: { number: 1, title: "Issue one", state: "closed" },
       },
@@ -121,7 +121,7 @@ describe("reconcile", () => {
       ],
     });
     const c = client({
-      "GET /repos/acme/widgets/issues?state=open": { body: [] },
+      "GET /repos/acme/widgets/issues?state=open&per_page=100": { body: [] },
       "GET /repos/acme/widgets/issues/1": {
         body: { number: 1, title: "Issue one", state: "closed" },
       },
@@ -134,7 +134,7 @@ describe("reconcile", () => {
     const root = tempDir("canon-reconcile-");
     scaffoldBriefs(root);
     const c = client({
-      "GET /repos/acme/widgets/issues?state=open": {
+      "GET /repos/acme/widgets/issues?state=open&per_page=100": {
         body: [{ number: 3, title: "Orphan issue", state: "open" }],
       },
     });
@@ -153,7 +153,7 @@ describe("reconcile", () => {
     const root = tempDir("canon-reconcile-");
     scaffoldBriefs(root);
     const c = client({
-      "GET /repos/acme/widgets/issues?state=open": {
+      "GET /repos/acme/widgets/issues?state=open&per_page=100": {
         body: [{ number: 4, title: "A PR", state: "open", pull_request: { url: "x" } }],
       },
     });
@@ -180,7 +180,7 @@ describe("reconcile", () => {
       ],
     });
     const c = client({
-      "GET /repos/acme/widgets/issues?state=open": {
+      "GET /repos/acme/widgets/issues?state=open&per_page=100": {
         body: [{ number: 1, title: "New title", state: "open" }],
       },
       "GET /repos/acme/widgets/issues/1": {

@@ -38,10 +38,14 @@ export function applyAgentsMd(existing: string | null): AgentsMdApplyResult {
 
   const closeIdx = existing.indexOf(AGENTS_MANAGED_CLOSE, openIdx);
   if (closeIdx === -1) {
-    // Malformed open marker with no matching close -- treat as if absent and
-    // append a fresh, well-formed block rather than guessing at repair.
-    const sep = existing.endsWith("\n") ? "\n" : "\n\n";
-    return { content: `${existing}${sep}${block}`, changed: true };
+    // Dangling open marker with no close: REMOVE the dangling marker before
+    // appending a fresh block. Leaving it in place would let a later run pair
+    // it with the appended block's close and silently swallow the user content
+    // in between.
+    const repaired =
+      existing.slice(0, openIdx) + existing.slice(openIdx + AGENTS_MANAGED_OPEN.length);
+    const sep = repaired.endsWith("\n") ? "\n" : "\n\n";
+    return { content: `${repaired}${sep}${block}`, changed: true };
   }
 
   const end = closeIdx + AGENTS_MANAGED_CLOSE.length;
@@ -50,6 +54,29 @@ export function applyAgentsMd(existing: string | null): AgentsMdApplyResult {
   if (after.startsWith("\n")) {
     after = after.slice(1);
   }
+  // De-duplicate: strip any additional complete marker pairs left by older
+  // runs so exactly one managed block survives.
+  after = stripManagedBlocks(after);
   const content = `${before}${block}${after}`;
   return { content, changed: content !== existing };
+}
+
+/** Remove every complete managed block (open..close) from `text`. */
+function stripManagedBlocks(text: string): string {
+  let out = text;
+  for (;;) {
+    const open = out.indexOf(AGENTS_MANAGED_OPEN);
+    if (open === -1) {
+      return out;
+    }
+    const close = out.indexOf(AGENTS_MANAGED_CLOSE, open);
+    if (close === -1) {
+      return out;
+    }
+    let end = close + AGENTS_MANAGED_CLOSE.length;
+    if (out[end] === "\n") {
+      end += 1;
+    }
+    out = out.slice(0, open) + out.slice(end);
+  }
 }

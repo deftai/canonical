@@ -123,7 +123,7 @@ describe("ingest", () => {
       ],
     });
     const c = client({
-      "GET /repos/acme/widgets/issues?state=open": {
+      "GET /repos/acme/widgets/issues?state=open&per_page=100": {
         body: [
           {
             number: 5,
@@ -193,7 +193,7 @@ describe("ingest", () => {
       ],
     });
     const c = client({
-      "GET /repos/acme/widgets/issues?state=open": {
+      "GET /repos/acme/widgets/issues?state=open&per_page=100": {
         body: [
           {
             number: 9,

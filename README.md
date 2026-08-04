@@ -33,8 +33,9 @@ pnpm run test      # vitest + coverage report
 
 ```sh
 # from this repo: pack + install globally
-for p in types core content cli; do (cd packages/$p && npm pack --pack-destination /tmp/canonpack); done
-npm i -g /tmp/canonpack/*.tgz
+# pnpm pack rewrites workspace:* deps to real versions (npm pack does NOT)
+for p in types core content cli; do (cd packages/$p && pnpm pack --pack-destination /tmp/canonpack); done
+npm i -g /tmp/canonpack/canonpack-types-*.tgz /tmp/canonpack/canonpack-core-*.tgz /tmp/canonpack/canonpack-content-*.tgz /tmp/canonpack/canonpack-cli-*.tgz
 
 # in the target project
 cd ~/some-project
@@ -48,3 +49,4 @@ root `Taskfile.yml` include (flattened, so verbs are bare: `task check`,
 `canon update` refreshes the deposit.
 
 Exit codes everywhere: `0` ok · `1` rejected/not ready · `2` misconfig/error.
+When invoking through go-task, use `task -x <verb>` to propagate the verb's exact exit code (plain `task` wraps failures as 201).

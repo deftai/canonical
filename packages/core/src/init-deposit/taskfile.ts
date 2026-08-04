@@ -7,25 +7,34 @@
 
 export const CANONICAL_TASKFILE_INCLUDE = "taskfile: ./.canonical/core/Taskfile.yml";
 
-const CANON_INCLUDE_CHILD_BLOCK =
-  "  canon:\n" +
-  "    taskfile: ./.canonical/core/Taskfile.yml\n" +
-  "    optional: true\n" +
-  "    flatten: true\n";
+function canonIncludeChildBlock(childIndent: string): string {
+  const field = `${childIndent}  `;
+  return (
+    `${childIndent}canon:\n` +
+    `${field}taskfile: ./.canonical/core/Taskfile.yml\n` +
+    `${field}optional: true\n` +
+    `${field}flatten: true\n`
+  );
+}
 
-export const MINIMAL_TASKFILE = `version: '3'\n\nincludes:\n${CANON_INCLUDE_CHILD_BLOCK}`;
+export const MINIMAL_TASKFILE = `version: '3'\n\nincludes:\n${canonIncludeChildBlock("  ")}`;
 
 function hasTopLevelIncludes(content: string): boolean {
   if (!content) {
     return false;
   }
   const norm = `\n${content.replace(/\r\n/g, "\n")}`;
-  if (norm.includes("\nincludes:")) {
+  if (/\nincludes:/.test(norm)) {
     return true;
   }
   return content.trimStart().startsWith("includes:");
 }
 
+/**
+ * Insert the canon child after a block-form `includes:` line, matching the
+ * indentation of the existing children so we never re-parent the user's
+ * includes. Inline-map form (`includes: {...}`) is NOT handled -- ok: false.
+ */
 function insertCanonIncludeAfterIncludesLine(content: string): { content: string; ok: boolean } {
   const norm = content.replace(/\r\n/g, "\n");
   const lines = norm.split("\n");
@@ -35,9 +44,22 @@ function insertCanonIncludeAfterIncludesLine(content: string): { content: string
       continue;
     }
     if (line.trimEnd() === "includes:") {
+      // Match the first existing child's indentation; default two spaces.
+      let childIndent = "  ";
+      for (let j = i + 1; j < lines.length; j++) {
+        const next = lines[j] ?? "";
+        if (next.trim().length === 0) {
+          continue;
+        }
+        const m = /^([ \t]+)\S/.exec(next);
+        if (m?.[1] !== undefined) {
+          childIndent = m[1];
+        }
+        break;
+      }
       const out = [
         ...lines.slice(0, i + 1),
-        ...CANON_INCLUDE_CHILD_BLOCK.trimEnd().split("\n"),
+        ...canonIncludeChildBlock(childIndent).trimEnd().split("\n"),
         ...lines.slice(i + 1),
       ];
       return { content: out.join("\n"), ok: true };
@@ -49,6 +71,8 @@ function insertCanonIncludeAfterIncludesLine(content: string): { content: string
 export interface TaskfileApplyResult {
   readonly content: string;
   readonly changed: boolean;
+  /** Set when the include could not be wired safely; caller must surface it. */
+  readonly warning?: string;
 }
 
 /** Compute the next root Taskfile.yml content. `existing` is `null` when absent. */
@@ -64,10 +88,20 @@ export function applyTaskfile(existing: string | null): TaskfileApplyResult {
     if (inserted.ok) {
       return { content: inserted.content, changed: true };
     }
+    // Inline-map `includes: {...}` (or otherwise unparseable) -- appending a
+    // second top-level `includes:` key would produce invalid YAML and break
+    // every `task` invocation. Refuse and tell the operator what to add.
+    return {
+      content: existing,
+      changed: false,
+      warning:
+        "Taskfile.yml has an `includes:` form this installer cannot safely edit -- add the canon include manually:\n" +
+        `includes:\n${canonIncludeChildBlock("  ")}`,
+    };
   }
   const sep = existing.endsWith("\n") ? "\n" : "\n\n";
   return {
-    content: `${existing}${sep}includes:\n${CANON_INCLUDE_CHILD_BLOCK}`,
+    content: `${existing}${sep}includes:\n${canonIncludeChildBlock("  ")}`,
     changed: true,
   };
 }

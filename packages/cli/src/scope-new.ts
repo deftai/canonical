@@ -45,6 +45,12 @@ export function run(argv: string[]): number {
 
   const now = new Date();
   const filename = scopeSkeletonFilename(title, now);
+  // A title of pure punctuation normalizes to an empty slug, which would write
+  // a filename that violates the filename contract -- usage error, not a write.
+  if (/^\d{4}-\d{2}-\d{2}-\.json$/.test(filename)) {
+    const message = `title '${title}' normalizes to an empty slug -- use a title with letters or digits`;
+    return emit(json, 2, { ok: false, error: message }, `canon: scope-new: ${message}\n`);
+  }
   const relPath = `briefs/proposed/${filename}`;
 
   const collision = findScopeFilenameCollision(projectRoot, filename);

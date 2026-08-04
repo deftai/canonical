@@ -103,8 +103,8 @@ export async function ingest(
     } else {
       const qs =
         opts.label !== undefined
-          ? `?state=open&labels=${encodeURIComponent(opts.label)}`
-          : "?state=open";
+          ? `?state=open&per_page=100&labels=${encodeURIComponent(opts.label)}`
+          : "?state=open&per_page=100";
       const list = (await client.get(`${base}/issues${qs}`)) as IssuePayload[];
       issues = (list ?? []).filter((i) => i.pull_request === undefined);
     }
@@ -128,7 +128,10 @@ export async function ingest(
       continue;
     }
     const scope = buildScope(issue, now);
-    const filename = `${isoDate(now)}-${normalizeSlug(issue.title)}-issue-${issue.number}.json`;
+    // An all-punctuation issue title normalizes to an empty slug; fall back so
+    // the filename contract holds.
+    const slug = normalizeSlug(issue.title) || "untitled";
+    const filename = `${isoDate(now)}-${slug}-issue-${issue.number}.json`;
     const relPath = `briefs/proposed/${filename}`;
     if (opts.dryRun !== true) {
       writeScope(projectRoot, relPath, scope);

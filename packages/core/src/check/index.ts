@@ -35,7 +35,10 @@ function detectPackageJsonCommands(projectRoot: string): readonly string[] {
   }
   const pm = existsSync(join(projectRoot, "pnpm-lock.yaml")) ? "pnpm" : "npm";
   const commands: string[] = [];
-  for (const script of ["lint", "build", "test"]) {
+  // Spec order: format check first, then lint, build, test. Coverage
+  // thresholds are enforced by the project's own test tooling config (the
+  // pack's engineering.md requires thresholds in config, not convention).
+  for (const script of ["format:check", "lint", "build", "test"]) {
     if (typeof scripts[script] === "string") {
       commands.push(`${pm} run ${script}`);
     }
@@ -89,13 +92,36 @@ export interface CommandRunResult {
 /** Injectable command execution seam. Tests must never invoke this against a real package manager. */
 export type CommandRunner = (command: string, cwd?: string) => CommandRunResult;
 
-/** Naive whitespace argv-split, then spawnSync(shell:false, stdio:"inherit") in the project root. */
+/** Quote one argument for a cmd.exe command line (win32 .cmd shims). */
+function quoteWin32Arg(arg: string): string {
+  if (arg.length > 0 && !/[\s"&|<>^()%!]/.test(arg)) {
+    return arg;
+  }
+  return `"${arg.replace(/"/g, '""')}"`;
+}
+
+/**
+ * Naive whitespace argv-split, then spawnSync(shell:false, stdio:"inherit") in
+ * the project root. On win32, package-manager entry points are .cmd shims Node
+ * refuses to spawn with shell:false -- route through a tightly quoted
+ * `cmd.exe /d /s /c` line instead (same discipline as tasks/engine-pm-run.cjs).
+ */
 export const defaultCommandRunner: CommandRunner = (command, cwd) => {
   const [cmd, ...args] = command.split(/\s+/).filter((s) => s.length > 0);
   if (cmd === undefined) {
     return { status: 1 };
   }
-  const result = spawnSync(cmd, args, { shell: false, stdio: "inherit", cwd });
+  if (process.platform === "win32") {
+    const line = [cmd, ...args].map(quoteWin32Arg).join(" ");
+    const winResult = spawnSync("cmd.exe", ["/d", "/s", "/c", line], {
+      shell: false,
+      stdio: "inherit",
+      cwd,
+      windowsHide: true,
+    });
+    return { status: winResult.status ?? 1 };
+  }
+  const result = spawnSync(cmd, args, { shell: false, stdio: "inherit", cwd, windowsHide: true });
   return { status: result.status ?? 1 };
 };
 

@@ -72,7 +72,7 @@ export async function evaluateClean(
   const reasons: string[] = [];
 
   const checkRunsPayload = asRecord(
-    await client.get(`${base}/commits/${headSha}/check-runs`),
+    await client.get(`${base}/commits/${headSha}/check-runs?per_page=100`),
   ) as CheckRunsPayload;
   for (const run of checkRunsPayload.check_runs ?? []) {
     if (run.status !== "completed") {
@@ -95,7 +95,7 @@ export async function evaluateClean(
   }
 
   const reviews =
-    ((await client.get(`${base}/pulls/${prNumber}/reviews`)) as ReviewPayload[]) ?? [];
+    ((await client.get(`${base}/pulls/${prNumber}/reviews?per_page=100`)) as ReviewPayload[]) ?? [];
   const latestByReviewer = new Map<string, ReviewPayload>();
   for (const review of reviews) {
     const login = review.user?.login;
