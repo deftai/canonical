@@ -1,54 +1,69 @@
-# directive-canonical-merged
+# canonical
 
-A standalone, installable implementation of the **canonical pack** — the merged
-distillation of the Directive framework into 6 rule files and 20 deterministic
-task verbs. The pack itself lives in [content/](content/) (root:
-[content/canonical.md](content/canonical.md); verb contracts:
-[content/canonical-tasks.md](content/canonical-tasks.md)).
+A compact, deterministic agent-workflow framework: 7 rule files an AI agent reads,
+20 CLI verbs that make the workflow checkable, and fail-closed git gates. The pack
+lives in [content/](content/) (root: [content/canonical.md](content/canonical.md);
+verb contracts: [content/canonical-tasks.md](content/canonical-tasks.md)).
+
+## Install
+
+```sh
+npm i -g @deftai/canonical
+```
+
+Requirements: Node ≥ 20, git. For the `task <verb>` surface, install
+[go-task](https://taskfile.dev) ≥ 3.33 separately (`brew install go-task` /
+`scoop install task` / see taskfile.dev) — it is not an npm dependency. Every
+verb also works directly as `canon <verb>` without go-task.
+
+## Use in a project
+
+```sh
+cd my-project        # a git repo (run `git init` first if new)
+canon init
+```
+
+This deposits `.canonical/core/` (the rule pack + Taskfile + hooks), writes an
+`AGENTS.md` managed section pointing your AI agent at the rules, wires the root
+`Taskfile.yml` include (verbs are bare: `task check`, `task scope:new -- "title"`),
+scaffolds `briefs/` (the durable work state), and installs git hooks.
+
+Then open the project with your AI agent and say:
+
+> I want to make an app that does X, help me set this up.
+
+The pack's kickoff flow interviews you, generates the project brief + one scope
+per feature with acceptance criteria, and renders the roadmap. `canon update`
+refreshes the deposit after upgrades; `canon init` is idempotent.
+
+Exit codes everywhere: `0` ok · `1` rejected/not ready · `2` misconfig/error.
+When invoking through go-task, use `task -x <verb>` to propagate the verb's
+exact exit code (plain `task` wraps failures as 201).
 
 ## Layout
 
-- `packages/types` — shared types (`@canonpack/types`)
-- `packages/core` — pure verb logic (`@canonpack/core`)
-- `packages/cli` — the `canon` binary (`@canonpack/cli`)
-- `packages/content` — payload package, assembled at pack time (`@canonpack/content`)
+- `content/` — the canonical pack (deposited into consumer projects)
+- `src/` — the `canon` CLI: `src/types` (contracts), domain modules, `src/cli` (verbs)
 - `tasks/` — go-task fragments + engine dispatch shims
-- `content/` — the canonical pack (deposited into consumers)
 - `.githooks/` — pre-commit / pre-push gates
-
-## Requirements
-
-- Node ≥ 20, pnpm (or corepack), [go-task](https://taskfile.dev) ≥ 3.33 (flattened includes)
+- `docs/manual-test-plan.md` — end-to-end walkthrough (Wordle)
 
 ## Develop
 
 ```sh
 pnpm install
-pnpm run build     # tsc -b
+pnpm run build     # tsc
 pnpm run lint      # biome
 pnpm run test      # vitest + coverage report
 ```
 
-## Install into a test project
+Local install for testing: `npm pack` then `npm i -g ./deftai-canonical-*.tgz`.
 
-```sh
-# from this repo: pack + install globally
-# pnpm pack rewrites workspace:* deps to real versions (npm pack does NOT).
-# content has no deps and its postpack cleanup races pnpm's verifier -- use npm pack for it.
-for p in types core cli; do (cd packages/$p && pnpm pack --pack-destination /tmp/canonpack); done
-(cd packages/content && npm pack --pack-destination /tmp/canonpack)
-npm i -g /tmp/canonpack/canonpack-types-*.tgz /tmp/canonpack/canonpack-core-*.tgz /tmp/canonpack/canonpack-content-*.tgz /tmp/canonpack/canonpack-cli-*.tgz
+## Release
 
-# in the target project
-cd ~/some-project
-canon init
-```
+Update `CHANGELOG.md`, merge, then tag: `git tag v<X.Y.Z> && git push origin v<X.Y.Z>` —
+the publish workflow builds and publishes to npm with provenance.
 
-`canon init` deposits `.canonical/core/` (the pack + Taskfile + hooks), writes an
-`AGENTS.md` managed section pointing at `.canonical/core/canonical.md`, wires the
-root `Taskfile.yml` include (flattened, so verbs are bare: `task check`,
-`task scope:new -- "title"`), scaffolds `briefs/`, and installs git hooks.
-`canon update` refreshes the deposit.
+## License
 
-Exit codes everywhere: `0` ok · `1` rejected/not ready · `2` misconfig/error.
-When invoking through go-task, use `task -x <verb>` to propagate the verb's exact exit code (plain `task` wraps failures as 201).
+MIT

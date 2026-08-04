@@ -14,14 +14,13 @@ Expected results are marked ▶.
 ```bash
 cd ~/Projects/directive-canonical-merged
 pnpm install && pnpm run build && pnpm run test:fast
-rm -rf /tmp/canonpack && mkdir -p /tmp/canonpack
-for p in types core cli; do (cd packages/$p && pnpm pack --pack-destination /tmp/canonpack); done
-(cd packages/content && npm pack --pack-destination /tmp/canonpack)
-npm i -g /tmp/canonpack/canonpack-types-*.tgz /tmp/canonpack/canonpack-core-*.tgz \
-         /tmp/canonpack/canonpack-content-*.tgz /tmp/canonpack/canonpack-cli-*.tgz
+npm pack --pack-destination /tmp
+npm i -g /tmp/deftai-canonical-*.tgz
 canon --help
 task --version
 ```
+
+(Or, once published: `npm i -g @deftai/canonical`.)
 
 ▶ `canon --help` lists all 20 verbs + init/update. `task` ≥ 3.33 (flattened includes).
 

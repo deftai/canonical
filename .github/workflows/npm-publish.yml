@@ -1,0 +1,78 @@
+name: npm publish
+
+# Publishes @deftai/canonical on release tags. Adapted from deftai/directive's
+# proven workflow, radically simplified by the single-package model: no version
+# alignment loop, no workspace-protocol rewrite -- one `npm publish`.
+
+on:
+  push:
+    tags:
+      - "v*"
+  # Manual re-publish of an existing tag without tag surgery: dispatch with the
+  # tag to (re)publish when a tag-triggered run failed, e.g. v0.1.0.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing release tag to (re)publish, e.g. v0.1.0"
+        required: true
+        type: string
+
+permissions:
+  # id-token is used for the --provenance attestation. Publish auth is the
+  # NPM_TOKEN secret (granular token) for now; npm trusted publishing can be
+  # configured on the package after the first release and the token dropped.
+  id-token: write
+  contents: read
+
+jobs:
+  publish:
+    name: Publish @deftai/canonical to npm
+    # GitHub-hosted runner is REQUIRED for npm --provenance: the registry
+    # rejects provenance bundles signed on self-hosted runners.
+    runs-on: ubuntu-latest
+    env:
+      REF_NAME: ${{ inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          registry-url: https://registry.npmjs.org
+
+      - name: Enable corepack (pnpm)
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Test
+        run: pnpm run test:fast
+
+      - name: Align package version with release tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${REF_NAME#v}"
+          echo "Publishing @deftai/canonical@${VERSION}"
+          npm version "${VERSION}" --no-git-tag-version --allow-same-version
+
+      # Idempotent re-publish: a workflow_dispatch rerun must not fail on E409
+      # when the version already published.
+      - name: Publish
+        shell: bash
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          PKG=$(node -p "require('./package.json').name")
+          VER=$(node -p "require('./package.json').version")
+          npm publish --provenance --access public || {
+            npm view "${PKG}@${VER}" version >/dev/null
+            echo "Already published ${PKG}@${VER}, continuing"
+          }
