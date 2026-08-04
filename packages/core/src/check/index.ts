@@ -1,0 +1,158 @@
+import { spawnSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import type { GateExitCode } from "@canonpack/types";
+import { readProjectBrief } from "../policy/index.js";
+
+/**
+ * Quality gate command resolution + execution (content/canonical-tasks.md `check`).
+ *
+ * Command source, in order: briefs/PROJECT.json `quality.commands[]` when
+ * non-empty; else detect from the toolchain on disk (package.json, go.mod,
+ * pyproject.toml); else a config error.
+ */
+
+export type ResolveCheckCommandsResult =
+  | { readonly ok: true; readonly commands: readonly string[] }
+  | { readonly ok: false; readonly message: string };
+
+function detectPackageJsonCommands(projectRoot: string): readonly string[] {
+  const pkgPath = join(projectRoot, "package.json");
+  if (!existsSync(pkgPath)) {
+    return [];
+  }
+  let scripts: Record<string, unknown> = {};
+  try {
+    const parsed: unknown = JSON.parse(readFileSync(pkgPath, "utf8"));
+    if (typeof parsed === "object" && parsed !== null) {
+      const rawScripts = (parsed as Record<string, unknown>).scripts;
+      if (typeof rawScripts === "object" && rawScripts !== null) {
+        scripts = rawScripts as Record<string, unknown>;
+      }
+    }
+  } catch {
+    return [];
+  }
+  const pm = existsSync(join(projectRoot, "pnpm-lock.yaml")) ? "pnpm" : "npm";
+  const commands: string[] = [];
+  for (const script of ["lint", "build", "test"]) {
+    if (typeof scripts[script] === "string") {
+      commands.push(`${pm} run ${script}`);
+    }
+  }
+  return commands;
+}
+
+function detectGoModCommands(projectRoot: string): readonly string[] {
+  if (!existsSync(join(projectRoot, "go.mod"))) {
+    return [];
+  }
+  return ["go vet ./...", "go build ./...", "go test ./..."];
+}
+
+function detectPyprojectCommands(projectRoot: string): readonly string[] {
+  if (!existsSync(join(projectRoot, "pyproject.toml"))) {
+    return [];
+  }
+  return ["python -m pytest"];
+}
+
+const DETECTORS: readonly ((projectRoot: string) => readonly string[])[] = [
+  detectPackageJsonCommands,
+  detectGoModCommands,
+  detectPyprojectCommands,
+];
+
+/** briefs/PROJECT.json `quality.commands[]` if non-empty, else detect from the toolchain on disk. */
+export function resolveCheckCommands(projectRoot: string): ResolveCheckCommandsResult {
+  const read = readProjectBrief(projectRoot);
+  if (!read.ok) {
+    return { ok: false, message: read.message };
+  }
+  const configured = read.project.quality?.commands;
+  if (configured !== undefined && configured.length > 0) {
+    return { ok: true, commands: configured };
+  }
+  for (const detect of DETECTORS) {
+    const commands = detect(projectRoot);
+    if (commands.length > 0) {
+      return { ok: true, commands };
+    }
+  }
+  return { ok: false, message: "no commands configured or detected" };
+}
+
+export interface CommandRunResult {
+  readonly status: number;
+}
+
+/** Injectable command execution seam. Tests must never invoke this against a real package manager. */
+export type CommandRunner = (command: string) => CommandRunResult;
+
+/** Naive whitespace argv-split, then spawnSync(shell:false, stdio:"inherit"). */
+export const defaultCommandRunner: CommandRunner = (command) => {
+  const [cmd, ...args] = command.split(/\s+/).filter((s) => s.length > 0);
+  if (cmd === undefined) {
+    return { status: 1 };
+  }
+  const result = spawnSync(cmd, args, { shell: false, stdio: "inherit" });
+  return { status: result.status ?? 1 };
+};
+
+/** Seam for the built-in `state:validate` / `verify:encoding` stages -- always the real CLI dispatcher in production. */
+export type DispatchFn = (argv: string[]) => Promise<number>;
+
+export interface RunCheckOptions {
+  readonly commandRunner?: CommandRunner;
+  readonly dispatchFn: DispatchFn;
+}
+
+export interface RunCheckResult {
+  readonly ok: boolean;
+  readonly code: GateExitCode;
+  /** The command or built-in stage name that failed, absent when `ok`. */
+  readonly failingStage?: string;
+  readonly message: string;
+}
+
+/** Built-in stages appended after the configured/detected command list (content/canonical-tasks.md `check`). */
+const BUILTIN_STAGES = ["state:validate", "verify:encoding"] as const;
+
+/**
+ * Run configured/detected commands in order, stopping at the first failure;
+ * then run the built-in `state:validate` + `verify:encoding` stages via
+ * `dispatchFn`.
+ */
+export async function runCheck(
+  projectRoot: string,
+  opts: RunCheckOptions,
+): Promise<RunCheckResult> {
+  const resolved = resolveCheckCommands(projectRoot);
+  if (!resolved.ok) {
+    return { ok: false, code: 2, message: resolved.message };
+  }
+  const runner = opts.commandRunner ?? defaultCommandRunner;
+  for (const command of resolved.commands) {
+    const result = runner(command);
+    if (result.status !== 0) {
+      return {
+        ok: false,
+        code: 1,
+        failingStage: command,
+        message: `check failed at stage: ${command}`,
+      };
+    }
+  }
+  for (const stage of BUILTIN_STAGES) {
+    const code = await opts.dispatchFn([stage]);
+    if (code !== 0) {
+      return {
+        ok: false,
+        code: 1,
+        failingStage: stage,
+        message: `check failed at stage: ${stage}`,
+      };
+    }
+  }
+  return { ok: true, code: 0, message: "all checks passed" };
+}
