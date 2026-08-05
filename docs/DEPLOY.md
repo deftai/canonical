@@ -40,8 +40,13 @@ Key properties:
   for publish auth. Provenance attestation is automatic.
 - **GitHub-hosted runner required** — the registry rejects provenance bundles
   signed on self-hosted runners.
-- **Idempotent** — a re-run does not fail on E409 when the version is already
-  published (it verifies via `npm view` and continues).
+- **Idempotent re-runs, with a caveat** — on any `npm publish` failure the
+  workflow falls back to `npm view` and succeeds if the version already exists
+  on the registry (the fallback is not E409-specific). Re-publishing an
+  existing tag is therefore safe, but a green re-run for an already-published
+  version proves only that the version exists — not that this attempt uploaded
+  anything. When diagnosing a publish failure, read the Publish step log, not
+  just the run status.
 - One-time registry setup (already done): npmjs.com → package Settings →
   Trusted Publisher: GitHub Actions, org `deftai`, repo `canonical`, workflow
   `npm-publish.yml`.
@@ -74,6 +79,12 @@ changelog entry without tagging. No GitHub Releases are created for tags
 
 ## Gotchas
 
+- **Actions are SHA-pinned** — third-party actions in both workflows are
+  referenced by full commit SHA with the version tag in a trailing comment
+  (supply-chain hardening; floating tags like `@v5` can be re-pointed). To
+  upgrade one, resolve the new tag to its commit —
+  `gh api repos/actions/checkout/commits/<tag> --jq .sha` — and update both
+  the SHA and the comment.
 - **GH007 email privacy** — commits authored with a private email are rejected
   on push. Use the GitHub noreply address in `git config user.email`.
 - **`task -x`** — when smoke-testing verbs through go-task, `-x` is required to

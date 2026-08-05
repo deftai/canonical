@@ -10,8 +10,11 @@ Maintainer-facing map of this repository. Repo-only: `docs/` is not in the npm
 1. **The pack** — seven markdown rule files in [`content/`](../content/) that an
    AI agent loads and obeys. [`content/canonical.md`](../content/canonical.md) is
    the always-loaded root; the other six are demand-loaded per its load table.
-2. **The `canon` CLI** — 20 deterministic verbs (plus the `init`/`update`
-   installers) that make the pack's workflow mechanically checkable.
+2. **The `canon` CLI** — the 20 pack verbs (the contract below) plus the two
+   installer commands `init` and `update`: 22 entries total in the dispatch
+   table (`CLI_MODULE_VERBS` in `src/cli/dispatch.ts`), which is also what
+   `canon --help` prints. If those counts drift, the table, this file, and
+   `content/canonical-tasks.md` disagree — fix whichever is wrong.
 
 The contract between them is [`content/canonical-tasks.md`](../content/canonical-tasks.md):
 intent → verb, exact args, exit codes. The pack is written to degrade — if a verb
