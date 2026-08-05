@@ -7,7 +7,7 @@ import type { GateExitCode } from "../types/index.js";
 /**
  * Quality gate command resolution + execution (content/canonical-tasks.md `check`).
  *
- * Command source, in order: briefs/PROJECT.json `quality.commands[]` when
+ * Command source, in order: xbrief/PROJECT.json `quality.commands[]` when
  * non-empty; else detect from the toolchain on disk (package.json, go.mod,
  * pyproject.toml); else a config error.
  */
@@ -66,7 +66,7 @@ const DETECTORS: readonly ((projectRoot: string) => readonly string[])[] = [
   detectPyprojectCommands,
 ];
 
-/** briefs/PROJECT.json `quality.commands[]` if non-empty, else detect from the toolchain on disk. */
+/** xbrief/PROJECT.json `quality.commands[]` if non-empty, else detect from the toolchain on disk. */
 export function resolveCheckCommands(projectRoot: string): ResolveCheckCommandsResult {
   const read = readProjectBrief(projectRoot);
   if (!read.ok) {

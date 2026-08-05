@@ -18,7 +18,7 @@ function status(overrides: Record<string, unknown> = {}) {
 }
 
 function auditLines(root: string): unknown[] {
-  const raw = readFileSync(join(root, "briefs", "audit.jsonl"), "utf8");
+  const raw = readFileSync(join(root, "xbrief", "audit.jsonl"), "utf8");
   return raw
     .split("\n")
     .filter((l) => l.trim() !== "")
@@ -36,7 +36,7 @@ describe("scopeStop", () => {
 
     expect(result).toMatchObject({ ok: true, status: "cancelled" });
     expect(() =>
-      readFileSync(join(root, "briefs", "cancelled", "2026-01-01-foo.json")),
+      readFileSync(join(root, "xbrief", "cancelled", "2026-01-01-foo.json")),
     ).not.toThrow();
     expect(auditLines(root)).toContainEqual(
       expect.objectContaining({
@@ -70,7 +70,7 @@ describe("scopeStop", () => {
 
     expect(result).toMatchObject({ ok: true, status: "failed" });
     expect(() =>
-      readFileSync(join(root, "briefs", "completed", "2026-01-01-foo.json")),
+      readFileSync(join(root, "xbrief", "completed", "2026-01-01-foo.json")),
     ).not.toThrow();
   });
 
@@ -95,7 +95,7 @@ describe("scopeStop", () => {
 
     expect(result).toMatchObject({ ok: true, status: "blocked" });
     const written = JSON.parse(
-      readFileSync(join(root, "briefs", "active", "2026-01-01-foo.json"), "utf8"),
+      readFileSync(join(root, "xbrief", "active", "2026-01-01-foo.json"), "utf8"),
     );
     expect(written.plan.status).toBe("blocked");
   });
@@ -169,7 +169,7 @@ describe("scopeStop", () => {
 
     expect(result).toMatchObject({ ok: true, status: "blocked" });
     const written = JSON.parse(
-      readFileSync(join(root, "briefs", "active", "2026-01-01-foo.json"), "utf8"),
+      readFileSync(join(root, "xbrief", "active", "2026-01-01-foo.json"), "utf8"),
     );
     expect(written.narratives.Note).toBe("blocked on upstream API");
 
@@ -180,7 +180,7 @@ describe("scopeStop", () => {
     });
     expect(second.ok).toBe(true);
     const rewritten = JSON.parse(
-      readFileSync(join(root, "briefs", "active", "2026-01-01-foo.json"), "utf8"),
+      readFileSync(join(root, "xbrief", "active", "2026-01-01-foo.json"), "utf8"),
     );
     expect(rewritten.narratives.Note).toBe("blocked on upstream API\nupstream fixed");
   });

@@ -62,13 +62,13 @@ describe("runInit", () => {
     const gitignore = readFileSync(join(root, ".gitignore"), "utf8");
     expect(gitignore).toContain(".canonical/core/");
     expect(gitignore).toContain(".canonical/cache/");
-    expect(gitignore).toContain("briefs/*.lock");
+    expect(gitignore).toContain("xbrief/*.lock");
 
-    // briefs/ scaffold
+    // xbrief/ scaffold
     for (const folder of ["proposed", "pending", "active", "completed", "cancelled"]) {
-      expect(existsSync(join(root, "briefs", folder, ".gitkeep"))).toBe(true);
+      expect(existsSync(join(root, "xbrief", folder, ".gitkeep"))).toBe(true);
     }
-    const project = JSON.parse(readFileSync(join(root, "briefs", "PROJECT.json"), "utf8"));
+    const project = JSON.parse(readFileSync(join(root, "xbrief", "PROJECT.json"), "utf8"));
     expect(project).toEqual({ title: expect.any(String), policy: {} });
 
     // git hooks wired

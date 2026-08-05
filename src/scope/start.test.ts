@@ -26,11 +26,11 @@ describe("scopeStart", () => {
 
     expect(result).toMatchObject({ ok: true, status: "running" });
     const written = JSON.parse(
-      readFileSync(join(root, "briefs", "active", "2026-01-01-foo.json"), "utf8"),
+      readFileSync(join(root, "xbrief", "active", "2026-01-01-foo.json"), "utf8"),
     );
     expect(written.plan.status).toBe("running");
 
-    const audit = readFileSync(join(root, "briefs", "audit.jsonl"), "utf8");
+    const audit = readFileSync(join(root, "xbrief", "audit.jsonl"), "utf8");
     expect(audit).toContain("proposed->pending");
     expect(audit).toContain("pending->running");
   });
@@ -50,7 +50,7 @@ describe("scopeStart", () => {
     const result = scopeStart(root, { scope: "2026-01-01-foo.json" });
 
     expect(result).toMatchObject({ ok: true, status: "running" });
-    const audit = readFileSync(join(root, "briefs", "audit.jsonl"), "utf8");
+    const audit = readFileSync(join(root, "xbrief", "audit.jsonl"), "utf8");
     expect(audit).not.toContain("proposed->pending");
     expect(audit).toContain("pending->running");
   });
@@ -109,7 +109,7 @@ describe("scopeStart", () => {
 
   it("gate: allowDirectCommitsToDefault policy permits starting on the default branch", () => {
     const root = tempGitRepo();
-    atomicWriteJson(root, "briefs/PROJECT.json", {
+    atomicWriteJson(root, "xbrief/PROJECT.json", {
       title: "t",
       policy: { allowDirectCommitsToDefault: true },
     });

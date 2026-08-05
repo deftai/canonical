@@ -1,14 +1,14 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { appendAudit } from "../briefs/audit.js";
 import { atomicWriteJson } from "../fs/contained-write.js";
 import type { PolicyFieldName, ProjectBrief, ProjectPolicy } from "../types/index.js";
 import { POLICY_DEFAULTS, REGISTERED_POLICY_FIELDS } from "../types/index.js";
+import { appendAudit } from "../xbrief/audit.js";
 
-/** Typed policy read/write over briefs/PROJECT.json (content/state.md "Project Policy"). */
+/** Typed policy read/write over xbrief/PROJECT.json (content/state.md "Project Policy"). */
 
 export function projectBriefPath(projectRoot: string): string {
-  return join(projectRoot, "briefs", "PROJECT.json");
+  return join(projectRoot, "xbrief", "PROJECT.json");
 }
 
 export type ReadProjectResult =
@@ -128,7 +128,7 @@ export function setPolicy(projectRoot: string, opts: SetPolicyOptions): SetPolic
   }
 
   const next = { ...project, policy };
-  atomicWriteJson(projectRoot, "briefs/PROJECT.json", next);
+  atomicWriteJson(projectRoot, "xbrief/PROJECT.json", next);
   appendAudit(projectRoot, {
     kind: "policy-set",
     field: opts.field,

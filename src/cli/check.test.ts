@@ -10,9 +10,9 @@ afterAll(() => {
 
 function writeProject(overrides: Record<string, unknown> = {}): string {
   const root = tempDir("cli-check-test-");
-  mkdirSync(join(root, "briefs"), { recursive: true });
+  mkdirSync(join(root, "xbrief"), { recursive: true });
   writeFileSync(
-    join(root, "briefs", "PROJECT.json"),
+    join(root, "xbrief", "PROJECT.json"),
     `${JSON.stringify({ title: "t", policy: {}, ...overrides }, null, 2)}\n`,
   );
   return root;
@@ -68,7 +68,7 @@ describe("canon check", () => {
   it("wires the built-in stages through the real dispatcher (all stages pass on a clean project)", async () => {
     // "true" is a portable no-op binary, not a package manager -- exercising the
     // real dispatch seam for the built-in stages without spawning any toolchain.
-    // state:validate and verify:encoding are real now: an empty briefs tree and a
+    // state:validate and verify:encoding are real now: an empty xbrief tree and a
     // non-git temp dir pass both, so the whole gate reports success.
     const root = writeProject({ quality: { commands: ["true"] } });
     const code = await run(["--project-root", root, "--json"]);
@@ -83,8 +83,8 @@ describe("canon check", () => {
 
   it("real dispatcher surfaces a failing built-in stage by name (invalid brief -> state:validate)", async () => {
     const root = writeProject({ quality: { commands: ["true"] } });
-    mkdirSync(join(root, "briefs", "active"), { recursive: true });
-    writeFileSync(join(root, "briefs", "active", "not-a-valid-name.json"), "{}\n");
+    mkdirSync(join(root, "xbrief", "active"), { recursive: true });
+    writeFileSync(join(root, "xbrief", "active", "not-a-valid-name.json"), "{}\n");
     const code = await run(["--project-root", root, "--json"]);
     expect(code).toBe(1);
     const lines = outBuf.join("").trim().split("\n");

@@ -46,28 +46,28 @@ export interface TempRepoOptions {
   readonly withBriefs?: boolean;
 }
 
-/** Init a real git repo in a temp dir with one commit; optionally scaffold briefs/. */
+/** Init a real git repo in a temp dir with one commit; optionally scaffold xbrief/. */
 export function tempGitRepo(opts: TempRepoOptions = {}): string {
   const root = tempDir("canon-repo-");
   git(root, "init", "-q");
   git(root, "branch", "-M", opts.branch ?? "main");
   writeFileSync(join(root, "README.md"), "# test\n");
   if (opts.withBriefs !== false) {
-    scaffoldBriefs(root);
+    scaffoldXbrief(root);
   }
   git(root, "add", "-A");
   git(root, "commit", "-q", "-m", "init");
   return root;
 }
 
-/** Create briefs/ with the five lifecycle dirs and a minimal PROJECT.json. */
-export function scaffoldBriefs(root: string): void {
+/** Create xbrief/ with the five lifecycle dirs and a minimal PROJECT.json. */
+export function scaffoldXbrief(root: string): void {
   for (const folder of ["proposed", "pending", "active", "completed", "cancelled"]) {
-    mkdirSync(join(root, "briefs", folder), { recursive: true });
-    writeFileSync(join(root, "briefs", folder, ".gitkeep"), "");
+    mkdirSync(join(root, "xbrief", folder), { recursive: true });
+    writeFileSync(join(root, "xbrief", folder, ".gitkeep"), "");
   }
   writeFileSync(
-    join(root, "briefs", "PROJECT.json"),
+    join(root, "xbrief", "PROJECT.json"),
     `${JSON.stringify({ title: "test-project", policy: {} }, null, 2)}\n`,
   );
 }
@@ -93,8 +93,8 @@ export function writeScopeFixture(
   filename: string,
   overrides: Record<string, unknown> = {},
 ): string {
-  const rel = join("briefs", folder, filename);
-  mkdirSync(join(root, "briefs", folder), { recursive: true });
+  const rel = join("xbrief", folder, filename);
+  mkdirSync(join(root, "xbrief", folder), { recursive: true });
   writeFileSync(join(root, rel), `${JSON.stringify(scopeFixture(overrides), null, 2)}\n`);
   return rel;
 }

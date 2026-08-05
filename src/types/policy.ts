@@ -1,4 +1,4 @@
-/** Typed project policy (content/state.md "Project Policy"). Lives in briefs/PROJECT.json -> policy.* */
+/** Typed project policy (content/state.md "Project Policy"). Lives in xbrief/PROJECT.json -> policy.* */
 
 export interface RuntimeAuthority {
   readonly denyPaths: readonly string[];

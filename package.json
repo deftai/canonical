@@ -1,6 +1,6 @@
 {
   "name": "@deftai/canonical",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "The canonical pack: a compact, deterministic agent-workflow framework -- briefs-based state, 20 CLI verbs, fail-closed git gates. Install globally, run `canon init` in any project.",
   "license": "MIT",
   "type": "module",

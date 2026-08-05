@@ -105,12 +105,12 @@ export function writeVersionStamp(
   return rel;
 }
 
-/** Five lifecycle dirs + .gitkeep, and briefs/PROJECT.json skeleton, only where absent. */
-export function ensureBriefsScaffold(projectRoot: string): CopyOutcome {
+/** Five lifecycle dirs + .gitkeep, and xbrief/PROJECT.json skeleton, only where absent. */
+export function ensureXbriefScaffold(projectRoot: string): CopyOutcome {
   const written: string[] = [];
   const skipped: string[] = [];
   for (const folder of LIFECYCLE_FOLDERS) {
-    const rel = `briefs/${folder}/.gitkeep`;
+    const rel = `xbrief/${folder}/.gitkeep`;
     if (existsSync(join(projectRoot, rel))) {
       skipped.push(rel);
       continue;
@@ -118,7 +118,7 @@ export function ensureBriefsScaffold(projectRoot: string): CopyOutcome {
     atomicWriteText(projectRoot, rel, "");
     written.push(rel);
   }
-  const projectRel = "briefs/PROJECT.json";
+  const projectRel = "xbrief/PROJECT.json";
   if (existsSync(join(projectRoot, projectRel))) {
     skipped.push(projectRel);
   } else {
@@ -129,7 +129,7 @@ export function ensureBriefsScaffold(projectRoot: string): CopyOutcome {
   return { written, skipped };
 }
 
-const GITIGNORE_BASELINE = [".canonical/core/", ".canonical/cache/", "briefs/*.lock"] as const;
+const GITIGNORE_BASELINE = [".canonical/core/", ".canonical/cache/", "xbrief/*.lock"] as const;
 
 /** Append any of the baseline .gitignore lines that are missing; skip if all present. */
 export function ensureGitignoreBaseline(projectRoot: string): CopyOutcome {

@@ -15,7 +15,7 @@ export function isScopeStatus(value: unknown): value is ScopeStatus {
   return typeof value === "string" && (SCOPE_STATUSES as readonly string[]).includes(value);
 }
 
-/** Lifecycle folder names under briefs/ (content/state.md Layout). */
+/** Lifecycle folder names under xbrief/ (content/state.md Layout). */
 export const LIFECYCLE_FOLDERS = [
   "proposed",
   "pending",

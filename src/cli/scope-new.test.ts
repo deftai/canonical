@@ -52,7 +52,7 @@ describe("scope-new handler", () => {
     const code = run(["--project-root", root, "Fix the widget loader"]);
     expect(code).toBe(0);
     const printed = out.join("").trim();
-    expect(printed).toMatch(/^briefs\/proposed\/\d{4}-\d{2}-\d{2}-fix-the-widget-loader\.json$/);
+    expect(printed).toMatch(/^xbrief\/proposed\/\d{4}-\d{2}-\d{2}-fix-the-widget-loader\.json$/);
     expect(existsSync(join(root, printed))).toBe(true);
 
     const written = JSON.parse(readFileSync(join(root, printed), "utf8")) as {
@@ -75,7 +75,7 @@ describe("scope-new handler", () => {
     expect(second).toBe(1);
     expect(out.join("")).toBe("");
     expect(err.join("")).toContain("slug collision");
-    expect(err.join("")).toMatch(/briefs\/proposed\/\d{4}-\d{2}-\d{2}-duplicate-title\.json/);
+    expect(err.join("")).toMatch(/xbrief\/proposed\/\d{4}-\d{2}-\d{2}-duplicate-title\.json/);
   });
 
   it("--json prints a JSON payload with the created path on success", () => {
@@ -84,7 +84,7 @@ describe("scope-new handler", () => {
     expect(code).toBe(0);
     const payload = JSON.parse(out.join(""));
     expect(payload.ok).toBe(true);
-    expect(payload.path).toMatch(/^briefs\/proposed\/.*json-created-scope\.json$/);
+    expect(payload.path).toMatch(/^xbrief\/proposed\/.*json-created-scope\.json$/);
     expect(payload.status).toBe("proposed");
   });
 

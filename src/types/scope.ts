@@ -75,8 +75,8 @@ export interface ScopeFile {
   readonly delivery?: DeliveryBlock;
 }
 
-/** briefs/ layout constants (content/state.md Layout). */
-export const BRIEFS_DIR = "briefs";
+/** xbrief/ layout constants (content/state.md Layout). */
+export const XBRIEF_DIR = "xbrief";
 export const PROJECT_BRIEF_NAME = "PROJECT.json";
 export const SPEC_BRIEF_NAME = "spec.json";
 export const PLAN_BRIEF_NAME = "plan.json";

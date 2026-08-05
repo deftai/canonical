@@ -4,7 +4,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { ghClient } from "../gh/rest.js";
 import {
   cleanupTempDirs,
-  scaffoldBriefs,
+  scaffoldXbrief,
   tempDir,
   writeScopeFixture,
 } from "../test-support/index.js";
@@ -46,7 +46,7 @@ afterAll(cleanupTempDirs);
 describe("ingest", () => {
   it("writes a proposed scope for a single issue number", async () => {
     const root = tempDir("canon-ingest-");
-    scaffoldBriefs(root);
+    scaffoldXbrief(root);
     const c = client({
       "GET /repos/acme/widgets/issues/9": {
         body: {
@@ -61,7 +61,7 @@ describe("ingest", () => {
     expect(result.code).toBe(0);
     expect(result.written).toHaveLength(1);
     const path = result.written[0] as string;
-    expect(path).toBe("briefs/proposed/2026-08-04-fix-the-widget-issue-9.json");
+    expect(path).toBe("xbrief/proposed/2026-08-04-fix-the-widget-issue-9.json");
     const scope = JSON.parse(readFileSync(join(root, path), "utf8"));
     expect(scope.kind).toBe("story");
     expect(scope.plan.status).toBe("proposed");
@@ -80,7 +80,7 @@ describe("ingest", () => {
 
   it("skips (not error) an issue already referenced by an existing scope", async () => {
     const root = tempDir("canon-ingest-");
-    scaffoldBriefs(root);
+    scaffoldXbrief(root);
     writeScopeFixture(root, "pending", "2026-01-01-existing-issue-9.json", {
       references: [
         {
@@ -111,7 +111,7 @@ describe("ingest", () => {
 
   it("ingests --all open issues, filtering out pull requests, and skips duplicates", async () => {
     const root = tempDir("canon-ingest-");
-    scaffoldBriefs(root);
+    scaffoldXbrief(root);
     writeScopeFixture(root, "pending", "2026-01-01-already-there-issue-5.json", {
       references: [
         {
@@ -149,14 +149,14 @@ describe("ingest", () => {
     });
     const result = await ingest(c, REPO, root, { all: true }, NOW);
     expect(result.code).toBe(0);
-    expect(result.written).toEqual(["briefs/proposed/2026-08-04-new-one-issue-6.json"]);
+    expect(result.written).toEqual(["xbrief/proposed/2026-08-04-new-one-issue-6.json"]);
     expect(result.skipped).toHaveLength(1);
     expect(result.skipped[0]?.issueNumber).toBe(5);
   });
 
   it("--dry-run prints planned writes without touching disk", async () => {
     const root = tempDir("canon-ingest-");
-    scaffoldBriefs(root);
+    scaffoldXbrief(root);
     const c = client({
       "GET /repos/acme/widgets/issues/9": {
         body: {
@@ -170,18 +170,18 @@ describe("ingest", () => {
     const result = await ingest(c, REPO, root, { number: 9, dryRun: true }, NOW);
     expect(result.code).toBe(0);
     expect(result.dryRun).toBe(true);
-    expect(result.written).toEqual(["briefs/proposed/2026-08-04-fix-the-widget-issue-9.json"]);
+    expect(result.written).toEqual(["xbrief/proposed/2026-08-04-fix-the-widget-issue-9.json"]);
     expect(
-      existsSync(join(root, "briefs", "proposed", "2026-08-04-fix-the-widget-issue-9.json")),
+      existsSync(join(root, "xbrief", "proposed", "2026-08-04-fix-the-widget-issue-9.json")),
     ).toBe(false);
     expect(
-      readdirSync(join(root, "briefs", "proposed")).filter((f) => f !== ".gitkeep"),
+      readdirSync(join(root, "xbrief", "proposed")).filter((f) => f !== ".gitkeep"),
     ).toHaveLength(0);
   });
 
   it("returns 1 when all matching issues are skipped as duplicates", async () => {
     const root = tempDir("canon-ingest-");
-    scaffoldBriefs(root);
+    scaffoldXbrief(root);
     writeScopeFixture(root, "pending", "2026-01-01-dup-issue-9.json", {
       references: [
         {
@@ -210,7 +210,7 @@ describe("ingest", () => {
 
   it("returns 2 on API error", async () => {
     const root = tempDir("canon-ingest-");
-    scaffoldBriefs(root);
+    scaffoldXbrief(root);
     const c = ghClient({
       fetchFn: (async () => {
         throw new Error("network down");

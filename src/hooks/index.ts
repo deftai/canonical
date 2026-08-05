@@ -16,7 +16,7 @@ import { type GitRunner, setConfig } from "../git/index.js";
 export const PRE_COMMIT_HOOK = `#!/bin/sh
 # canon pre-commit hook -- deposited by \`canon setup\` (content/canonical-tasks.md).
 # Runs verify:branch, verify:encoding --staged, verify:forward-coverage --staged,
-# and state:validate when briefs/ exists. Fails closed (exit 2) when the canon
+# and state:validate when xbrief/ exists. Fails closed (exit 2) when the canon
 # CLI cannot be resolved -- never silently skips a gate.
 
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
@@ -50,7 +50,7 @@ run_canon verify:encoding --staged --project-root "$REPO_ROOT" || exit $?
 
 run_canon verify:forward-coverage --staged --project-root "$REPO_ROOT" || exit $?
 
-if [ -d "$REPO_ROOT/briefs" ]; then
+if [ -d "$REPO_ROOT/xbrief" ]; then
     run_canon state:validate --project-root "$REPO_ROOT" || exit $?
 fi
 `;

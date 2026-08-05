@@ -1,5 +1,5 @@
-import { listScopes, readScope } from "../briefs/brief-io.js";
 import type { GhClient, RepoSlug } from "../gh/rest.js";
+import { listScopes, readScope } from "../xbrief/brief-io.js";
 
 /** Exit codes per content/canonical-tasks.md `issue:sync reconcile`. */
 export type ReconcileExitCode = 0 | 1 | 2;

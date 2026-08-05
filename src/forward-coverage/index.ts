@@ -7,7 +7,7 @@ import type { GateResult } from "../types/index.js";
  * verify:forward-coverage (content/canonical-tasks.md): every STAGED NEW
  * source file under a configured root must ship with a staged new-or-modified
  * test file in the same commit. Pure function of the staged git index +
- * briefs/PROJECT.json `quality.forwardCoverageRoots` override.
+ * xbrief/PROJECT.json `quality.forwardCoverageRoots` override.
  */
 
 export const DEFAULT_ROOTS: readonly string[] = ["src/", "lib/", "cmd/", "scripts/", "packages/"];

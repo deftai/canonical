@@ -12,7 +12,7 @@ import { isValidScopeFilename, listScopes, readScope } from "./brief-io.js";
 /**
  * `state:validate` -- every check named in content/canonical-tasks.md
  * (`state:validate` section) and content/state.md ("Scope Files",
- * "Origins & Trust", "Story Fields"). Pure: reads `briefs/**​/*.json`
+ * "Origins & Trust", "Story Fields"). Pure: reads `xbrief/**​/*.json`
  * relative to `projectRoot`, never throws, never writes.
  */
 

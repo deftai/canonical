@@ -7,8 +7,8 @@ import { resolveContentRoot } from "./content-root.js";
 import {
   copyPayloadInto,
   depositGitHooks,
-  ensureBriefsScaffold,
   ensureGitignoreBaseline,
+  ensureXbriefScaffold,
   writeVersionStamp,
 } from "./deposit.js";
 import { applyTaskfile } from "./taskfile.js";
@@ -38,7 +38,7 @@ function isValidProjectRoot(projectRoot: string): boolean {
 /**
  * Idempotent one-time (or re-run) deposit: payload -> .canonical/core/,
  * VERSION stamp, AGENTS.md managed section, root Taskfile.yml include,
- * briefs/ scaffold, git hooks, .gitignore baseline. Every step is safe to
+ * xbrief/ scaffold, git hooks, .gitignore baseline. Every step is safe to
  * re-run: unchanged content is reported as skipped, not rewritten.
  */
 export function runInit(projectRoot: string, opts: RunInitOptions = {}): RunInitResult {
@@ -108,10 +108,10 @@ export function runInit(projectRoot: string, opts: RunInitOptions = {}): RunInit
     skipped.push("Taskfile.yml");
   }
 
-  // (5) briefs/ scaffold.
-  const briefsOutcome = ensureBriefsScaffold(projectRoot);
-  written.push(...briefsOutcome.written);
-  skipped.push(...briefsOutcome.skipped);
+  // (5) xbrief/ scaffold.
+  const xbriefOutcome = ensureXbriefScaffold(projectRoot);
+  written.push(...xbriefOutcome.written);
+  skipped.push(...xbriefOutcome.skipped);
 
   // (6) .githooks/ + core.hooksPath.
   const hooksOutcome = depositGitHooks(projectRoot, payload);

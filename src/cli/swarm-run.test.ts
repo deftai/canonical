@@ -95,7 +95,7 @@ describe("canon swarm-run -- finalize mode", () => {
         stories: [
           {
             story_id: "2026-01-01-a.json",
-            story_path: "briefs/active/2026-01-01-a.json",
+            story_path: "xbrief/active/2026-01-01-a.json",
             worktree_path: ".scratch/worktrees/2026-01-01-a",
             base_branch: "main",
           },
@@ -104,7 +104,7 @@ describe("canon swarm-run -- finalize mode", () => {
     );
     const code = run(["--project-root", root, "--finalize", "--manifest", manifestPath]);
     expect(code).toBe(0);
-    expect(out).toContain("finalized: briefs/completed/2026-01-01-a.json");
-    expect(existsSync(join(root, "briefs", "completed", "2026-01-01-a.json"))).toBe(true);
+    expect(out).toContain("finalized: xbrief/completed/2026-01-01-a.json");
+    expect(existsSync(join(root, "xbrief", "completed", "2026-01-01-a.json"))).toBe(true);
   });
 });

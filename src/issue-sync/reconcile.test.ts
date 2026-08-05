@@ -2,7 +2,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { ghClient } from "../gh/rest.js";
 import {
   cleanupTempDirs,
-  scaffoldBriefs,
+  scaffoldXbrief,
   tempDir,
   writeScopeFixture,
 } from "../test-support/index.js";
@@ -43,7 +43,7 @@ afterAll(cleanupTempDirs);
 describe("reconcile", () => {
   it("reports no drift when everything matches", async () => {
     const root = tempDir("canon-reconcile-");
-    scaffoldBriefs(root);
+    scaffoldXbrief(root);
     writeScopeFixture(root, "pending", "2026-01-01-a.json", {
       plan: {
         status: "pending",
@@ -74,7 +74,7 @@ describe("reconcile", () => {
 
   it("flags a scope that is non-terminal while its origin issue is closed", async () => {
     const root = tempDir("canon-reconcile-");
-    scaffoldBriefs(root);
+    scaffoldXbrief(root);
     writeScopeFixture(root, "active", "2026-01-01-a.json", {
       plan: {
         status: "running",
@@ -104,7 +104,7 @@ describe("reconcile", () => {
 
   it("does not flag a closed issue when the scope is already terminal", async () => {
     const root = tempDir("canon-reconcile-");
-    scaffoldBriefs(root);
+    scaffoldXbrief(root);
     writeScopeFixture(root, "completed", "2026-01-01-a.json", {
       plan: {
         status: "completed",
@@ -132,7 +132,7 @@ describe("reconcile", () => {
 
   it("flags an open issue with no corresponding scope", async () => {
     const root = tempDir("canon-reconcile-");
-    scaffoldBriefs(root);
+    scaffoldXbrief(root);
     const c = client({
       "GET /repos/acme/widgets/issues?state=open&per_page=100": {
         body: [{ number: 3, title: "Orphan issue", state: "open" }],
@@ -151,7 +151,7 @@ describe("reconcile", () => {
 
   it("filters pull requests out of the open-issues list", async () => {
     const root = tempDir("canon-reconcile-");
-    scaffoldBriefs(root);
+    scaffoldXbrief(root);
     const c = client({
       "GET /repos/acme/widgets/issues?state=open&per_page=100": {
         body: [{ number: 4, title: "A PR", state: "open", pull_request: { url: "x" } }],
@@ -163,7 +163,7 @@ describe("reconcile", () => {
 
   it("flags a title drift between the scope's reference and the live issue", async () => {
     const root = tempDir("canon-reconcile-");
-    scaffoldBriefs(root);
+    scaffoldXbrief(root);
     writeScopeFixture(root, "pending", "2026-01-01-a.json", {
       plan: {
         status: "pending",
@@ -194,7 +194,7 @@ describe("reconcile", () => {
 
   it("returns 2 on API error", async () => {
     const root = tempDir("canon-reconcile-");
-    scaffoldBriefs(root);
+    scaffoldXbrief(root);
     const c = ghClient({
       fetchFn: (async () => {
         throw new Error("network down");

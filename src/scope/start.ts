@@ -1,7 +1,7 @@
-import { appendAudit } from "../briefs/audit.js";
-import { findScope, readScope, transitionScope } from "../briefs/brief-io.js";
 import { currentBranch, defaultBranch, type GitRunner, isDirty, isGitRepo } from "../git/index.js";
 import { resolvePolicy } from "../policy/index.js";
+import { appendAudit } from "../xbrief/audit.js";
+import { findScope, readScope, transitionScope } from "../xbrief/brief-io.js";
 
 /**
  * `scope:start` verb (content/canonical-tasks.md #scope:start, content/state.md Lifecycle).

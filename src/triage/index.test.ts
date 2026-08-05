@@ -10,7 +10,7 @@ afterAll(() => {
 });
 
 function auditLines(root: string): unknown[] {
-  const raw = readFileSync(join(root, "briefs", "audit.jsonl"), "utf8");
+  const raw = readFileSync(join(root, "xbrief", "audit.jsonl"), "utf8");
   return raw
     .split("\n")
     .filter((l) => l.trim() !== "")
@@ -25,7 +25,7 @@ describe("triageDecide", () => {
     const result = triageDecide(root, { verb: "accept", scope: "2026-01-01-foo.json" });
 
     expect(result).toMatchObject({ ok: true, verb: "accept", status: "pending" });
-    expect(readFileSync(join(root, "briefs", "pending", "2026-01-01-foo.json"), "utf8")).toContain(
+    expect(readFileSync(join(root, "xbrief", "pending", "2026-01-01-foo.json"), "utf8")).toContain(
       '"status": "pending"',
     );
     const rows = auditLines(root);
@@ -33,14 +33,14 @@ describe("triageDecide", () => {
       expect.objectContaining({
         kind: "triage",
         verb: "accept",
-        scope: "briefs/proposed/2026-01-01-foo.json",
+        scope: "xbrief/proposed/2026-01-01-foo.json",
       }),
     );
   });
 
   it("accept over the WIP cap without --force is a violation (exit 1)", () => {
     const root = tempGitRepo();
-    atomicWriteJson(root, "briefs/PROJECT.json", { title: "t", policy: { wipCap: 1 } });
+    atomicWriteJson(root, "xbrief/PROJECT.json", { title: "t", policy: { wipCap: 1 } });
     writeScopeFixture(root, "pending", "2026-01-01-a.json");
     writeScopeFixture(root, "proposed", "2026-01-02-b.json");
 
@@ -51,7 +51,7 @@ describe("triageDecide", () => {
 
   it("accept over the WIP cap with --force succeeds and logs a wip-cap-override row", () => {
     const root = tempGitRepo();
-    atomicWriteJson(root, "briefs/PROJECT.json", { title: "t", policy: { wipCap: 1 } });
+    atomicWriteJson(root, "xbrief/PROJECT.json", { title: "t", policy: { wipCap: 1 } });
     writeScopeFixture(root, "pending", "2026-01-01-a.json");
     writeScopeFixture(root, "proposed", "2026-01-02-b.json");
 
@@ -71,7 +71,7 @@ describe("triageDecide", () => {
 
     expect(result).toMatchObject({ ok: true, status: "cancelled" });
     expect(() =>
-      readFileSync(join(root, "briefs", "cancelled", "2026-01-01-foo.json")),
+      readFileSync(join(root, "xbrief", "cancelled", "2026-01-01-foo.json")),
     ).not.toThrow();
   });
 
@@ -96,7 +96,7 @@ describe("triageDecide", () => {
     expect(first).toMatchObject({ ok: true, status: "proposed" });
 
     const afterFirst = JSON.parse(
-      readFileSync(join(root, "briefs", "proposed", "2026-01-01-foo.json"), "utf8"),
+      readFileSync(join(root, "xbrief", "proposed", "2026-01-01-foo.json"), "utf8"),
     );
     expect(afterFirst.narratives.Note).toBe("waiting on design");
 
@@ -107,7 +107,7 @@ describe("triageDecide", () => {
     });
     expect(second.ok).toBe(true);
     const afterSecond = JSON.parse(
-      readFileSync(join(root, "briefs", "proposed", "2026-01-01-foo.json"), "utf8"),
+      readFileSync(join(root, "xbrief", "proposed", "2026-01-01-foo.json"), "utf8"),
     );
     expect(afterSecond.narratives.Note).toBe("waiting on design\nstill waiting");
   });
@@ -128,15 +128,15 @@ describe("triageDecide", () => {
     const result = triageDecide(root, {
       verb: "duplicate",
       scope: "2026-01-02-dup.json",
-      winningUri: "briefs/pending/2026-01-01-winner.json",
+      winningUri: "xbrief/pending/2026-01-01-winner.json",
     });
 
     expect(result).toMatchObject({ ok: true, status: "cancelled" });
     const written = JSON.parse(
-      readFileSync(join(root, "briefs", "cancelled", "2026-01-02-dup.json"), "utf8"),
+      readFileSync(join(root, "xbrief", "cancelled", "2026-01-02-dup.json"), "utf8"),
     );
     expect(written.references).toContainEqual({
-      uri: "briefs/pending/2026-01-01-winner.json",
+      uri: "xbrief/pending/2026-01-01-winner.json",
       type: "scope",
       trust: "internal",
     });

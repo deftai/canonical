@@ -1,18 +1,18 @@
-import { appendAudit } from "../briefs/audit.js";
+import { resolvePolicy } from "../policy/index.js";
+import type { ScopeFile, ScopeReference } from "../types/index.js";
+import { appendAudit } from "../xbrief/audit.js";
 import {
   findScope,
   listScopes,
   readScope,
   transitionScope,
   writeScope,
-} from "../briefs/brief-io.js";
-import { resolvePolicy } from "../policy/index.js";
-import type { ScopeFile, ScopeReference } from "../types/index.js";
+} from "../xbrief/brief-io.js";
 
 /**
  * `triage` verb (content/canonical-tasks.md #triage, content/state.md Lifecycle).
  * Decides the fate of a proposed/ candidate. Every decision appends one
- * {kind:"triage", verb, scope, note?} row to briefs/audit.jsonl; accept over
+ * {kind:"triage", verb, scope, note?} row to xbrief/audit.jsonl; accept over
  * the WIP cap additionally appends a {kind:"wip-cap-override"} row when
  * `force` is used to push through.
  */

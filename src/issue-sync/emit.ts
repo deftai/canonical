@@ -1,6 +1,6 @@
-import { findScope, readScope, writeScope } from "../briefs/brief-io.js";
 import type { GhClient, RepoSlug } from "../gh/rest.js";
 import type { ScopeFile, ScopeReference } from "../types/index.js";
+import { findScope, readScope, writeScope } from "../xbrief/brief-io.js";
 
 /** Exit codes per content/canonical-tasks.md `issue:sync emit`. */
 export type EmitExitCode = 0 | 2;

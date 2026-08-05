@@ -4,7 +4,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { ghClient } from "../gh/rest.js";
 import {
   cleanupTempDirs,
-  scaffoldBriefs,
+  scaffoldXbrief,
   tempDir,
   writeScopeFixture,
 } from "../test-support/index.js";
@@ -52,7 +52,7 @@ afterAll(cleanupTempDirs);
 describe("emit", () => {
   it("PATCHes the existing issue when the scope already has an issue reference", async () => {
     const root = tempDir("canon-emit-");
-    scaffoldBriefs(root);
+    scaffoldXbrief(root);
     const rel = writeScopeFixture(root, "pending", "2026-01-01-my-scope.json", {
       title: "Updated title",
       narratives: { Description: "Updated body" },
@@ -83,7 +83,7 @@ describe("emit", () => {
 
   it("POSTs a new issue and appends the reference + Origin when the scope has none", async () => {
     const root = tempDir("canon-emit-");
-    scaffoldBriefs(root);
+    scaffoldXbrief(root);
     const rel = writeScopeFixture(root, "pending", "2026-01-01-no-issue.json", {
       title: "Needs an issue",
       narratives: { Description: "Body text" },
@@ -133,7 +133,7 @@ describe("emit", () => {
 
   it("returns 2 when the scope cannot be found", async () => {
     const root = tempDir("canon-emit-");
-    scaffoldBriefs(root);
+    scaffoldXbrief(root);
     const c = ghClient({ fetchFn: fakeFetch({}, []), env: { GH_TOKEN: "t" } });
     const result = await emit(c, REPO, root, "nonexistent.json");
     expect(result.code).toBe(2);
@@ -142,7 +142,7 @@ describe("emit", () => {
 
   it("returns 2 on API error", async () => {
     const root = tempDir("canon-emit-");
-    scaffoldBriefs(root);
+    scaffoldXbrief(root);
     writeScopeFixture(root, "pending", "2026-01-01-boom.json", { references: [] });
     const c = ghClient({
       fetchFn: (async () => {

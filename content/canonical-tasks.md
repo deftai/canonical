@@ -10,20 +10,20 @@ The `-x` flag makes go-task propagate the verb's exact exit code; without it eve
 ## Solo Path
 
 ### `setup`
-**Does:** One-time per clone. Set `core.hooksPath`; deposit pre-commit (runs `verify:branch`, `verify:encoding -- --staged`, `verify:forward-coverage -- --staged`, `state:validate` when `briefs/` exists) and pre-push (refuses force-push/`+refspec` to default branch and repo-delete operations; env bypass `ALLOW_DESTRUCTIVE_GIT=1` prints an audit line). Probe toolchain presence; print found/missing.
+**Does:** One-time per clone. Set `core.hooksPath`; deposit pre-commit (runs `verify:branch`, `verify:encoding -- --staged`, `verify:forward-coverage -- --staged`, `state:validate` when `xbrief/` exists) and pre-push (refuses force-push/`+refspec` to default branch and repo-delete operations; env bypass `ALLOW_DESTRUCTIVE_GIT=1` prints an audit line). Probe toolchain presence; print found/missing.
 **Exit:** `0` wired · `2` cannot write hooks.
 
 ### `orient`
-**Does:** Mutation-session readiness snapshot: git status, `briefs/` readable, core tools on PATH.
-**Exit:** `0` ready · `1` missing `briefs/` or dirty tree without `--allow-dirty` · `2` tools broken.
+**Does:** Mutation-session readiness snapshot: git status, `xbrief/` readable, core tools on PATH.
+**Exit:** `0` ready · `1` missing `xbrief/` or dirty tree without `--allow-dirty` · `2` tools broken.
 **Not:** package upgrades, network probes, multi-minute doctoring.
 
 ### `check`
-**Does:** Project quality gate, in order: format check → lint → build → tests with coverage (fail under 85% lines/functions/branches/statements when coverage tooling exists) → `state:validate` → `verify:encoding`. Command list from `briefs/PROJECT.json` `quality.commands[]`, else detect from `package.json`/`go.mod`/`pyproject.toml`.
+**Does:** Project quality gate, in order: format check → lint → build → tests with coverage (fail under 85% lines/functions/branches/statements when coverage tooling exists) → `state:validate` → `verify:encoding`. Command list from `xbrief/PROJECT.json` `quality.commands[]`, else detect from `package.json`/`go.mod`/`pyproject.toml`.
 **Exit:** `0` all pass · `1` failure (print failing stage) · `2` no commands configured or detected.
 
 ### `state:validate`
-**Does:** Validate all `briefs/**/*.json`: schema shape, status enum, filename pattern in lifecycle folders, folder↔status consistency, references carry `uri`+`type`+`trust`, ingested scopes carry origin reference + `Origin` narrative, no duplicate origin URIs, swarm block shape when present (non-empty `file_scope`/`verify_commands`, 2–5 acceptance items for `readiness: ready`).
+**Does:** Validate all `xbrief/**/*.json`: schema shape, status enum, filename pattern in lifecycle folders, folder↔status consistency, references carry `uri`+`type`+`trust`, ingested scopes carry origin reference + `Origin` narrative, no duplicate origin URIs, swarm block shape when present (non-empty `file_scope`/`verify_commands`, 2–5 acceptance items for `readiness: ready`).
 **Exit:** `0` · `1` violations (print per-file findings) · `2` I/O error.
 
 ### `verify:branch`
@@ -38,16 +38,16 @@ The `-x` flag makes go-task propagate the verb's exact exit code; without it eve
 **Exit:** `0` · `1` listing uncovered files.
 
 ### `work:next`
-**Does:** Print the next work item, pure logic: (1) first incomplete entry of an ordered sequence in `briefs/plan.json`, else (2) `briefs/pending/*.json` ranked dependencies-satisfied-first then oldest `plan.created`, else (3) empty.
+**Does:** Print the next work item, pure logic: (1) first incomplete entry of an ordered sequence in `xbrief/plan.json`, else (2) `xbrief/pending/*.json` ranked dependencies-satisfied-first then oldest `plan.created`, else (3) empty.
 **Exit:** `0` printed · `1` empty · `2` corrupt JSON.
 **Not:** live GitHub; no network.
 
 ### `triage`
-**Does:** Record a decision on a candidate. `accept|reject|defer|duplicate -- <scope-or-origin> [--note=…]`. accept → `pending/` (WIP-cap check; `--force` logs a cap-override row); reject → `cancelled/`; defer → stays `proposed/`, note stamped; duplicate → cancel + reference the winning URI. Appends to `briefs/audit.jsonl`.
+**Does:** Record a decision on a candidate. `accept|reject|defer|duplicate -- <scope-or-origin> [--note=…]`. accept → `pending/` (WIP-cap check; `--force` logs a cap-override row); reject → `cancelled/`; defer → stays `proposed/`, note stamped; duplicate → cancel + reference the winning URI. Appends to `xbrief/audit.jsonl`.
 **Exit:** `0` · `1` WIP cap hit on accept · `2` bad args/path.
 
 ### `scope:new`
-**Does:** Create `briefs/proposed/<today>-<normalized-slug>.json` (status `proposed`) from the schema skeleton. Slug: lowercase `[a-z0-9-]`, ≤80 chars.
+**Does:** Create `xbrief/proposed/<today>-<normalized-slug>.json` (status `proposed`) from the schema skeleton. Slug: lowercase `[a-z0-9-]`, ≤80 chars.
 **Exit:** `0` (prints path) · `1` slug collision (prints existing path) · `2` error.
 
 ### `scope:start`
@@ -59,14 +59,14 @@ The `-x` flag makes go-task propagate the verb's exact exit code; without it eve
 **Exit:** `0` · `1` missing delivery evidence · `2` error.
 
 ### `scope:stop`
-**Does:** Non-happy terminal or pause. `-- <path> --cancel|--fail|--block|--unblock|--demote [--note=…]`. cancel → `cancelled/`; fail → `completed/` + `failed`; block/unblock toggle within `active/`; demote → `pending/`. Note recorded in narratives; every transition appends to `briefs/audit.jsonl`.
+**Does:** Non-happy terminal or pause. `-- <path> --cancel|--fail|--block|--unblock|--demote [--note=…]`. cancel → `cancelled/`; fail → `completed/` + `failed`; block/unblock toggle within `active/`; demote → `pending/`. Note recorded in narratives; every transition appends to `xbrief/audit.jsonl`.
 **Exit:** `0` · `1` illegal transition · `2` error.
 
 ### `render`
-**Does:** `roadmap|spec [--check]`. `roadmap`: generate `ROADMAP.md` from lifecycle folders (one section per folder; one row per scope: title, status, origin link, dependencies). `spec`: generate `SPEC.md` from `briefs/spec.json`. Output opens with a 4-line `AUTO-GENERATED` banner (generator, purpose, source of truth, regenerate command). `--check` exits 1 if the committed file differs from regenerated output.
+**Does:** `roadmap|spec [--check]`. `roadmap`: generate `ROADMAP.md` from lifecycle folders (one section per folder; one row per scope: title, status, origin link, dependencies). `spec`: generate `SPEC.md` from `xbrief/spec.json`. Output opens with a 4-line `AUTO-GENERATED` banner (generator, purpose, source of truth, regenerate command). `--check` exits 1 if the committed file differs from regenerated output.
 
 ### `policy`
-**Does:** `show [--field=…]` prints `policy.*` fields with values and defaults. `set --field= --value= --confirm` writes one typed field; refuses unknown fields, type mismatches, and absence of `--confirm`; appends `{ts, field, old, new, actor}` to `briefs/audit.jsonl`.
+**Does:** `show [--field=…]` prints `policy.*` fields with values and defaults. `set --field= --value= --confirm` writes one typed field; refuses unknown fields, type mismatches, and absence of `--confirm`; appends `{ts, field, old, new, actor}` to `xbrief/audit.jsonl`.
 **Exit:** `0` · `1` unknown field/refused · `2` error.
 
 ## Ship Path
@@ -105,7 +105,7 @@ The `-x` flag makes go-task propagate the verb's exact exit code; without it eve
 | LLM triage auto-classification | not deterministic |
 | Deploy provider playbooks | not pack core |
 | Body-encoding helpers as top-level verbs | library inside `issue:sync` / PR tooling |
-| Undo verbs | `briefs/` is committed; git history is the undo |
+| Undo verbs | `xbrief/` is committed; git history is the undo |
 
 ## Minimal Install Order
 

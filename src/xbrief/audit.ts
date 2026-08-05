@@ -2,7 +2,7 @@ import { appendFileSync, existsSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { assertContained } from "../fs/contained-write.js";
 
-/** Append-only audit log at briefs/audit.jsonl (content/state.md Layout). */
+/** Append-only audit log at xbrief/audit.jsonl (content/state.md Layout). */
 
 export interface AuditRecord {
   readonly ts: string;
@@ -11,7 +11,7 @@ export interface AuditRecord {
 }
 
 export function auditLogPath(projectRoot: string): string {
-  return join(projectRoot, "briefs", "audit.jsonl");
+  return join(projectRoot, "xbrief", "audit.jsonl");
 }
 
 export function appendAudit(
@@ -19,7 +19,7 @@ export function appendAudit(
   record: Omit<AuditRecord, "ts"> & { readonly ts?: string },
   now: Date = new Date(),
 ): void {
-  const abs = assertContained(projectRoot, "briefs/audit.jsonl");
+  const abs = assertContained(projectRoot, "xbrief/audit.jsonl");
   const full: AuditRecord = { ts: record.ts ?? now.toISOString(), ...record } as AuditRecord;
   if (!existsSync(dirname(abs))) {
     mkdirSync(dirname(abs), { recursive: true });

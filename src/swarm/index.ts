@@ -1,10 +1,10 @@
 import { existsSync, readFileSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
-import { appendAudit } from "../briefs/audit.js";
-import { findScope, listScopes, readScope, transitionScope } from "../briefs/brief-io.js";
 import { atomicWriteJson } from "../fs/contained-write.js";
 import { currentBranch } from "../git/index.js";
 import type { ScopeFile } from "../types/index.js";
+import { appendAudit } from "../xbrief/audit.js";
+import { findScope, listScopes, readScope, transitionScope } from "../xbrief/brief-io.js";
 
 /**
  * `swarm:run` -- cohort prep or finalize, never spawns (content/canonical-tasks.md

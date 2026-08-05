@@ -20,7 +20,7 @@ tasks:
           ENGINE_CMD: 'setup {{.CLI_ARGS}} --project-root "{{.USER_WORKING_DIR}}"'
 
   "orient":
-    desc: "Mutation-session readiness snapshot: git status, briefs/, core tools."
+    desc: "Mutation-session readiness snapshot: git status, xbrief/, core tools."
     dir: '{{.USER_WORKING_DIR}}'
     deps:
       - task: engine:_ts-build
@@ -40,7 +40,7 @@ tasks:
           ENGINE_CMD: 'check {{.CLI_ARGS}} --project-root "{{.USER_WORKING_DIR}}"'
 
   "state:validate":
-    desc: "Validate all briefs/**/*.json for schema shape and lifecycle consistency."
+    desc: "Validate all xbrief/**/*.json for schema shape and lifecycle consistency."
     dir: '{{.USER_WORKING_DIR}}'
     deps:
       - task: engine:_ts-build
@@ -80,7 +80,7 @@ tasks:
           ENGINE_CMD: 'verify:forward-coverage {{.CLI_ARGS}} --project-root "{{.USER_WORKING_DIR}}"'
 
   "work:next":
-    desc: "Print the next work item from briefs/plan.json or briefs/pending/."
+    desc: "Print the next work item from xbrief/plan.json or xbrief/pending/."
     dir: '{{.USER_WORKING_DIR}}'
     deps:
       - task: engine:_ts-build
@@ -140,7 +140,7 @@ tasks:
           ENGINE_CMD: 'scope:stop {{.CLI_ARGS}} --project-root "{{.USER_WORKING_DIR}}"'
 
   "render":
-    desc: "Generate ROADMAP.md or SPEC.md from lifecycle folders / briefs/spec.json."
+    desc: "Generate ROADMAP.md or SPEC.md from lifecycle folders / xbrief/spec.json."
     dir: '{{.USER_WORKING_DIR}}'
     deps:
       - task: engine:_ts-build

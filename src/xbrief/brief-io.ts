@@ -4,24 +4,24 @@ import { atomicWriteJson } from "../fs/contained-write.js";
 import type { LifecycleFolder, ScopeFile, ScopeStatus } from "../types/index.js";
 import { LIFECYCLE_FOLDERS, SCOPE_FILENAME_RE, STATUS_FOLDER_MAP } from "../types/index.js";
 
-/** briefs/ path helpers + scope file read/write. Reads never throw on bad JSON -- they return result objects. */
+/** xbrief/ path helpers + scope file read/write. Reads never throw on bad JSON -- they return result objects. */
 
-export function briefsRoot(projectRoot: string): string {
-  return join(projectRoot, "briefs");
+export function xbriefRoot(projectRoot: string): string {
+  return join(projectRoot, "xbrief");
 }
 
 export function lifecycleDir(projectRoot: string, folder: LifecycleFolder): string {
-  return join(briefsRoot(projectRoot), folder);
+  return join(xbriefRoot(projectRoot), folder);
 }
 
-export function briefsExist(projectRoot: string): boolean {
-  return existsSync(briefsRoot(projectRoot));
+export function xbriefExist(projectRoot: string): boolean {
+  return existsSync(xbriefRoot(projectRoot));
 }
 
 export interface ScopeRef {
   /** Absolute path. */
   readonly path: string;
-  /** Path relative to project root, POSIX separators (e.g. "briefs/active/2026-08-04-x.json"). */
+  /** Path relative to project root, POSIX separators (e.g. "xbrief/active/2026-08-04-x.json"). */
   readonly relPath: string;
   readonly folder: LifecycleFolder;
   readonly filename: string;
@@ -69,7 +69,7 @@ export function listScopes(projectRoot: string): readonly ScopeRef[] {
       }
       out.push({
         path: join(dir, name),
-        relPath: `briefs/${folder}/${name}`,
+        relPath: `xbrief/${folder}/${name}`,
         folder,
         filename: name,
       });
@@ -142,7 +142,7 @@ export function transitionScope(
     ...scope,
     plan: { ...scope.plan, status: newStatus, updated: now.toISOString() },
   };
-  const targetRel = `briefs/${targetFolder}/${ref.filename}`;
+  const targetRel = `xbrief/${targetFolder}/${ref.filename}`;
   // Write the updated brief to the TARGET path first (atomicWriteJson mkdirs the
   // folder), then remove the source. Worst case on a crash is a duplicate file
   // (state:validate flags it) -- never a folder/status mismatch or a lost brief.

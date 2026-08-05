@@ -53,7 +53,7 @@ describe("findScopeFilenameCollision", () => {
     writeScopeFixture(root, "proposed", "2026-08-04-taken.json");
     const hit = findScopeFilenameCollision(root, "2026-08-04-taken.json");
     expect(hit).not.toBeNull();
-    expect(hit?.relPath).toBe("briefs/proposed/2026-08-04-taken.json");
+    expect(hit?.relPath).toBe("xbrief/proposed/2026-08-04-taken.json");
   });
 
   it("finds a collision even after the scope moved to a different lifecycle folder", () => {
@@ -77,7 +77,7 @@ describe("integration: skeleton written via writeScope round-trips through readS
     const root = tempGitRepo();
     const now = new Date("2026-08-04T00:00:00.000Z");
     const filename = scopeSkeletonFilename("Round trip me", now);
-    const relPath = `briefs/proposed/${filename}`;
+    const relPath = `xbrief/proposed/${filename}`;
     const skeleton = buildScopeSkeleton("Round trip me", now);
     writeScope(root, relPath, skeleton);
 

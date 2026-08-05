@@ -11,20 +11,20 @@ const brokenProbe = (bin: string): ToolProbe =>
   bin === "git" ? { name: bin, ok: false, detail: "not found" } : okProbe(bin);
 
 describe("orient", () => {
-  it("exits 0 ready on a clean repo with briefs/", () => {
+  it("exits 0 ready on a clean repo with xbrief/", () => {
     const root = tempGitRepo();
     const snapshot = orient(root, { probeTool: okProbe });
     expect(snapshot.code).toBe(0);
     expect(snapshot.isGitRepo).toBe(true);
-    expect(snapshot.briefsReadable).toBe(true);
+    expect(snapshot.xbriefReadable).toBe(true);
     expect(snapshot.dirty).toBe(false);
   });
 
-  it("exits 1 when briefs/ is missing", () => {
+  it("exits 1 when xbrief/ is missing", () => {
     const root = tempGitRepo({ withBriefs: false });
     const snapshot = orient(root, { probeTool: okProbe });
     expect(snapshot.code).toBe(1);
-    expect(snapshot.message).toContain("briefs/ not found");
+    expect(snapshot.message).toContain("xbrief/ not found");
   });
 
   it("exits 1 when the tree is dirty without --allow-dirty", () => {

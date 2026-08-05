@@ -13,7 +13,7 @@ function findingCodes(report: ReturnType<typeof validateState>): string[] {
 }
 
 describe("validateState", () => {
-  it("is ok on an empty briefs/ tree", () => {
+  it("is ok on an empty xbrief/ tree", () => {
     const root = tempGitRepo();
     const report = validateState(root);
     expect(report.ok).toBe(true);
@@ -274,7 +274,7 @@ describe("validateState", () => {
 
   it("reports invalid-json for unparsable scope files and keeps scanning others", () => {
     const root = tempGitRepo();
-    writeFileSync(join(root, "briefs", "proposed", "2026-01-01-broken.json"), "{ not json");
+    writeFileSync(join(root, "xbrief", "proposed", "2026-01-01-broken.json"), "{ not json");
     writeScopeFixture(root, "proposed", "2026-01-02-fine.json");
     const report = validateState(root);
     expect(report.ok).toBe(false);

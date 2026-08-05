@@ -13,8 +13,8 @@ Legend: `!` MUST · `~` SHOULD · `≉` SHOULD NOT · `⊗` MUST NOT · `?` MAY
   4. Explicit non-goals (what v1 will NOT do).
   5. Stack (offer a recommended default for their platform; accept "you pick").
 - ! Then generate the state, without further prompting:
-  1. `briefs/PROJECT.json` — title, a `narratives.Description` one-paragraph gestalt, and `quality.commands` for the chosen stack.
-  2. `briefs/spec.json` — narratives `Problem`, `Users`, `NonGoals`; `items` = the must-have list.
+  1. `xbrief/PROJECT.json` — title, a `narratives.Description` one-paragraph gestalt, and `quality.commands` for the chosen stack.
+  2. `xbrief/spec.json` — narratives `Problem`, `Users`, `NonGoals`; `items` = the must-have list.
   3. One scope per must-have feature: `task scope:new -- "<feature>"`, then edit each brief to fill `narratives.Description` and 2–5 observable acceptance `items` derived from the interview.
   4. `task -x state:validate` (must exit 0), then `task -x render -- roadmap`.
 - ! Finish with a short summary and a numbered menu: (1) accept all into pending, (2) review scopes one by one, (3) add/remove a feature, then `Discuss`, `Back`. On accept, use `task triage -- accept <scope>` per scope.

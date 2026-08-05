@@ -1,6 +1,6 @@
 import { existsSync, statSync } from "node:fs";
 import { parseArgs, renderJson } from "../args/index.js";
-import { validateState } from "../briefs/index.js";
+import { validateState } from "../xbrief/index.js";
 
 /** `state:validate` handler. Contract: content/canonical-tasks.md. */
 

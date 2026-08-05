@@ -1,10 +1,10 @@
-import { appendAudit } from "../briefs/audit.js";
-import { findScope, readScope, transitionScope } from "../briefs/brief-io.js";
 import { GhConfigError, type GhSeams, ghClient, resolveRepo } from "../gh/rest.js";
 import { defaultBranch, type GitRunner, isAncestorOf, isGitRepo } from "../git/index.js";
 import { resolvePolicy } from "../policy/index.js";
 import type { DeliveryDisposition, ScopeFile } from "../types/index.js";
 import { DELIVERY_DISPOSITIONS } from "../types/index.js";
+import { appendAudit } from "../xbrief/audit.js";
+import { findScope, readScope, transitionScope } from "../xbrief/brief-io.js";
 
 /**
  * `scope:complete` verb (content/canonical-tasks.md #scope:complete, content/state.md

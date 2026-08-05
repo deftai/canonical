@@ -49,7 +49,7 @@ describe("canon triage", () => {
 
   it("gate failure (WIP cap) returns 1", () => {
     const root = tempGitRepo();
-    atomicWriteJson(root, "briefs/PROJECT.json", { title: "t", policy: { wipCap: 0 } });
+    atomicWriteJson(root, "xbrief/PROJECT.json", { title: "t", policy: { wipCap: 0 } });
     writeScopeFixture(root, "proposed", "2026-01-01-foo.json");
 
     const code = run(["accept", "2026-01-01-foo.json", "--project-root", root]);

@@ -1,6 +1,6 @@
-import { appendAudit } from "../briefs/audit.js";
-import { findScope, readScope, transitionScope } from "../briefs/brief-io.js";
 import type { ScopeFile, ScopeStatus } from "../types/index.js";
+import { appendAudit } from "../xbrief/audit.js";
+import { findScope, readScope, transitionScope } from "../xbrief/brief-io.js";
 
 /**
  * `scope:stop` verb (content/canonical-tasks.md #scope:stop, content/state.md Lifecycle).

@@ -1,6 +1,6 @@
-import { isoDate, listScopes, normalizeSlug, readScope, writeScope } from "../briefs/brief-io.js";
 import type { GhClient, RepoSlug } from "../gh/rest.js";
 import type { ScopeFile } from "../types/index.js";
+import { isoDate, listScopes, normalizeSlug, readScope, writeScope } from "../xbrief/brief-io.js";
 
 /** Exit codes per content/canonical-tasks.md `issue:sync ingest`. */
 export type IngestExitCode = 0 | 1 | 2;
@@ -132,7 +132,7 @@ export async function ingest(
     // the filename contract holds.
     const slug = normalizeSlug(issue.title) || "untitled";
     const filename = `${isoDate(now)}-${slug}-issue-${issue.number}.json`;
-    const relPath = `briefs/proposed/${filename}`;
+    const relPath = `xbrief/proposed/${filename}`;
     if (opts.dryRun !== true) {
       writeScope(projectRoot, relPath, scope);
     }

@@ -65,10 +65,10 @@ describe("work-next handler", () => {
     expect(err.join("")).toBe("");
   });
 
-  it("exits 2 when briefs/plan.json is corrupt", () => {
+  it("exits 2 when xbrief/plan.json is corrupt", () => {
     const root = tempGitRepo();
-    mkdirSync(join(root, "briefs"), { recursive: true });
-    writeFileSync(join(root, "briefs", "plan.json"), "{ not json");
+    mkdirSync(join(root, "xbrief"), { recursive: true });
+    writeFileSync(join(root, "xbrief", "plan.json"), "{ not json");
     const code = run(["--project-root", root]);
     expect(code).toBe(2);
   });

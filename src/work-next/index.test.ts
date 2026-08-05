@@ -9,12 +9,12 @@ afterAll(() => {
 });
 
 function writePlan(root: string, value: unknown): void {
-  mkdirSync(join(root, "briefs"), { recursive: true });
-  writeFileSync(join(root, "briefs", "plan.json"), JSON.stringify(value, null, 2));
+  mkdirSync(join(root, "xbrief"), { recursive: true });
+  writeFileSync(join(root, "xbrief", "plan.json"), JSON.stringify(value, null, 2));
 }
 
 describe("workNext", () => {
-  it("returns empty when briefs/ has no plan.json and no pending scopes", () => {
+  it("returns empty when xbrief/ has no plan.json and no pending scopes", () => {
     const root = tempGitRepo();
     const result = workNext(root);
     expect(result.kind).toBe("empty");
@@ -67,8 +67,8 @@ describe("workNext", () => {
 
   it("errors when plan.json is not valid JSON", () => {
     const root = tempGitRepo();
-    mkdirSync(join(root, "briefs"), { recursive: true });
-    writeFileSync(join(root, "briefs", "plan.json"), "{ not json");
+    mkdirSync(join(root, "xbrief"), { recursive: true });
+    writeFileSync(join(root, "xbrief", "plan.json"), "{ not json");
     const result = workNext(root);
     expect(result.kind).toBe("error");
   });
@@ -82,14 +82,14 @@ describe("workNext", () => {
 
   it("errors when a sequence entry points at unparsable JSON", () => {
     const root = tempGitRepo();
-    mkdirSync(join(root, "briefs", "pending"), { recursive: true });
-    writeFileSync(join(root, "briefs", "pending", "2026-01-01-broken.json"), "{ not json");
-    writePlan(root, { sequence: ["briefs/pending/2026-01-01-broken.json"] });
+    mkdirSync(join(root, "xbrief", "pending"), { recursive: true });
+    writeFileSync(join(root, "xbrief", "pending", "2026-01-01-broken.json"), "{ not json");
+    writePlan(root, { sequence: ["xbrief/pending/2026-01-01-broken.json"] });
     const result = workNext(root);
     expect(result.kind).toBe("error");
   });
 
-  it("falls back to ranking briefs/pending/*.json when plan.json has no sequence field", () => {
+  it("falls back to ranking xbrief/pending/*.json when plan.json has no sequence field", () => {
     const root = tempGitRepo();
     writePlan(root, { title: "no sequence here" });
     const older = writeScopeFixture(root, "pending", "2026-01-01-older.json", {
@@ -199,8 +199,8 @@ describe("workNext", () => {
 
   it("errors when a pending scope file is unparsable", () => {
     const root = tempGitRepo();
-    mkdirSync(join(root, "briefs", "pending"), { recursive: true });
-    writeFileSync(join(root, "briefs", "pending", "2026-01-01-broken.json"), "{ not json");
+    mkdirSync(join(root, "xbrief", "pending"), { recursive: true });
+    writeFileSync(join(root, "xbrief", "pending", "2026-01-01-broken.json"), "{ not json");
     const result = workNext(root);
     expect(result.kind).toBe("error");
   });

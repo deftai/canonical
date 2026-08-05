@@ -11,7 +11,7 @@ afterAll(() => {
 function emptyProject(): string {
   const root = tempDir("cli-render-test-");
   for (const folder of ["proposed", "pending", "active", "completed", "cancelled"]) {
-    mkdirSync(join(root, "briefs", folder), { recursive: true });
+    mkdirSync(join(root, "xbrief", folder), { recursive: true });
   }
   return root;
 }
@@ -75,11 +75,11 @@ describe("canon render", () => {
     expect(code).toBe(0);
   });
 
-  it("spec exits 1 (violation) when briefs/spec.json is absent", () => {
+  it("spec exits 1 (violation) when xbrief/spec.json is absent", () => {
     const root = emptyProject();
     const code = run(["spec", "--project-root", root]);
     expect(code).toBe(1);
-    expect(errBuf.join("")).toContain("briefs/spec.json missing");
+    expect(errBuf.join("")).toContain("xbrief/spec.json missing");
   });
 
   it("--json prints a one-line key-sorted payload to stdout", () => {
@@ -91,7 +91,7 @@ describe("canon render", () => {
     expect(line.split("\n")).toHaveLength(1);
     expect(JSON.parse(line)).toEqual({
       code: 1,
-      message: "briefs/spec.json missing",
+      message: "xbrief/spec.json missing",
       ok: false,
       path: null,
     });

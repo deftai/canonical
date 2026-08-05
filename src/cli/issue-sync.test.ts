@@ -4,7 +4,7 @@ import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vites
 import type { GhSeams } from "../gh/index.js";
 import {
   cleanupTempDirs,
-  scaffoldBriefs,
+  scaffoldXbrief,
   tempDir,
   writeScopeFixture,
 } from "../test-support/index.js";
@@ -89,7 +89,7 @@ describe("issue-sync run()", () => {
 
     it("writes a scope for a single issue and exits 0", async () => {
       const root = tempDir("canon-issue-sync-cli-");
-      scaffoldBriefs(root);
+      scaffoldXbrief(root);
       const code = await run(["ingest", "9", `--project-root=${root}`, "--json"], {
         env: { GH_TOKEN: "t" },
         exec: fakeExec,
@@ -111,7 +111,7 @@ describe("issue-sync run()", () => {
 
     it("dedup skip: exits 1 when the issue is already ingested", async () => {
       const root = tempDir("canon-issue-sync-cli-");
-      scaffoldBriefs(root);
+      scaffoldXbrief(root);
       writeScopeFixture(root, "pending", "2026-01-01-dup-issue-9.json", {
         references: [
           {
@@ -142,7 +142,7 @@ describe("issue-sync run()", () => {
 
     it("--dry-run plans writes without touching disk", async () => {
       const root = tempDir("canon-issue-sync-cli-");
-      scaffoldBriefs(root);
+      scaffoldXbrief(root);
       const code = await run(["ingest", "9", `--project-root=${root}`, "--dry-run"], {
         env: { GH_TOKEN: "t" },
         exec: fakeExec,
@@ -170,7 +170,7 @@ describe("issue-sync run()", () => {
 
     it("round-trips: creates then updates the same issue", async () => {
       const root = tempDir("canon-issue-sync-cli-");
-      scaffoldBriefs(root);
+      scaffoldXbrief(root);
       const rel = writeScopeFixture(root, "pending", "2026-01-01-emit-me.json", {
         title: "Emit me",
         references: [],
@@ -203,7 +203,7 @@ describe("issue-sync run()", () => {
   describe("reconcile", () => {
     it("exits 0 with no drift", async () => {
       const root = tempDir("canon-issue-sync-cli-");
-      scaffoldBriefs(root);
+      scaffoldXbrief(root);
       const code = await run(["reconcile", `--project-root=${root}`], {
         env: { GH_TOKEN: "t" },
         exec: fakeExec,
@@ -216,7 +216,7 @@ describe("issue-sync run()", () => {
 
     it("exits 1 when drift is found", async () => {
       const root = tempDir("canon-issue-sync-cli-");
-      scaffoldBriefs(root);
+      scaffoldXbrief(root);
       const code = await run(["reconcile", `--project-root=${root}`, "--json"], {
         env: { GH_TOKEN: "t" },
         exec: fakeExec,

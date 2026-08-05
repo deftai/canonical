@@ -1,13 +1,13 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { briefsRoot, listScopes, readScope } from "../briefs/brief-io.js";
 import type { ScopeFile, ScopeStatus } from "../types/index.js";
+import { listScopes, readScope, xbriefRoot } from "../xbrief/brief-io.js";
 
 /**
  * `work:next` -- pure ranking logic (content/canonical-tasks.md):
- *  1. `briefs/plan.json` `sequence: string[]` (rel-paths) -> first entry
+ *  1. `xbrief/plan.json` `sequence: string[]` (rel-paths) -> first entry
  *     whose scope status is not terminal.
- *  2. else `briefs/pending/*.json` ranked dependencies-satisfied-first,
+ *  2. else `xbrief/pending/*.json` ranked dependencies-satisfied-first,
  *     then oldest `plan.created`.
  *  3. else empty.
  *
@@ -29,7 +29,7 @@ export type WorkNextResult =
   | { readonly kind: "error"; readonly message: string };
 
 function planPath(projectRoot: string): string {
-  return join(briefsRoot(projectRoot), "plan.json");
+  return join(xbriefRoot(projectRoot), "plan.json");
 }
 
 function toItem(relPath: string, scope: ScopeFile): WorkNextItem {

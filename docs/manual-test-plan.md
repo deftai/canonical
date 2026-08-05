@@ -67,7 +67,7 @@ ALLOW_DEFAULT_BRANCH_COMMIT=1 git commit -m "install canonical"
 
 ```bash
 git switch -c feat/guess-evaluation
-task -x orient                      # ▶ exit 0: git ok, briefs/ readable, tools present
+task -x orient                      # ▶ exit 0: git ok, xbrief/ readable, tools present
 task -x scope:new -- "guess evaluation greens yellows grays"
 task -x scope:new -- "keyboard state tracker"
 task -x scope:new -- "hard mode guess validation"
@@ -75,7 +75,7 @@ task -x state:validate              # ▶ exit 0, 3 scope files scanned
 ```
 
 Add acceptance criteria to the first brief (hand edit is allowed; the validator is the gate).
-Edit `briefs/proposed/<date>-guess-evaluation-greens-yellows-grays.json` and set:
+Edit `xbrief/proposed/<date>-guess-evaluation-greens-yellows-grays.json` and set:
 
 ```json
 "items": [
@@ -94,7 +94,7 @@ task -x render -- roadmap && cat ROADMAP.md
 git add -A && git commit -m "seed backlog"      # ▶ hooks pass (feature branch, ASCII, no new src)
 ```
 
-Also check the audit trail: `cat briefs/audit.jsonl` ▶ one row per triage decision.
+Also check the audit trail: `cat xbrief/audit.jsonl` ▶ one row per triage decision.
 
 ## Phase 3 — Feature 1: guess evaluation (full happy path)
 
@@ -163,7 +163,7 @@ git switch main && git merge --ff-only feat/guess-evaluation
 task -x scope:complete -- guess-evaluation --disposition delivered --sha "$(git rev-parse HEAD)"
 ```
 
-▶ exit 0. Inspect `briefs/completed/…guess-evaluation….json` ▶ has a `delivery` block with sha + branch.
+▶ exit 0. Inspect `xbrief/completed/…guess-evaluation….json` ▶ has a `delivery` block with sha + branch.
 
 **Gate tests on complete:**
 
@@ -216,7 +216,7 @@ Also test the kickoff flow in a SECOND fresh project (`mkdir`, `git init`, `cano
 
 > I want to make a wordle app, help me set this up.
 
-▶ Per `kickoff.md` the agent should interview you (one numbered question per turn, Discuss/Back last), then generate `briefs/PROJECT.json`, `briefs/spec.json`, one proposed scope per must-have feature with acceptance items, validate, render the roadmap, and offer a triage menu. Then say "oh, and I also want hard mode" ▶ one new scope appears with acceptance criteria and a triage prompt. Then ask it to build a feature whose brief you emptied out ▶ it should stop and ask up to 3 questions before `scope:start`.
+▶ Per `kickoff.md` the agent should interview you (one numbered question per turn, Discuss/Back last), then generate `xbrief/PROJECT.json`, `xbrief/spec.json`, one proposed scope per must-have feature with acceptance items, validate, render the roadmap, and offer a triage menu. Then say "oh, and I also want hard mode" ▶ one new scope appears with acceptance criteria and a triage prompt. Then ask it to build a feature whose brief you emptied out ▶ it should stop and ask up to 3 questions before `scope:start`.
 
 Score the agent against this checklist:
 
@@ -239,7 +239,7 @@ task -x pr:watch -- <N> --one-shot
 task -x pr:finish -- <N>                    # ▶ exit 1 HANDOFF: requireHumanMerge defaults true
 task -x policy -- set --field requireHumanMerge --value false --confirm
 task -x pr:finish -- <N>                    # ▶ merges when CLEAN + closing keyword present
-cat briefs/audit.jsonl | tail -2            # ▶ policy-set row recorded
+cat xbrief/audit.jsonl | tail -2            # ▶ policy-set row recorded
 ```
 
 ## Phase 7 — Maintenance checks

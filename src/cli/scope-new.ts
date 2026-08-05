@@ -5,7 +5,7 @@ import {
   findScopeFilenameCollision,
   scopeSkeletonFilename,
   writeScope,
-} from "../briefs/index.js";
+} from "../xbrief/index.js";
 
 /** `scope:new` handler. Contract: content/canonical-tasks.md. */
 
@@ -51,7 +51,7 @@ export function run(argv: string[]): number {
     const message = `title '${title}' normalizes to an empty slug -- use a title with letters or digits`;
     return emit(json, 2, { ok: false, error: message }, `canon: scope-new: ${message}\n`);
   }
-  const relPath = `briefs/proposed/${filename}`;
+  const relPath = `xbrief/proposed/${filename}`;
 
   const collision = findScopeFilenameCollision(projectRoot, filename);
   if (collision !== null) {

@@ -10,16 +10,16 @@ afterAll(() => {
 
 function writeProject(overrides: Record<string, unknown> = {}): string {
   const root = tempDir("check-test-");
-  mkdirSync(join(root, "briefs"), { recursive: true });
+  mkdirSync(join(root, "xbrief"), { recursive: true });
   writeFileSync(
-    join(root, "briefs", "PROJECT.json"),
+    join(root, "xbrief", "PROJECT.json"),
     `${JSON.stringify({ title: "t", policy: {}, ...overrides }, null, 2)}\n`,
   );
   return root;
 }
 
 describe("resolveCheckCommands: detection matrix", () => {
-  it("uses briefs/PROJECT.json quality.commands when non-empty", () => {
+  it("uses xbrief/PROJECT.json quality.commands when non-empty", () => {
     const root = writeProject({ quality: { commands: ["custom lint", "custom test"] } });
     const result = resolveCheckCommands(root);
     expect(result).toEqual({ ok: true, commands: ["custom lint", "custom test"] });

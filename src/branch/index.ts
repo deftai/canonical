@@ -59,7 +59,7 @@ export function evaluateBranch(
   }
 
   // On the default branch: env override is checked first because it never
-  // requires reading briefs/PROJECT.json (cheap, and wins if both are set).
+  // requires reading xbrief/PROJECT.json (cheap, and wins if both are set).
   if (envOverrideActive(env)) {
     return {
       code: 0,
@@ -95,7 +95,7 @@ export function evaluateBranch(
     message:
       `verify:branch: refusing commit on default branch '${branch}'.\n` +
       "  Fix: create a feature branch (git switch -c feat/<name>), or set " +
-      "policy.allowDirectCommitsToDefault=true in briefs/PROJECT.json, or " +
+      "policy.allowDirectCommitsToDefault=true in xbrief/PROJECT.json, or " +
       `set ${ENV_ALLOW_DEFAULT_BRANCH_COMMIT}=1.`,
   };
 }

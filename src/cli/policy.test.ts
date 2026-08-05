@@ -10,16 +10,16 @@ afterAll(() => {
 
 function writeProject(policy: Record<string, unknown> = {}): string {
   const root = tempDir("cli-policy-test-");
-  mkdirSync(join(root, "briefs"), { recursive: true });
+  mkdirSync(join(root, "xbrief"), { recursive: true });
   writeFileSync(
-    join(root, "briefs", "PROJECT.json"),
+    join(root, "xbrief", "PROJECT.json"),
     `${JSON.stringify({ title: "t", policy }, null, 2)}\n`,
   );
   return root;
 }
 
 function auditRows(root: string): unknown[] {
-  const path = join(root, "briefs", "audit.jsonl");
+  const path = join(root, "xbrief", "audit.jsonl");
   if (!existsSync(path)) {
     return [];
   }
@@ -128,7 +128,7 @@ describe("canon policy", () => {
       expect(code).toBe(0);
       expect(outBuf.join("")).toContain("policy.wipCap: null -> 7");
 
-      const project = JSON.parse(readFileSync(join(root, "briefs", "PROJECT.json"), "utf8"));
+      const project = JSON.parse(readFileSync(join(root, "xbrief", "PROJECT.json"), "utf8"));
       expect(project.policy.wipCap).toBe(7);
 
       const rows = auditRows(root);

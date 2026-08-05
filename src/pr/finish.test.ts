@@ -44,8 +44,8 @@ const HEAD_SHA = "abc123";
 
 function projectRoot(policy: Record<string, unknown> = {}): string {
   const root = tempDir("canon-finish-");
-  mkdirSync(join(root, "briefs"), { recursive: true });
-  writeFileSync(join(root, "briefs", "PROJECT.json"), JSON.stringify({ title: "t", policy }));
+  mkdirSync(join(root, "xbrief"), { recursive: true });
+  writeFileSync(join(root, "xbrief", "PROJECT.json"), JSON.stringify({ title: "t", policy }));
   return root;
 }
 

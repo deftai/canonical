@@ -54,7 +54,7 @@ describe("state-validate handler", () => {
     const code = run(["--project-root", root]);
     expect(code).toBe(1);
     expect(out.join("")).toBe("");
-    expect(err.join("")).toContain("briefs/active/2026-01-01-mismatch.json");
+    expect(err.join("")).toContain("xbrief/active/2026-01-01-mismatch.json");
     expect(err.join("")).toContain("folder-status-mismatch");
   });
 

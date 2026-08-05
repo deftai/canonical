@@ -7,7 +7,7 @@ Legend: `!` MUST · `~` SHOULD · `≉` SHOULD NOT · `⊗` MUST NOT · `?` MAY
 ## Layout
 
 ```text
-briefs/
+xbrief/
   PROJECT.json      # identity + policy.* + scope registry
   spec.json         # requirements/design source (SPEC.md renders from this)
   plan.json         # ordered plan + session todos
@@ -16,7 +16,7 @@ briefs/
   proposed/  pending/  active/  completed/  cancelled/    # scope files
 ```
 
-- ! All work-state files live under `briefs/`; ⊗ scope files at repo root. The root files are singular — ⊗ suffixed variants (`plan-2.json`, `todo-*.json`); todos live in `plan.json`, not harness-native todo state.
+- ! All work-state files live under `xbrief/`; ⊗ scope files at repo root. The root files are singular — ⊗ suffixed variants (`plan-2.json`, `todo-*.json`); todos live in `plan.json`, not harness-native todo state.
 - ⊗ Delete any brief except `continue.json` as scratch. ~ Cancel instead of delete — history is data.
 
 ## Scope Files
@@ -84,7 +84,7 @@ proposed --triage accept--> pending --scope:start--> active --scope:complete--> 
 
 - ! Parallelized stories need non-empty `file_scope` and `verify_commands`, 2–5 observable acceptance items, and pairwise-disjoint file scopes across the cohort. ⊗ `readiness: "ready"` with an empty `file_scope`, empty `verify_commands`, or broad globs (`src/**`).
 
-## Project Policy (`briefs/PROJECT.json` → `policy.*`)
+## Project Policy (`xbrief/PROJECT.json` → `policy.*`)
 
 | field | meaning | default |
 |---|---|---|
@@ -94,7 +94,7 @@ proposed --triage accept--> pending --scope:start--> active --scope:complete--> 
 | `requireHumanMerge` | agents open PRs; humans merge | `true` when auto-deploy-on-merge |
 | `runtimeAuthority.denyPaths` | paths no agent may write | `[]` |
 
-- ! Respect these when present; use the defaults when absent. Change only via `task policy set` (confirmed, audited to `briefs/audit.jsonl`).
+- ! Respect these when present; use the defaults when absent. Change only via `task policy set` (confirmed, audited to `xbrief/audit.jsonl`).
 
 ## Planning Contract
 
@@ -105,7 +105,7 @@ proposed --triage accept--> pending --scope:start--> active --scope:complete--> 
 
 ## Checkpoint & Resume
 
-- ! `briefs/continue.json` on interruption/context exhaustion: completed items, remaining items, decisions, hazards, exact resume point, references to active scopes.
+- ! `xbrief/continue.json` on interruption/context exhaustion: completed items, remaining items, decisions, hazards, exact resume point, references to active scopes.
 - ! On resume: read it, continue from the resume point, mark it consumed (delete or status `completed`). ⊗ Re-debate recorded decisions; ⊗ let stale checkpoints accumulate.
 - ! Never summarize a summary — rebuild from the level below plus actual code state. On context rot (repeating tool calls, conflating details, re-litigating settled choices), checkpoint and recommend a fresh session.
 

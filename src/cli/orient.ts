@@ -19,7 +19,7 @@ export function run(argv: string[]): number {
     process.stdout.write(
       `${renderJson({
         branch: snapshot.branch,
-        briefs_readable: snapshot.briefsReadable,
+        xbrief_readable: snapshot.xbriefReadable,
         dirty: snapshot.dirty,
         exit_code: snapshot.code,
         is_git_repo: snapshot.isGitRepo,

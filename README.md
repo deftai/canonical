@@ -26,7 +26,7 @@ canon init
 This deposits `.canonical/core/` (the rule pack + Taskfile + hooks), writes an
 `AGENTS.md` managed section pointing your AI agent at the rules, wires the root
 `Taskfile.yml` include (verbs are bare: `task check`, `task scope:new -- "title"`),
-scaffolds `briefs/` (the durable work state), and installs git hooks.
+scaffolds `xbrief/` (the durable work state), and installs git hooks.
 
 Then open the project with your AI agent and say:
 

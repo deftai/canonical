@@ -7,7 +7,7 @@ import { ENV_ALLOW_DEFAULT_BRANCH_COMMIT, evaluateBranch } from "./index.js";
 afterAll(cleanupTempDirs);
 
 function writeProjectJson(root: string, body: unknown): void {
-  writeFileSync(join(root, "briefs", "PROJECT.json"), JSON.stringify(body));
+  writeFileSync(join(root, "xbrief", "PROJECT.json"), JSON.stringify(body));
 }
 
 describe("evaluateBranch", () => {
@@ -56,7 +56,7 @@ describe("evaluateBranch", () => {
 
   it("exits 2 when PROJECT.json is malformed and no override applies", () => {
     const root = tempGitRepo({ branch: "main" });
-    writeFileSync(join(root, "briefs", "PROJECT.json"), "{not json");
+    writeFileSync(join(root, "xbrief", "PROJECT.json"), "{not json");
     const result = evaluateBranch(root, { env: {} });
     expect(result.code).toBe(2);
     expect(result.message).toContain("cannot resolve policy");

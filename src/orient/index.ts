@@ -1,11 +1,11 @@
 import { spawnSync } from "node:child_process";
-import { briefsExist } from "../briefs/index.js";
 import { currentBranch, type GitRunner, isDirty, isGitRepo } from "../git/index.js";
 import type { GateResult } from "../types/index.js";
+import { xbriefExist } from "../xbrief/index.js";
 
 /**
  * `orient` (content/canonical-tasks.md): first-mutation-of-session readiness
- * snapshot -- git status, briefs/ readable, core tools on PATH. No network,
+ * snapshot -- git status, xbrief/ readable, core tools on PATH. No network,
  * no upgrades, no multi-minute doctoring.
  */
 
@@ -49,12 +49,12 @@ export interface OrientSnapshot extends GateResult {
   readonly isGitRepo: boolean;
   readonly branch: string | null;
   readonly dirty: boolean;
-  readonly briefsReadable: boolean;
+  readonly xbriefReadable: boolean;
   readonly tools: readonly ToolProbe[];
 }
 
 /**
- * Snapshot mutation-session readiness. Exit 0 ready, 1 when briefs/ is
+ * Snapshot mutation-session readiness. Exit 0 ready, 1 when xbrief/ is
  * missing or the tree is dirty without --allow-dirty, 2 when a required
  * tool (git, node) is broken -- checked first since nothing else is
  * trustworthy without a working toolchain.
@@ -69,7 +69,7 @@ export function orient(projectRoot: string, opts: OrientOptions = {}): OrientSna
       isGitRepo: false,
       branch: null,
       dirty: false,
-      briefsReadable: false,
+      xbriefReadable: false,
       tools,
       message: `orient: tool(s) broken -- ${broken.map((t) => `${t.name} (${t.detail})`).join(", ")}.`,
     };
@@ -78,18 +78,18 @@ export function orient(projectRoot: string, opts: OrientOptions = {}): OrientSna
   const gitRepo = isGitRepo(projectRoot, opts.runner);
   const branch = gitRepo ? currentBranch(projectRoot, opts.runner) : null;
   const dirty = gitRepo ? isDirty(projectRoot, opts.runner) : false;
-  const briefsReadable = briefsExist(projectRoot);
+  const xbriefReadable = xbriefExist(projectRoot);
 
-  if (!briefsReadable) {
+  if (!xbriefReadable) {
     return {
       code: 1,
       isGitRepo: gitRepo,
       branch,
       dirty,
-      briefsReadable,
+      xbriefReadable,
       tools,
       message:
-        "orient: briefs/ not found -- not ready for mutation (run `canon scope:new` after bootstrapping).",
+        "orient: xbrief/ not found -- not ready for mutation (run `canon scope:new` after bootstrapping).",
     };
   }
 
@@ -99,7 +99,7 @@ export function orient(projectRoot: string, opts: OrientOptions = {}): OrientSna
       isGitRepo: gitRepo,
       branch,
       dirty,
-      briefsReadable,
+      xbriefReadable,
       tools,
       message: "orient: working tree is dirty -- pass --allow-dirty, or commit/stash first.",
     };
@@ -110,7 +110,7 @@ export function orient(projectRoot: string, opts: OrientOptions = {}): OrientSna
     isGitRepo: gitRepo,
     branch,
     dirty,
-    briefsReadable,
+    xbriefReadable,
     tools,
     message: `orient: ready on branch '${branch ?? "(detached)"}'.`,
   };

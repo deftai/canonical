@@ -19,7 +19,7 @@ function status(overrides: Record<string, unknown> = {}) {
 }
 
 function auditLines(root: string): unknown[] {
-  const raw = readFileSync(join(root, "briefs", "audit.jsonl"), "utf8");
+  const raw = readFileSync(join(root, "xbrief", "audit.jsonl"), "utf8");
   return raw
     .split("\n")
     .filter((l) => l.trim() !== "")
@@ -43,7 +43,7 @@ describe("scopeComplete", () => {
 
     expect(result).toMatchObject({ ok: true, status: "completed" });
     expect(() =>
-      readFileSync(join(root, "briefs", "completed", "2026-01-01-foo.json")),
+      readFileSync(join(root, "xbrief", "completed", "2026-01-01-foo.json")),
     ).not.toThrow();
     expect(auditLines(root)).toContainEqual(
       expect.objectContaining({ kind: "scope-complete", disposition: null }),
@@ -82,7 +82,7 @@ describe("scopeComplete", () => {
 
     expect(result).toMatchObject({ ok: true, status: "completed" });
     const written = JSON.parse(
-      readFileSync(join(root, "briefs", "completed", "2026-01-01-foo.json"), "utf8"),
+      readFileSync(join(root, "xbrief", "completed", "2026-01-01-foo.json"), "utf8"),
     );
     expect(written.delivery).toMatchObject({
       disposition: "accepted_not_delivered",
@@ -104,7 +104,7 @@ describe("scopeComplete", () => {
 
     expect(result).toMatchObject({ ok: true, status: "completed" });
     const written = JSON.parse(
-      readFileSync(join(root, "briefs", "completed", "2026-01-01-foo.json"), "utf8"),
+      readFileSync(join(root, "xbrief", "completed", "2026-01-01-foo.json"), "utf8"),
     );
     expect(written.delivery).toMatchObject({
       disposition: "delivered",

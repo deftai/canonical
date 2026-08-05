@@ -47,7 +47,7 @@ describe("swarmRun -- stories readiness", () => {
     expect(result.manifest?.stories).toHaveLength(2);
     expect(result.manifest?.stories[0]).toMatchObject({
       story_id: "2026-01-01-a.json",
-      story_path: "briefs/active/2026-01-01-a.json",
+      story_path: "xbrief/active/2026-01-01-a.json",
       worktree_path: ".scratch/worktrees/2026-01-01-a",
     });
     expect(result.manifest?.stories[0]?.base_branch).toBeTypeOf("string");
@@ -181,7 +181,7 @@ describe("swarmRun -- stories readiness", () => {
 
   it("errors (2) on an unresolvable story path", () => {
     const root = tempGitRepo({ withBriefs: true });
-    const result = swarmRun(root, { mode: "stories", storyPaths: ["briefs/active/nope.json"] });
+    const result = swarmRun(root, { mode: "stories", storyPaths: ["xbrief/active/nope.json"] });
     expect(result.code).toBe(2);
   });
 
@@ -213,16 +213,16 @@ describe("swarmRun -- finalize", () => {
 
     const result = swarmRun(root, { mode: "finalize", manifestPath });
     expect(result.code).toBe(0);
-    expect(result.finalized).toEqual(["briefs/completed/2026-01-01-a.json"]);
-    expect(existsSync(join(root, "briefs", "completed", "2026-01-01-a.json"))).toBe(true);
-    expect(existsSync(join(root, "briefs", "active", "2026-01-01-a.json"))).toBe(false);
+    expect(result.finalized).toEqual(["xbrief/completed/2026-01-01-a.json"]);
+    expect(existsSync(join(root, "xbrief", "completed", "2026-01-01-a.json"))).toBe(true);
+    expect(existsSync(join(root, "xbrief", "active", "2026-01-01-a.json"))).toBe(false);
 
-    const audit = readFileSync(join(root, "briefs", "audit.jsonl"), "utf8")
+    const audit = readFileSync(join(root, "xbrief", "audit.jsonl"), "utf8")
       .trim()
       .split("\n");
     const last = JSON.parse(audit[audit.length - 1] ?? "{}");
     expect(last.kind).toBe("swarm-finalize");
-    expect(last.scope).toBe("briefs/completed/2026-01-01-a.json");
+    expect(last.scope).toBe("xbrief/completed/2026-01-01-a.json");
   });
 
   it("skips manifest stories that are no longer in active/", () => {
@@ -243,7 +243,7 @@ describe("swarmRun -- finalize", () => {
         stories: [
           {
             story_id: "2026-01-01-a.json",
-            story_path: "briefs/completed/2026-01-01-a.json",
+            story_path: "xbrief/completed/2026-01-01-a.json",
             worktree_path: ".scratch/worktrees/2026-01-01-a",
             base_branch: "main",
           },

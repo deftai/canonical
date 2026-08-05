@@ -28,7 +28,7 @@ function captureStd(): { out: string[]; err: string[]; restore: () => void } {
 }
 
 describe("orient handler", () => {
-  it("exits 0 ready on a clean repo with briefs/", () => {
+  it("exits 0 ready on a clean repo with xbrief/", () => {
     const root = tempGitRepo();
     const cap = captureStd();
     const code = run(["--project-root", root]);
