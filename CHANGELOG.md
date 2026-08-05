@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-08-05
+
 - canonical-tasks.md intro now states the `canon` CLI implements every verb and
   the file is the binding contract (intent -> verb, args, exit codes) for agents
   and any alternative implementation; vestigial "Minimal Install Order" section
