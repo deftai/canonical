@@ -1,6 +1,6 @@
 # Canonical Tasks
 
-Deterministic verbs this pack expects. Build each as a `task` target: a pure function of disk + git + optional network — no LLM inside.
+Deterministic verbs this pack expects — the agent-facing contract: which verb serves which intent, exact args, and exit codes. The `canon` CLI implements every verb (`canon init` wires them as `task` targets); any alternative implementation must honor this same contract. Every verb is a pure function of disk + git + optional network — no LLM inside.
 
 Agents: if a verb is missing, fail closed, follow the pack's file rules by hand where they permit it, and report the verb is not installed — never fake a gate.
 
@@ -106,20 +106,6 @@ The `-x` flag makes go-task propagate the verb's exact exit code; without it eve
 | Deploy provider playbooks | not pack core |
 | Body-encoding helpers as top-level verbs | library inside `issue:sync` / PR tooling |
 | Undo verbs | `xbrief/` is committed; git history is the undo |
-
-## Minimal Install Order
-
-1. `state:validate` + folder layout
-2. `scope:new` / `scope:start` / `scope:complete` / `scope:stop`
-3. `work:next` + `triage`
-4. `check` (+ `verify:branch`, `verify:encoding`, `verify:forward-coverage`) + `setup`
-5. `orient`
-6. `pr:watch` + `pr:finish`
-7. `issue:sync`
-8. `render` + `policy`
-9. `swarm:run` + `review-monitor`
-
-Solo usable after step 5. Ship loop after 6. Multi-agent after 9.
 
 ## Agent Call Map
 
