@@ -5,7 +5,7 @@
   "license": "MIT",
   "type": "module",
   "bin": {
-    "canon": "./dist/cli/bin.js"
+    "canon": "dist/cli/bin.js"
   },
   "files": [
     "dist/**/*.js",
@@ -23,14 +23,20 @@
   "bugs": {
     "url": "https://github.com/deftai/canonical/issues"
   },
-  "keywords": ["ai-agent", "agent-workflow", "claude", "agents-md", "task-runner", "briefs"],
+  "keywords": [
+    "ai-agent",
+    "agent-workflow",
+    "claude",
+    "agents-md",
+    "task-runner",
+    "briefs"
+  ],
   "packageManager": "pnpm@11.8.0",
   "engines": {
     "node": ">=20"
   },
   "publishConfig": {
-    "access": "public",
-    "provenance": true
+    "access": "public"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",

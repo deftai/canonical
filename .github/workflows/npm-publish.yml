@@ -18,9 +18,12 @@ on:
         type: string
 
 permissions:
-  # id-token is used for the --provenance attestation. Publish auth is the
-  # NPM_TOKEN secret (granular token) for now; npm trusted publishing can be
-  # configured on the package after the first release and the token dropped.
+  # id-token: write powers npm TRUSTED PUBLISHING (docs.npmjs.com/trusted-publishers):
+  # the npm CLI exchanges the GitHub OIDC token for publish auth -- no NPM_TOKEN
+  # secret anywhere. Provenance attestation is automatic under trusted publishing.
+  # One-time setup: publish the very first version manually, then on npmjs.com ->
+  # package Settings -> Trusted Publisher: GitHub Actions, org "deftai", repo
+  # "canonical", workflow filename "npm-publish.yml", no environment.
   id-token: write
   contents: read
 
@@ -62,17 +65,17 @@ jobs:
           echo "Publishing @deftai/canonical@${VERSION}"
           npm version "${VERSION}" --no-git-tag-version --allow-same-version
 
+      # Auth: trusted publishing (OIDC) -- no token env. Requires npm >= 11.5.1
+      # (bundled with the Node from .nvmrc) and a GitHub-hosted runner.
       # Idempotent re-publish: a workflow_dispatch rerun must not fail on E409
       # when the version already published.
       - name: Publish
         shell: bash
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -euo pipefail
           PKG=$(node -p "require('./package.json').name")
           VER=$(node -p "require('./package.json').version")
-          npm publish --provenance --access public || {
+          npm publish --access public || {
             npm view "${PKG}@${VER}" version >/dev/null
             echo "Already published ${PKG}@${VER}, continuing"
           }
