@@ -1,2 +1,4 @@
+# Not a workspace -- this is a single-package repo. Since pnpm 10, this file is
+# the official home for pnpm settings, which is all it holds.
 allowBuilds:
   esbuild: true

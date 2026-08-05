@@ -64,7 +64,7 @@ function validateScriptName(name, scripts) {
   if (typeof name !== "string" || !name || !SCRIPT_NAME_RE.test(name)) {
     return false;
   }
-  return !!scripts && Object.prototype.hasOwnProperty.call(scripts, name);
+  return !!scripts && Object.hasOwn(scripts, name);
 }
 
 /** @param {string} arg */
@@ -114,8 +114,8 @@ function executeAllowlisted(execFn, cmd, args, opts) {
     cwd: opts.cwd,
     stdio: "inherit",
     windowsHide: true,
-    shell: false,
     ...spawnOverride,
+    // After the spread: shell must stay false even if opts.spawn tries to set it.
     shell: false,
   };
   if (process.platform === "win32") {
@@ -243,7 +243,9 @@ function main() {
   const script = process.argv[3];
   const markWarmFlag = process.argv.includes("--mark-warm");
   if (!root || !script) {
-    console.error("canon: engine-pm-run usage: engine-pm-run.cjs <CANON_ROOT> <script> [--mark-warm]");
+    console.error(
+      "canon: engine-pm-run usage: engine-pm-run.cjs <CANON_ROOT> <script> [--mark-warm]",
+    );
     process.exit(2);
   }
   const code = runPackageScript(root, script, { markWarm: markWarmFlag });

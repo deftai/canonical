@@ -67,7 +67,7 @@ function main() {
   const candidates = [];
 
   walkSourceFiles(path.join(root, "src"), candidates);
-  for (const name of ["package.json", "tsconfig.json", "tsconfig.base.json"]) {
+  for (const name of ["package.json", "tsconfig.json"]) {
     const fp = path.join(root, name);
     if (fs.existsSync(fp)) candidates.push(fp);
   }
