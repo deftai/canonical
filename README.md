@@ -46,7 +46,10 @@ exact exit code (plain `task` wraps failures as 201).
 - `src/` — the `canon` CLI: `src/types` (contracts), domain modules, `src/cli` (verbs)
 - `tasks/` — go-task fragments + engine dispatch shims
 - `.githooks/` — pre-commit / pre-push gates
-- `docs/manual-test-plan.md` — end-to-end walkthrough (Wordle)
+- `docs/` — maintainer docs (repo-only, not in the npm package):
+  [ARCHITECTURE.md](docs/ARCHITECTURE.md) · [DEPLOY.md](docs/DEPLOY.md) ·
+  [manual-test-plan.md](docs/manual-test-plan.md) (end-to-end walkthrough on a
+  throwaway Wordle app)
 
 ## Develop
 
