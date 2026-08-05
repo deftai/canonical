@@ -12,6 +12,8 @@
  * Handlers never call process.exit(); only bin.ts exits.
  */
 
+import { createRequire } from "node:module";
+
 export const CLI_MODULE_VERBS = [
   "check",
   "init",
@@ -106,7 +108,15 @@ function loadHandler(canonical: string): Promise<CommandHandler> {
 }
 
 function versionBanner(): string {
-  return "canon 0.1.0\n";
+  // Read the real version from this package's manifest -- dist/cli/ and
+  // src/cli/ both sit two levels below the package root.
+  try {
+    const require = createRequire(import.meta.url);
+    const pkg = require("../../package.json") as { version?: string };
+    return `canon ${pkg.version ?? "unknown"}\n`;
+  } catch {
+    return "canon unknown\n";
+  }
 }
 
 function printHelp(io: DispatchIo): void {
