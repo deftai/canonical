@@ -4,6 +4,10 @@ End-to-end exercise: build/install `canon`, create a fresh project, and drive th
 small Wordle features through the full pack workflow (briefs, gates, hooks, tasks),
 including deliberate gate-violation tests and an optional AI-agent phase.
 
+The Wordle app is a throwaway fixture — small enough to build in minutes, rich enough
+(pure functions, tests, multiple features) to exercise every gate. It is not part of
+the product; only this plan references it.
+
 Conventions: every gate is run as `task -x <verb>` (exact exit codes) or `canon <verb>`.
 Expected results are marked ▶.
 
@@ -12,7 +16,7 @@ Expected results are marked ▶.
 ## Phase 0 — Build and install canon (once)
 
 ```bash
-cd ~/Projects/directive-canonical-merged
+cd <your canonical checkout>
 pnpm install && pnpm run build && pnpm run test:fast
 npm pack --pack-destination /tmp
 npm i -g /tmp/deftai-canonical-*.tgz
@@ -41,7 +45,7 @@ canon init
 ▶ init prints a written/skipped list. Verify the deposit:
 
 ```bash
-ls .canonical/core/            # 6 md files + Taskfile.yml + tasks/ + VERSION
+ls .canonical/core/            # 7 md files + Taskfile.yml + tasks/ + VERSION
 head -3 AGENTS.md              # <!-- canon:managed-section v1 --> ... canonical.md pointer
 git config core.hooksPath      # .githooks
 task --list                    # all 20 verbs, bare names
@@ -251,7 +255,7 @@ task -x policy -- show
 task -x state:validate && task -x render -- roadmap --check
 ```
 
-Cleanup when done: `npm rm -g @canonpack/cli @canonpack/content @canonpack/core @canonpack/types`.
+Cleanup when done: `npm rm -g @deftai/canonical`.
 
 ---
 

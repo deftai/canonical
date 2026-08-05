@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+- canonical-tasks.md intro now states the `canon` CLI implements every verb and
+  the file is the binding contract (intent -> verb, args, exit codes) for agents
+  and any alternative implementation; vestigial "Minimal Install Order" section
+  removed (`canon init` deposits everything at once).
+- CI: actions/checkout and actions/setup-node bumped v4 -> v5 (GitHub deprecated
+  the Node 20 action runtime) and pinned to full commit SHAs instead of floating
+  tags (supply-chain hardening, from PR review).
+
 ## [0.2.1] - 2026-08-05
 
 - engineering.md gains a Security Floor: OWASP ASVS / Cheatsheet Series named as
