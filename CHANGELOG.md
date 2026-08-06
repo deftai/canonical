@@ -2,6 +2,45 @@
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-08-06
+
+- BREAKING: every durable state file under `xbrief/` is now a conformant
+  [xBRIEF v0.8](https://github.com/deftai/xBRIEF) document. Scope files gain the
+  `{"xBRIEFInfo":{"version":"0.8"},"plan":{...}}` envelope, move `title`/`items`/
+  `narratives`/`references` under `plan`, and carry canonical-specific fields as
+  `x-canonical/*` extension properties (`kind`, `dependencies`, `swarm` -- now
+  camelCase `filesScope`/`verifyCommands` -- `delivery`, and per-reference
+  `trust`). Reference types use the spec registry (`x-xbrief/github-issue`,
+  `x-xbrief/github-pr`, `x-xbrief/plan`) plus `x-canonical/user-request`.
+  Acceptance items are spec PlanItems (`{id, title, status}`, `done` is gone).
+  Filenames end `.xbrief.json`; the root docs are `PROJECT.xbrief.json`
+  (policy at `plan["x-canonical/policy"]`), `spec.xbrief.json`,
+  `plan.xbrief.json` (ordering at `plan["x-canonical/sequence"]` -- core
+  `plan.sequence` is an integer and was silently colliding), and
+  `continue.xbrief.json`. `audit.jsonl` is unchanged (event log, not a
+  document). No migration is provided -- pre-0.3 projects should re-run
+  `canon init` and recreate their scopes; `state:validate` flags leftover
+  legacy files as `legacy-file`.
+- `state:validate` is now layered: parse -> core xBRIEF v0.8 conformance
+  (envelope, enums, item ids, string narratives, reference-type registry,
+  offset-bearing timestamps) -> canonical profile (folders, filenames,
+  x-canonical blocks). New finding codes: `bad-envelope`, `bad-version`,
+  `bad-item`, `bad-narrative`, `bad-plan-id`, `bad-dependency`, `bad-root-doc`,
+  `legacy-file`. Root docs are scanned too.
+- Scope writes use canonical serialization (recursively sorted keys, trailing
+  newline) byte-identical to the reference `libxbrief-ts` encoder, and unknown
+  `x-<token>/` extension properties round-trip untouched (spec section 7.2).
+- Conformance is CI-enforced against the spec's own artifacts: the
+  `deftai/xBRIEF` repo is pinned as the `third_party/xBRIEF` submodule and a
+  new test suite validates every emitted document shape against the real 0.8
+  JSON Schema (ajv, dev-only) and differentially against the spec's examples
+  corpus. Runtime stays zero-dependency -- the shipped validator is
+  canonical-owned code.
+- New maintainer doc `docs/xbrief-canonical-profile.md`: the `x-canonical`
+  consumer-token claim, storage conventions (lifecycle folders as views of
+  `plan.status`), extension property shapes, and the v0.9 forward-compatibility
+  stance (core fields win when the spec standardizes equivalents).
+
 ## [0.2.2] - 2026-08-05
 
 - canonical-tasks.md intro now states the `canon` CLI implements every verb and

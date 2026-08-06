@@ -1,9 +1,8 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { Ajv2020 } from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
 import { afterAll, describe, expect, it } from "vitest";
-import type { ScopeDoc, ValidationFinding } from "../types/index.js";
 import { buildProjectSkeleton } from "../policy/index.js";
 import {
   acceptanceItem,
@@ -12,6 +11,7 @@ import {
   tempGitRepo,
   writeScopeFixture,
 } from "../test-support/index.js";
+import type { ScopeDoc, ValidationFinding } from "../types/index.js";
 import { canonicalStringify, readScope, transitionScope, writeScope } from "./brief-io.js";
 import { buildScopeSkeleton } from "./skeleton.js";
 import { validateCoreDocument } from "./validate.js";
@@ -232,7 +232,8 @@ describe("extension round-trip preservation (spec section 7.2)", () => {
     expect(doc.xBRIEFInfo["x-other/infoTag"]).toBe("kept");
     expect(doc.plan["x-other/planNote"]).toEqual({ nested: ["a", 1, null] });
     expect((doc.plan.items[0] as Record<string, unknown>)["x-other/itemFlag"]).toBe(true);
-    expect((doc.plan.references?.[0] as Record<string, unknown>)["x-other/refMeta"]).toBe("kept");
+    const firstRef = doc.plan.references?.[0] as Record<string, unknown> | undefined;
+    expect(firstRef?.["x-other/refMeta"]).toBe("kept");
     // And the mutated fields did change:
     expect(doc.plan.status).toBe("pending");
   });

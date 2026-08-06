@@ -75,7 +75,7 @@ without go-task. The wiring in `tasks/`:
    outside the markers is preserved) pointing agents at
    `.canonical/core/canonical.md`.
 3. Ensures the root `Taskfile.yml` includes the deposited one (`flatten: true`).
-4. Scaffolds `xbrief/` — the five lifecycle folders plus a `PROJECT.json`
+4. Scaffolds `xbrief/` — the five lifecycle folders plus a `PROJECT.xbrief.json`
    skeleton (see [`content/state.md`](../content/state.md) for the state model).
 5. Deposits the git hooks to `.githooks/` and sets `core.hooksPath`.
 6. Appends a `.gitignore` baseline (`.canonical/core/`, `.canonical/cache/`,

@@ -1,7 +1,12 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
-import { acceptanceItem, cleanupTempDirs, tempGitRepo, writeScopeFixture } from "../test-support/index.js";
+import {
+  acceptanceItem,
+  cleanupTempDirs,
+  tempGitRepo,
+  writeScopeFixture,
+} from "../test-support/index.js";
 import { validateState } from "./validate.js";
 
 afterAll(() => {
@@ -58,45 +63,75 @@ describe("validateState", () => {
 
   it("flags a missing xBRIEFInfo envelope", () => {
     const root = tempGitRepo();
-    writeScopeFixture(root, "proposed", "2026-01-01-no-envelope.xbrief.json", {}, {
-      xBRIEFInfo: undefined,
-    });
+    writeScopeFixture(
+      root,
+      "proposed",
+      "2026-01-01-no-envelope.xbrief.json",
+      {},
+      {
+        xBRIEFInfo: undefined,
+      },
+    );
     const report = validateState(root);
     expect(findingCodes(report)).toContain("bad-envelope");
   });
 
   it("flags a wrong xBRIEFInfo.version", () => {
     const root = tempGitRepo();
-    writeScopeFixture(root, "proposed", "2026-01-01-old-version.xbrief.json", {}, {
-      xBRIEFInfo: { version: "0.5" },
-    });
+    writeScopeFixture(
+      root,
+      "proposed",
+      "2026-01-01-old-version.xbrief.json",
+      {},
+      {
+        xBRIEFInfo: { version: "0.5" },
+      },
+    );
     const report = validateState(root);
     expect(findingCodes(report)).toContain("bad-version");
   });
 
   it("flags forbidden legacy containers (todoList/playbook)", () => {
     const root = tempGitRepo();
-    writeScopeFixture(root, "proposed", "2026-01-01-legacy-container.xbrief.json", {}, {
-      todoList: { items: [] },
-    });
+    writeScopeFixture(
+      root,
+      "proposed",
+      "2026-01-01-legacy-container.xbrief.json",
+      {},
+      {
+        todoList: { items: [] },
+      },
+    );
     const report = validateState(root);
     expect(findingCodes(report)).toContain("bad-envelope");
   });
 
   it("flags stray non-extension root keys on scope documents", () => {
     const root = tempGitRepo();
-    writeScopeFixture(root, "proposed", "2026-01-01-stray-key.xbrief.json", {}, {
-      stray: true,
-    });
+    writeScopeFixture(
+      root,
+      "proposed",
+      "2026-01-01-stray-key.xbrief.json",
+      {},
+      {
+        stray: true,
+      },
+    );
     const report = validateState(root);
     expect(findingCodes(report)).toContain("bad-envelope");
   });
 
   it("preserves foreign x-<token>/ root keys without findings", () => {
     const root = tempGitRepo();
-    writeScopeFixture(root, "proposed", "2026-01-01-foreign-ext.xbrief.json", {}, {
-      "x-other/blob": { anything: true },
-    });
+    writeScopeFixture(
+      root,
+      "proposed",
+      "2026-01-01-foreign-ext.xbrief.json",
+      {},
+      {
+        "x-other/blob": { anything: true },
+      },
+    );
     const report = validateState(root);
     expect(report.ok).toBe(true);
   });
@@ -142,9 +177,15 @@ describe("validateState", () => {
 
   it("flags a missing plan object", () => {
     const root = tempGitRepo();
-    writeScopeFixture(root, "proposed", "2026-01-01-no-plan.xbrief.json", {}, {
-      plan: undefined,
-    });
+    writeScopeFixture(
+      root,
+      "proposed",
+      "2026-01-01-no-plan.xbrief.json",
+      {},
+      {
+        plan: undefined,
+      },
+    );
     const report = validateState(root);
     expect(findingCodes(report)).toContain("missing-plan");
   });
