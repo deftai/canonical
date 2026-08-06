@@ -8,19 +8,34 @@ afterAll(() => {
   cleanupTempDirs();
 });
 
-function writeProject(overrides: Record<string, unknown> = {}): string {
+function writeProject(planOverrides: Record<string, unknown> = {}): string {
   const root = tempDir("check-test-");
   mkdirSync(join(root, "xbrief"), { recursive: true });
   writeFileSync(
-    join(root, "xbrief", "PROJECT.json"),
-    `${JSON.stringify({ title: "t", policy: {}, ...overrides }, null, 2)}\n`,
+    join(root, "xbrief", "PROJECT.xbrief.json"),
+    `${JSON.stringify(
+      {
+        xBRIEFInfo: { version: "0.8" },
+        plan: {
+          title: "t",
+          status: "running",
+          items: [],
+          "x-canonical/policy": {},
+          ...planOverrides,
+        },
+      },
+      null,
+      2,
+    )}\n`,
   );
   return root;
 }
 
 describe("resolveCheckCommands: detection matrix", () => {
-  it("uses xbrief/PROJECT.json quality.commands when non-empty", () => {
-    const root = writeProject({ quality: { commands: ["custom lint", "custom test"] } });
+  it("uses xbrief/PROJECT.xbrief.json x-canonical/quality commands when non-empty", () => {
+    const root = writeProject({
+      "x-canonical/quality": { commands: ["custom lint", "custom test"] },
+    });
     const result = resolveCheckCommands(root);
     expect(result).toEqual({ ok: true, commands: ["custom lint", "custom test"] });
   });
@@ -90,7 +105,7 @@ describe("runCheck: stage-failure naming", () => {
   }
 
   it("runs configured commands in order via the injected runner, then the built-in stages", async () => {
-    const root = writeProject({ quality: { commands: ["a", "b"] } });
+    const root = writeProject({ "x-canonical/quality": { commands: ["a", "b"] } });
     const seen: string[] = [];
     const runner: CommandRunner = (command) => {
       seen.push(command);
@@ -110,7 +125,7 @@ describe("runCheck: stage-failure naming", () => {
   });
 
   it("stops at the first failing configured command and names it", async () => {
-    const root = writeProject({ quality: { commands: ["a", "b", "c"] } });
+    const root = writeProject({ "x-canonical/quality": { commands: ["a", "b", "c"] } });
     const seen: string[] = [];
     const runner: CommandRunner = (command) => {
       seen.push(command);
@@ -127,7 +142,7 @@ describe("runCheck: stage-failure naming", () => {
   });
 
   it("names the failing built-in stage when a configured command runner never spawns a real process", async () => {
-    const root = writeProject({ quality: { commands: ["a"] } });
+    const root = writeProject({ "x-canonical/quality": { commands: ["a"] } });
     const result = await runCheck(root, {
       commandRunner: () => ({ status: 0 }),
       dispatchFn: fakeDispatch({ "state:validate": 1 }),

@@ -1,4 +1,5 @@
-import type { ScopeFile } from "../types/index.js";
+import type { ScopeDoc } from "../types/index.js";
+import { XBRIEF_VERSION } from "../types/index.js";
 import type { ScopeRef } from "./brief-io.js";
 import { isoDate, listScopes, normalizeSlug } from "./brief-io.js";
 
@@ -8,21 +9,26 @@ import { isoDate, listScopes, normalizeSlug } from "./brief-io.js";
  * owns the write via `writeScope`.
  */
 
-/** `${isoDate()}-${normalizeSlug(title)}.json`, per the filename contract. */
+/** `${isoDate()}-${normalizeSlug(title)}.xbrief.json`, per the filename contract. */
 export function scopeSkeletonFilename(title: string, now: Date = new Date()): string {
-  return `${isoDate(now)}-${normalizeSlug(title)}.json`;
+  return `${isoDate(now)}-${normalizeSlug(title)}.xbrief.json`;
 }
 
-/** A valid, minimal ScopeFile in status `proposed`, ready to write via `writeScope`. */
-export function buildScopeSkeleton(title: string, now: Date = new Date()): ScopeFile {
+/** A valid, minimal scope document in status `proposed`, ready to write via `writeScope`. */
+export function buildScopeSkeleton(title: string, now: Date = new Date()): ScopeDoc {
   const timestamp = now.toISOString();
   return {
-    title,
-    kind: "story",
-    plan: { status: "proposed", created: timestamp, updated: timestamp },
-    narratives: { Description: "" },
-    items: [],
-    references: [],
+    xBRIEFInfo: { version: XBRIEF_VERSION },
+    plan: {
+      title,
+      status: "proposed",
+      created: timestamp,
+      updated: timestamp,
+      items: [],
+      narratives: { Description: "" },
+      references: [],
+      "x-canonical/kind": "story",
+    },
   };
 }
 

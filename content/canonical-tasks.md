@@ -19,11 +19,11 @@ The `-x` flag makes go-task propagate the verb's exact exit code; without it eve
 **Not:** package upgrades, network probes, multi-minute doctoring.
 
 ### `check`
-**Does:** Project quality gate, in order: format check → lint → build → tests with coverage (fail under 85% lines/functions/branches/statements when coverage tooling exists) → `state:validate` → `verify:encoding`. Command list from `xbrief/PROJECT.json` `quality.commands[]`, else detect from `package.json`/`go.mod`/`pyproject.toml`.
+**Does:** Project quality gate, in order: format check → lint → build → tests with coverage (fail under 85% lines/functions/branches/statements when coverage tooling exists) → `state:validate` → `verify:encoding`. Command list from `xbrief/PROJECT.xbrief.json` `plan["x-canonical/quality"].commands[]`, else detect from `package.json`/`go.mod`/`pyproject.toml`.
 **Exit:** `0` all pass · `1` failure (print failing stage) · `2` no commands configured or detected.
 
 ### `state:validate`
-**Does:** Validate all `xbrief/**/*.json`: schema shape, status enum, filename pattern in lifecycle folders, folder↔status consistency, references carry `uri`+`type`+`trust`, ingested scopes carry origin reference + `Origin` narrative, no duplicate origin URIs, swarm block shape when present (non-empty `file_scope`/`verify_commands`, 2–5 acceptance items for `readiness: ready`).
+**Does:** Validate all `xbrief/**` state files in three layers: (1) parse; (2) core xBRIEF v0.8 conformance — `xBRIEFInfo.version: "0.8"` envelope, `plan.title/status/items` required, core status enums, item ids (dot-notation, unique), string narratives, `references[].type` matches `x-<token>/…` with `x-xbrief/*` restricted to the spec registry, timestamps carry an explicit Z/offset; (3) canonical profile — filename pattern in lifecycle folders, folder↔status consistency, `x-canonical/kind`, references carry `x-canonical/trust`, ingested scopes carry origin reference + `Origin` narrative, no duplicate origin URIs, swarm block shape when present (non-empty `filesScope`/`verifyCommands`, 2–5 acceptance items for `readiness: ready`). Legacy pre-0.3 `.json` state files are flagged `legacy-file`.
 **Exit:** `0` · `1` violations (print per-file findings) · `2` I/O error.
 
 ### `verify:branch`
@@ -38,7 +38,7 @@ The `-x` flag makes go-task propagate the verb's exact exit code; without it eve
 **Exit:** `0` · `1` listing uncovered files.
 
 ### `work:next`
-**Does:** Print the next work item, pure logic: (1) first incomplete entry of an ordered sequence in `xbrief/plan.json`, else (2) `xbrief/pending/*.json` ranked dependencies-satisfied-first then oldest `plan.created`, else (3) empty.
+**Does:** Print the next work item, pure logic: (1) first incomplete entry of `plan["x-canonical/sequence"]` in `xbrief/plan.xbrief.json`, else (2) `xbrief/pending/*.xbrief.json` ranked dependencies-satisfied-first then oldest `plan.created`, else (3) empty.
 **Exit:** `0` printed · `1` empty · `2` corrupt JSON.
 **Not:** live GitHub; no network.
 
@@ -47,7 +47,7 @@ The `-x` flag makes go-task propagate the verb's exact exit code; without it eve
 **Exit:** `0` · `1` WIP cap hit on accept · `2` bad args/path.
 
 ### `scope:new`
-**Does:** Create `xbrief/proposed/<today>-<normalized-slug>.json` (status `proposed`) from the schema skeleton. Slug: lowercase `[a-z0-9-]`, ≤80 chars.
+**Does:** Create `xbrief/proposed/<today>-<normalized-slug>.xbrief.json` (status `proposed`) from the xBRIEF v0.8 skeleton. Slug: lowercase `[a-z0-9-]`, ≤80 chars.
 **Exit:** `0` (prints path) · `1` slug collision (prints existing path) · `2` error.
 
 ### `scope:start`
@@ -63,10 +63,10 @@ The `-x` flag makes go-task propagate the verb's exact exit code; without it eve
 **Exit:** `0` · `1` illegal transition · `2` error.
 
 ### `render`
-**Does:** `roadmap|spec [--check]`. `roadmap`: generate `ROADMAP.md` from lifecycle folders (one section per folder; one row per scope: title, status, origin link, dependencies). `spec`: generate `SPEC.md` from `xbrief/spec.json`. Output opens with a 4-line `AUTO-GENERATED` banner (generator, purpose, source of truth, regenerate command). `--check` exits 1 if the committed file differs from regenerated output.
+**Does:** `roadmap|spec [--check]`. `roadmap`: generate `ROADMAP.md` from lifecycle folders (one section per folder; one row per scope: title, status, origin link, dependencies). `spec`: generate `SPEC.md` from `xbrief/spec.xbrief.json`. Output opens with a 4-line `AUTO-GENERATED` banner (generator, purpose, source of truth, regenerate command). `--check` exits 1 if the committed file differs from regenerated output.
 
 ### `policy`
-**Does:** `show [--field=…]` prints `policy.*` fields with values and defaults. `set --field= --value= --confirm` writes one typed field; refuses unknown fields, type mismatches, and absence of `--confirm`; appends `{ts, field, old, new, actor}` to `xbrief/audit.jsonl`.
+**Does:** `show [--field=…]` prints policy fields (from `PROJECT.xbrief.json` `plan["x-canonical/policy"]`) with values and defaults. `set --field= --value= --confirm` writes one typed field; refuses unknown fields, type mismatches, and absence of `--confirm`; appends `{ts, field, old, new, actor}` to `xbrief/audit.jsonl`.
 **Exit:** `0` · `1` unknown field/refused · `2` error.
 
 ## Ship Path
@@ -83,13 +83,13 @@ The `-x` flag makes go-task propagate the verb's exact exit code; without it eve
 ## Integration
 
 ### `issue:sync`
-**Does:** Deterministic origin ↔ scope. `ingest -- <N | --all [--label L]>`: fetch via REST, write `proposed/` scope with origin reference (`trust: external`) + `Origin` narrative; skip (not error) when the origin URI already exists; `--dry-run` prints planned writes. `emit -- <scope-path>`: open/update the issue from scope title/narratives. `reconcile`: read-only drift report — externally-closed issues with non-terminal scopes, open issues with no scope, origin issues whose title/state changed.
+**Does:** Deterministic origin ↔ scope. `ingest -- <N | --all [--label L]>`: fetch via REST, write `proposed/` scope with origin reference (`type: x-xbrief/github-issue`, `x-canonical/trust: external`) + `Origin` narrative; skip (not error) when the origin URI already exists; `--dry-run` prints planned writes. `emit -- <scope-path>`: open/update the issue from scope title/narratives. `reconcile`: read-only drift report — externally-closed issues with non-terminal scopes, open issues with no scope, origin issues whose title/state changed.
 **Exit:** `0` · `1` skip/dup (ingest, emit) or drift found (reconcile) · `2` API error.
 
 ## Multi-Agent (optional)
 
 ### `swarm:run`
-**Does:** Cohort prep or finalize — never spawns. `--stories <paths…>`: readiness check (all `kind: story`, non-empty `file_scope`/`verify_commands`, acceptance items, pairwise-disjoint file scopes) and emit `launch-manifest.json` + worktree map `{story_id, worktree_path, base_branch}[]`. `--finalize --manifest <path>`: post-merge `scope:complete` for the cohort.
+**Does:** Cohort prep or finalize — never spawns. `--stories <paths…>`: readiness check (all `x-canonical/kind: story`, non-empty `filesScope`/`verifyCommands`, acceptance items, pairwise-disjoint file scopes) and emit `launch-manifest.json` + worktree map `{story_id, worktree_path, base_branch}[]`. `--finalize --manifest <path>`: post-merge `scope:complete` for the cohort.
 **Exit:** `0` · `1` not ready (print which story/why) · `2` error.
 
 ### `review-monitor`

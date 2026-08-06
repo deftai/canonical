@@ -42,7 +42,7 @@ External canon, linked not restated: OWASP ASVS is the reference standard; the [
 - ⊗ Hand-roll security primitives — session management, password hashing, token generation, crypto, CSRF defense. Use the framework or platform primitive; if none exists, stop and escalate rather than improvise.
 - ! Code touching authentication, authorization, session handling, or money is checked against the relevant OWASP cheatsheet before scope completion. Auth checks cover EVERY path to a protected resource, not the happy path — build it in; the completion stub-scan is a backstop, not the plan.
 - ! Treat all external input as hostile until validated at the trust boundary: parameterized queries only, output encoding matched to the sink, allowlists over denylists.
-- ~ Wire security scanners the project has (SAST, dependency audit, secret scan) into `xbrief/PROJECT.json` `quality.commands[]` — they then gate `task check` like any other stage. Security findings are P0 in review.
+- ~ Wire security scanners the project has (SAST, dependency audit, secret scan) into `xbrief/PROJECT.xbrief.json` `plan["x-canonical/quality"].commands[]` — they then gate `task check` like any other stage. Security findings are P0 in review.
 
 ## Cross-Language Floor
 

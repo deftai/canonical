@@ -79,12 +79,12 @@ task -x state:validate              # ▶ exit 0, 3 scope files scanned
 ```
 
 Add acceptance criteria to the first brief (hand edit is allowed; the validator is the gate).
-Edit `xbrief/proposed/<date>-guess-evaluation-greens-yellows-grays.json` and set:
+Edit `xbrief/proposed/<date>-guess-evaluation-greens-yellows-grays.xbrief.json` and set (inside `plan`):
 
 ```json
 "items": [
-  { "id": "ac1", "text": "evaluate(guess, answer) returns g/y/x per letter", "done": false },
-  { "id": "ac2", "text": "duplicate letters consume yellow budget correctly", "done": false }
+  { "id": "ac1", "title": "evaluate(guess, answer) returns g/y/x per letter", "status": "pending" },
+  { "id": "ac2", "title": "duplicate letters consume yellow budget correctly", "status": "pending" }
 ]
 ```
 
@@ -167,7 +167,7 @@ git switch main && git merge --ff-only feat/guess-evaluation
 task -x scope:complete -- guess-evaluation --disposition delivered --sha "$(git rev-parse HEAD)"
 ```
 
-▶ exit 0. Inspect `xbrief/completed/…guess-evaluation….json` ▶ has a `delivery` block with sha + branch.
+▶ exit 0. Inspect `xbrief/completed/…guess-evaluation….xbrief.json` ▶ its plan has an `x-canonical/delivery` block with sha + branch.
 
 **Gate tests on complete:**
 
@@ -220,7 +220,7 @@ Also test the kickoff flow in a SECOND fresh project (`mkdir`, `git init`, `cano
 
 > I want to make a wordle app, help me set this up.
 
-▶ Per `kickoff.md` the agent should interview you (one numbered question per turn, Discuss/Back last), then generate `xbrief/PROJECT.json`, `xbrief/spec.json`, one proposed scope per must-have feature with acceptance items, validate, render the roadmap, and offer a triage menu. Then say "oh, and I also want hard mode" ▶ one new scope appears with acceptance criteria and a triage prompt. Then ask it to build a feature whose brief you emptied out ▶ it should stop and ask up to 3 questions before `scope:start`.
+▶ Per `kickoff.md` the agent should interview you (one numbered question per turn, Discuss/Back last), then generate `xbrief/PROJECT.xbrief.json`, `xbrief/spec.xbrief.json`, one proposed scope per must-have feature with acceptance items, validate, render the roadmap, and offer a triage menu. Then say "oh, and I also want hard mode" ▶ one new scope appears with acceptance criteria and a triage prompt. Then ask it to build a feature whose brief you emptied out ▶ it should stop and ask up to 3 questions before `scope:start`.
 
 Score the agent against this checklist:
 

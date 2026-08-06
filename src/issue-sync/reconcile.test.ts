@@ -44,18 +44,14 @@ describe("reconcile", () => {
   it("reports no drift when everything matches", async () => {
     const root = tempDir("canon-reconcile-");
     scaffoldXbrief(root);
-    writeScopeFixture(root, "pending", "2026-01-01-a.json", {
-      plan: {
-        status: "pending",
-        created: "2026-01-01T00:00:00.000Z",
-        updated: "2026-01-01T00:00:00.000Z",
-      },
+    writeScopeFixture(root, "pending", "2026-01-01-a.xbrief.json", {
+      status: "pending",
       references: [
         {
           uri: "https://github.com/acme/widgets/issues/1",
-          type: "issue",
+          type: "x-xbrief/github-issue",
           title: "Issue one",
-          trust: "external",
+          "x-canonical/trust": "external",
         },
       ],
     });
@@ -75,18 +71,14 @@ describe("reconcile", () => {
   it("flags a scope that is non-terminal while its origin issue is closed", async () => {
     const root = tempDir("canon-reconcile-");
     scaffoldXbrief(root);
-    writeScopeFixture(root, "active", "2026-01-01-a.json", {
-      plan: {
-        status: "running",
-        created: "2026-01-01T00:00:00.000Z",
-        updated: "2026-01-01T00:00:00.000Z",
-      },
+    writeScopeFixture(root, "active", "2026-01-01-a.xbrief.json", {
+      status: "running",
       references: [
         {
           uri: "https://github.com/acme/widgets/issues/1",
-          type: "issue",
+          type: "x-xbrief/github-issue",
           title: "Issue one",
-          trust: "external",
+          "x-canonical/trust": "external",
         },
       ],
     });
@@ -105,18 +97,14 @@ describe("reconcile", () => {
   it("does not flag a closed issue when the scope is already terminal", async () => {
     const root = tempDir("canon-reconcile-");
     scaffoldXbrief(root);
-    writeScopeFixture(root, "completed", "2026-01-01-a.json", {
-      plan: {
-        status: "completed",
-        created: "2026-01-01T00:00:00.000Z",
-        updated: "2026-01-01T00:00:00.000Z",
-      },
+    writeScopeFixture(root, "completed", "2026-01-01-a.xbrief.json", {
+      status: "completed",
       references: [
         {
           uri: "https://github.com/acme/widgets/issues/1",
-          type: "issue",
+          type: "x-xbrief/github-issue",
           title: "Issue one",
-          trust: "external",
+          "x-canonical/trust": "external",
         },
       ],
     });
@@ -164,18 +152,14 @@ describe("reconcile", () => {
   it("flags a title drift between the scope's reference and the live issue", async () => {
     const root = tempDir("canon-reconcile-");
     scaffoldXbrief(root);
-    writeScopeFixture(root, "pending", "2026-01-01-a.json", {
-      plan: {
-        status: "pending",
-        created: "2026-01-01T00:00:00.000Z",
-        updated: "2026-01-01T00:00:00.000Z",
-      },
+    writeScopeFixture(root, "pending", "2026-01-01-a.xbrief.json", {
+      status: "pending",
       references: [
         {
           uri: "https://github.com/acme/widgets/issues/1",
-          type: "issue",
+          type: "x-xbrief/github-issue",
           title: "Old title",
-          trust: "external",
+          "x-canonical/trust": "external",
         },
       ],
     });

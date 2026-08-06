@@ -53,15 +53,15 @@ describe("emit", () => {
   it("PATCHes the existing issue when the scope already has an issue reference", async () => {
     const root = tempDir("canon-emit-");
     scaffoldXbrief(root);
-    const rel = writeScopeFixture(root, "pending", "2026-01-01-my-scope.json", {
+    const rel = writeScopeFixture(root, "pending", "2026-01-01-my-scope.xbrief.json", {
       title: "Updated title",
       narratives: { Description: "Updated body" },
       references: [
         {
           uri: "https://github.com/acme/widgets/issues/12",
-          type: "issue",
+          type: "x-xbrief/github-issue",
           title: "old",
-          trust: "external",
+          "x-canonical/trust": "external",
         },
       ],
     });
@@ -70,7 +70,7 @@ describe("emit", () => {
       fetchFn: fakeFetch({ "PATCH /repos/acme/widgets/issues/12": { body: {} } }, calls),
       env: { GH_TOKEN: "t" },
     });
-    const result = await emit(c, REPO, root, "2026-01-01-my-scope.json");
+    const result = await emit(c, REPO, root, "2026-01-01-my-scope.xbrief.json");
     expect(result.code).toBe(0);
     expect(result.created).toBe(false);
     expect(result.issueNumber).toBe(12);
@@ -78,13 +78,13 @@ describe("emit", () => {
     expect(patchCall?.body).toEqual({ title: "Updated title", body: "Updated body" });
     // scope file untouched by the PATCH path
     const scope = JSON.parse(readFileSync(join(root, rel), "utf8"));
-    expect(scope.title).toBe("Updated title");
+    expect(scope.plan.title).toBe("Updated title");
   });
 
   it("POSTs a new issue and appends the reference + Origin when the scope has none", async () => {
     const root = tempDir("canon-emit-");
     scaffoldXbrief(root);
-    const rel = writeScopeFixture(root, "pending", "2026-01-01-no-issue.json", {
+    const rel = writeScopeFixture(root, "pending", "2026-01-01-no-issue.xbrief.json", {
       title: "Needs an issue",
       narratives: { Description: "Body text" },
       references: [],
@@ -101,7 +101,7 @@ describe("emit", () => {
       ),
       env: { GH_TOKEN: "t" },
     });
-    const result = await emit(c, REPO, root, "2026-01-01-no-issue.json");
+    const result = await emit(c, REPO, root, "2026-01-01-no-issue.xbrief.json");
     expect(result.code).toBe(0);
     expect(result.created).toBe(true);
     expect(result.issueNumber).toBe(42);
@@ -110,22 +110,22 @@ describe("emit", () => {
     expect(postCall?.body).toEqual({ title: "Needs an issue", body: "Body text" });
 
     const scope = JSON.parse(readFileSync(join(root, rel), "utf8"));
-    expect(scope.references).toEqual([
+    expect(scope.plan.references).toEqual([
       {
         uri: "https://github.com/acme/widgets/issues/42",
-        type: "issue",
+        type: "x-xbrief/github-issue",
         title: "Needs an issue",
-        trust: "external",
+        "x-canonical/trust": "external",
       },
     ]);
-    expect(scope.narratives.Origin).toBe("Emitted to issue #42");
+    expect(scope.plan.narratives.Origin).toBe("Emitted to issue #42");
     // round trip: emitting again now patches instead of creating another issue
     const calls2: Call[] = [];
     const c2 = ghClient({
       fetchFn: fakeFetch({ "PATCH /repos/acme/widgets/issues/42": { body: {} } }, calls2),
       env: { GH_TOKEN: "t" },
     });
-    const second = await emit(c2, REPO, root, "2026-01-01-no-issue.json");
+    const second = await emit(c2, REPO, root, "2026-01-01-no-issue.xbrief.json");
     expect(second.code).toBe(0);
     expect(second.created).toBe(false);
     expect(second.issueNumber).toBe(42);
@@ -143,14 +143,14 @@ describe("emit", () => {
   it("returns 2 on API error", async () => {
     const root = tempDir("canon-emit-");
     scaffoldXbrief(root);
-    writeScopeFixture(root, "pending", "2026-01-01-boom.json", { references: [] });
+    writeScopeFixture(root, "pending", "2026-01-01-boom.xbrief.json", { references: [] });
     const c = ghClient({
       fetchFn: (async () => {
         throw new Error("network down");
       }) as unknown as typeof fetch,
       env: { GH_TOKEN: "t" },
     });
-    const result = await emit(c, REPO, root, "2026-01-01-boom.json");
+    const result = await emit(c, REPO, root, "2026-01-01-boom.xbrief.json");
     expect(result.code).toBe(2);
   });
 });

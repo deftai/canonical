@@ -54,7 +54,13 @@ const CLEAN_ROUTES: Record<string, Route> = {
 function projectRoot(policy: Record<string, unknown>): string {
   const root = tempDir("canon-pr-finish-cli-");
   mkdirSync(join(root, "xbrief"), { recursive: true });
-  writeFileSync(join(root, "xbrief", "PROJECT.json"), JSON.stringify({ title: "t", policy }));
+  writeFileSync(
+    join(root, "xbrief", "PROJECT.xbrief.json"),
+    JSON.stringify({
+      xBRIEFInfo: { version: "0.8" },
+      plan: { title: "t", status: "running", items: [], "x-canonical/policy": policy },
+    }),
+  );
   return root;
 }
 

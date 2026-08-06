@@ -1,8 +1,10 @@
 import { chmodSync, existsSync, readFileSync, statSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
-import { atomicWriteJson, atomicWriteText } from "../fs/contained-write.js";
+import { atomicWriteText } from "../fs/contained-write.js";
 import { isGitRepo, setConfig } from "../git/index.js";
-import { LIFECYCLE_FOLDERS } from "../types/index.js";
+import { buildProjectSkeleton } from "../policy/index.js";
+import { LIFECYCLE_FOLDERS, PROJECT_BRIEF_NAME } from "../types/index.js";
+import { canonicalStringify } from "../xbrief/brief-io.js";
 import type { ContentPayload } from "./content-root.js";
 
 /** Low-level deposit primitives shared by `runInit` and `runUpdate`. */
@@ -105,7 +107,7 @@ export function writeVersionStamp(
   return rel;
 }
 
-/** Five lifecycle dirs + .gitkeep, and xbrief/PROJECT.json skeleton, only where absent. */
+/** Five lifecycle dirs + .gitkeep, and xbrief/PROJECT.xbrief.json skeleton, only where absent. */
 export function ensureXbriefScaffold(projectRoot: string): CopyOutcome {
   const written: string[] = [];
   const skipped: string[] = [];
@@ -118,12 +120,12 @@ export function ensureXbriefScaffold(projectRoot: string): CopyOutcome {
     atomicWriteText(projectRoot, rel, "");
     written.push(rel);
   }
-  const projectRel = "xbrief/PROJECT.json";
+  const projectRel = `xbrief/${PROJECT_BRIEF_NAME}`;
   if (existsSync(join(projectRoot, projectRel))) {
     skipped.push(projectRel);
   } else {
     const title = basename(resolve(projectRoot));
-    atomicWriteJson(projectRoot, projectRel, { title, policy: {} });
+    atomicWriteText(projectRoot, projectRel, canonicalStringify(buildProjectSkeleton(title)));
     written.push(projectRel);
   }
   return { written, skipped };

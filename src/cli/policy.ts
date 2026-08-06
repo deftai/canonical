@@ -2,6 +2,7 @@
 import { parseArgs, renderJson } from "../args/index.js";
 import {
   isRegisteredPolicyField,
+  projectPolicyBlock,
   readProjectBrief,
   resolvePolicy,
   setPolicy,
@@ -82,8 +83,10 @@ function runShow(argv: string[]): number {
   if (!briefRead.ok) {
     return emitFailure(json, 2, briefRead.message);
   }
-  const rawPolicy: Record<string, unknown> =
-    (briefRead.project.policy as Record<string, unknown> | undefined) ?? {};
+  const rawPolicy: Record<string, unknown> = projectPolicyBlock(briefRead.project) as Record<
+    string,
+    unknown
+  >;
 
   const targetFields: readonly PolicyFieldName[] =
     field !== undefined && isRegisteredPolicyField(field) ? [field] : REGISTERED_POLICY_FIELDS;

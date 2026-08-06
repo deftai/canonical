@@ -1,4 +1,5 @@
-import type { ScopeFile, ScopeStatus } from "../types/index.js";
+import type { ScopeDoc, ScopeStatus } from "../types/index.js";
+import { withPlan } from "../types/index.js";
 import { appendAudit } from "../xbrief/audit.js";
 import { findScope, readScope, transitionScope } from "../xbrief/brief-io.js";
 
@@ -77,12 +78,14 @@ export function scopeStop(projectRoot: string, opts: ScopeStopOptions): ScopeSto
     return { ok: false, code: 1, message: `cannot ${opts.mode} scope with status '${current}'` };
   }
 
-  let updated: ScopeFile = scope;
+  let updated: ScopeDoc = scope;
   if (opts.note !== undefined && opts.note.trim() !== "") {
-    updated = {
-      ...scope,
-      narratives: { ...scope.narratives, Note: appendNote(scope.narratives?.Note, opts.note) },
-    };
+    updated = withPlan(scope, {
+      narratives: {
+        ...scope.plan.narratives,
+        Note: appendNote(scope.plan.narratives?.Note, opts.note),
+      },
+    });
   }
 
   const newRef = transitionScope(projectRoot, ref, updated, next, now);

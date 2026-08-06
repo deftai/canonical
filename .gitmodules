@@ -1,0 +1,3 @@
+[submodule "third_party/xBRIEF"]
+	path = third_party/xBRIEF
+	url = https://github.com/deftai/xBRIEF

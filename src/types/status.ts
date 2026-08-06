@@ -1,4 +1,21 @@
-/** Seven-value status enum (content/state.md). */
+/** Core xBRIEF v0.8 PlanStatus enum (spec section 5.1). */
+export const PLAN_STATUSES = [
+  "draft",
+  "proposed",
+  "approved",
+  "pending",
+  "running",
+  "completed",
+  "blocked",
+  "failed",
+  "cancelled",
+] as const;
+export type PlanStatus = (typeof PLAN_STATUSES)[number];
+
+/** Core xBRIEF v0.8 PlanItemStatus enum: PlanStatus plus container-only `auto`. */
+export const PLAN_ITEM_STATUSES = [...PLAN_STATUSES, "auto"] as const;
+
+/** The seven statuses canonical's profile uses on scopes (content/state.md) -- a subset of PLAN_STATUSES. */
 export const SCOPE_STATUSES = [
   "proposed",
   "pending",
@@ -46,6 +63,7 @@ export const FOLDER_STATUS_MAP: Readonly<Record<LifecycleFolder, readonly ScopeS
   cancelled: ["cancelled"],
 };
 
-/** Scope filename contract: YYYY-MM-DD-<slug>.json, slug [a-z0-9]+(-[a-z0-9]+)*, <=80 chars. */
-export const SCOPE_FILENAME_RE = /^(\d{4})-(\d{2})-(\d{2})-([a-z0-9]+(?:-[a-z0-9]+)*)\.json$/;
+/** Scope filename contract: YYYY-MM-DD-<slug>.xbrief.json, slug [a-z0-9]+(-[a-z0-9]+)*, <=80 chars. */
+export const SCOPE_FILENAME_RE =
+  /^(\d{4})-(\d{2})-(\d{2})-([a-z0-9]+(?:-[a-z0-9]+)*)\.xbrief\.json$/;
 export const SCOPE_SLUG_MAX_LENGTH = 80;

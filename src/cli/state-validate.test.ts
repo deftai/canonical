@@ -41,7 +41,7 @@ describe("state-validate handler", () => {
 
   it("exits 0 with no findings on a clean tree", () => {
     const root = tempGitRepo();
-    writeScopeFixture(root, "proposed", "2026-01-01-happy.json");
+    writeScopeFixture(root, "proposed", "2026-01-01-happy.xbrief.json");
     const code = run(["--project-root", root]);
     expect(code).toBe(0);
     expect(out.join("")).toContain("state ok");
@@ -50,26 +50,26 @@ describe("state-validate handler", () => {
 
   it("exits 1 and prints per-file findings to stderr on violations", () => {
     const root = tempGitRepo();
-    writeScopeFixture(root, "active", "2026-01-01-mismatch.json"); // proposed status filed under active/
+    writeScopeFixture(root, "active", "2026-01-01-mismatch.xbrief.json"); // proposed status filed under active/
     const code = run(["--project-root", root]);
     expect(code).toBe(1);
     expect(out.join("")).toBe("");
-    expect(err.join("")).toContain("xbrief/active/2026-01-01-mismatch.json");
+    expect(err.join("")).toContain("xbrief/active/2026-01-01-mismatch.xbrief.json");
     expect(err.join("")).toContain("folder-status-mismatch");
   });
 
   it("--json reports ok on stdout with the same exit code", () => {
     const root = tempGitRepo();
-    writeScopeFixture(root, "proposed", "2026-01-01-happy.json");
+    writeScopeFixture(root, "proposed", "2026-01-01-happy.xbrief.json");
     const code = run(["--project-root", root, "--json"]);
     expect(code).toBe(0);
     const payload = JSON.parse(out.join(""));
-    expect(payload).toEqual({ findings: [], ok: true, scanned: 1 });
+    expect(payload).toEqual({ findings: [], ok: true, scanned: 2 });
   });
 
   it("--json reports violations on stdout with exit 1", () => {
     const root = tempGitRepo();
-    writeScopeFixture(root, "active", "2026-01-01-mismatch.json");
+    writeScopeFixture(root, "active", "2026-01-01-mismatch.xbrief.json");
     const code = run(["--project-root", root, "--json"]);
     expect(code).toBe(1);
     expect(err.join("")).toBe("");

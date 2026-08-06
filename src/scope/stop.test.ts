@@ -28,15 +28,13 @@ function auditLines(root: string): unknown[] {
 describe("scopeStop", () => {
   it("cancel from a non-terminal status moves to cancelled/", () => {
     const root = tempGitRepo();
-    writeScopeFixture(root, "pending", "2026-01-01-foo.json", {
-      plan: status({ status: "pending" }),
-    });
+    writeScopeFixture(root, "pending", "2026-01-01-foo.xbrief.json", status({ status: "pending" }));
 
-    const result = scopeStop(root, { scope: "2026-01-01-foo.json", mode: "cancel" });
+    const result = scopeStop(root, { scope: "2026-01-01-foo.xbrief.json", mode: "cancel" });
 
     expect(result).toMatchObject({ ok: true, status: "cancelled" });
     expect(() =>
-      readFileSync(join(root, "xbrief", "cancelled", "2026-01-01-foo.json")),
+      readFileSync(join(root, "xbrief", "cancelled", "2026-01-01-foo.xbrief.json")),
     ).not.toThrow();
     expect(auditLines(root)).toContainEqual(
       expect.objectContaining({
@@ -50,11 +48,14 @@ describe("scopeStop", () => {
 
   it("cancel from a terminal status is illegal", () => {
     const root = tempGitRepo();
-    writeScopeFixture(root, "completed", "2026-01-01-foo.json", {
-      plan: status({ status: "completed" }),
-    });
+    writeScopeFixture(
+      root,
+      "completed",
+      "2026-01-01-foo.xbrief.json",
+      status({ status: "completed" }),
+    );
 
-    const result = scopeStop(root, { scope: "2026-01-01-foo.json", mode: "cancel" });
+    const result = scopeStop(root, { scope: "2026-01-01-foo.xbrief.json", mode: "cancel" });
 
     expect(result).toMatchObject({ ok: false, code: 1 });
     expect((result as { message: string }).message).toContain("completed");
@@ -62,133 +63,120 @@ describe("scopeStop", () => {
 
   it("fail from active (running) moves to completed/failed", () => {
     const root = tempGitRepo();
-    writeScopeFixture(root, "active", "2026-01-01-foo.json", {
-      plan: status({ status: "running" }),
-    });
+    writeScopeFixture(root, "active", "2026-01-01-foo.xbrief.json", status({ status: "running" }));
 
-    const result = scopeStop(root, { scope: "2026-01-01-foo.json", mode: "fail" });
+    const result = scopeStop(root, { scope: "2026-01-01-foo.xbrief.json", mode: "fail" });
 
     expect(result).toMatchObject({ ok: true, status: "failed" });
     expect(() =>
-      readFileSync(join(root, "xbrief", "completed", "2026-01-01-foo.json")),
+      readFileSync(join(root, "xbrief", "completed", "2026-01-01-foo.xbrief.json")),
     ).not.toThrow();
   });
 
   it("fail from pending is illegal", () => {
     const root = tempGitRepo();
-    writeScopeFixture(root, "pending", "2026-01-01-foo.json", {
-      plan: status({ status: "pending" }),
-    });
+    writeScopeFixture(root, "pending", "2026-01-01-foo.xbrief.json", status({ status: "pending" }));
 
-    const result = scopeStop(root, { scope: "2026-01-01-foo.json", mode: "fail" });
+    const result = scopeStop(root, { scope: "2026-01-01-foo.xbrief.json", mode: "fail" });
 
     expect(result).toMatchObject({ ok: false, code: 1 });
   });
 
   it("block from running stays in active/ as blocked", () => {
     const root = tempGitRepo();
-    writeScopeFixture(root, "active", "2026-01-01-foo.json", {
-      plan: status({ status: "running" }),
-    });
+    writeScopeFixture(root, "active", "2026-01-01-foo.xbrief.json", status({ status: "running" }));
 
-    const result = scopeStop(root, { scope: "2026-01-01-foo.json", mode: "block" });
+    const result = scopeStop(root, { scope: "2026-01-01-foo.xbrief.json", mode: "block" });
 
     expect(result).toMatchObject({ ok: true, status: "blocked" });
     const written = JSON.parse(
-      readFileSync(join(root, "xbrief", "active", "2026-01-01-foo.json"), "utf8"),
+      readFileSync(join(root, "xbrief", "active", "2026-01-01-foo.xbrief.json"), "utf8"),
     );
     expect(written.plan.status).toBe("blocked");
   });
 
   it("block from blocked is illegal", () => {
     const root = tempGitRepo();
-    writeScopeFixture(root, "active", "2026-01-01-foo.json", {
-      plan: status({ status: "blocked" }),
-    });
+    writeScopeFixture(root, "active", "2026-01-01-foo.xbrief.json", status({ status: "blocked" }));
 
-    const result = scopeStop(root, { scope: "2026-01-01-foo.json", mode: "block" });
+    const result = scopeStop(root, { scope: "2026-01-01-foo.xbrief.json", mode: "block" });
 
     expect(result).toMatchObject({ ok: false, code: 1 });
   });
 
   it("unblock from blocked returns to running", () => {
     const root = tempGitRepo();
-    writeScopeFixture(root, "active", "2026-01-01-foo.json", {
-      plan: status({ status: "blocked" }),
-    });
+    writeScopeFixture(root, "active", "2026-01-01-foo.xbrief.json", status({ status: "blocked" }));
 
-    const result = scopeStop(root, { scope: "2026-01-01-foo.json", mode: "unblock" });
+    const result = scopeStop(root, { scope: "2026-01-01-foo.xbrief.json", mode: "unblock" });
 
     expect(result).toMatchObject({ ok: true, status: "running" });
   });
 
   it("unblock from running is illegal", () => {
     const root = tempGitRepo();
-    writeScopeFixture(root, "active", "2026-01-01-foo.json", {
-      plan: status({ status: "running" }),
-    });
+    writeScopeFixture(root, "active", "2026-01-01-foo.xbrief.json", status({ status: "running" }));
 
-    const result = scopeStop(root, { scope: "2026-01-01-foo.json", mode: "unblock" });
+    const result = scopeStop(root, { scope: "2026-01-01-foo.xbrief.json", mode: "unblock" });
 
     expect(result).toMatchObject({ ok: false, code: 1 });
   });
 
   it("demote from active (running or blocked) moves to pending/", () => {
     const root = tempGitRepo();
-    writeScopeFixture(root, "active", "2026-01-01-foo.json", {
-      plan: status({ status: "running" }),
-    });
+    writeScopeFixture(root, "active", "2026-01-01-foo.xbrief.json", status({ status: "running" }));
 
-    const result = scopeStop(root, { scope: "2026-01-01-foo.json", mode: "demote" });
+    const result = scopeStop(root, { scope: "2026-01-01-foo.xbrief.json", mode: "demote" });
 
     expect(result).toMatchObject({ ok: true, status: "pending" });
   });
 
   it("demote from proposed is illegal", () => {
     const root = tempGitRepo();
-    writeScopeFixture(root, "proposed", "2026-01-01-foo.json", {
-      plan: status({ status: "proposed" }),
-    });
+    writeScopeFixture(
+      root,
+      "proposed",
+      "2026-01-01-foo.xbrief.json",
+      status({ status: "proposed" }),
+    );
 
-    const result = scopeStop(root, { scope: "2026-01-01-foo.json", mode: "demote" });
+    const result = scopeStop(root, { scope: "2026-01-01-foo.xbrief.json", mode: "demote" });
 
     expect(result).toMatchObject({ ok: false, code: 1 });
   });
 
   it("records --note in narratives.Note and appends on repeat", () => {
     const root = tempGitRepo();
-    writeScopeFixture(root, "active", "2026-01-01-foo.json", {
-      plan: status({ status: "running" }),
-    });
+    writeScopeFixture(root, "active", "2026-01-01-foo.xbrief.json", status({ status: "running" }));
 
     const result = scopeStop(root, {
-      scope: "2026-01-01-foo.json",
+      scope: "2026-01-01-foo.xbrief.json",
       mode: "block",
       note: "blocked on upstream API",
     });
 
     expect(result).toMatchObject({ ok: true, status: "blocked" });
     const written = JSON.parse(
-      readFileSync(join(root, "xbrief", "active", "2026-01-01-foo.json"), "utf8"),
+      readFileSync(join(root, "xbrief", "active", "2026-01-01-foo.xbrief.json"), "utf8"),
     );
-    expect(written.narratives.Note).toBe("blocked on upstream API");
+    expect(written.plan.narratives.Note).toBe("blocked on upstream API");
 
     const second = scopeStop(root, {
-      scope: "2026-01-01-foo.json",
+      scope: "2026-01-01-foo.xbrief.json",
       mode: "unblock",
       note: "upstream fixed",
     });
     expect(second.ok).toBe(true);
     const rewritten = JSON.parse(
-      readFileSync(join(root, "xbrief", "active", "2026-01-01-foo.json"), "utf8"),
+      readFileSync(join(root, "xbrief", "active", "2026-01-01-foo.xbrief.json"), "utf8"),
     );
-    expect(rewritten.narratives.Note).toBe("blocked on upstream API\nupstream fixed");
+    expect(rewritten.plan.narratives.Note).toBe("blocked on upstream API\nupstream fixed");
   });
 
   it("unknown scope id is a config error (exit 2)", () => {
     const root = tempGitRepo();
 
-    const result = scopeStop(root, { scope: "nope.json", mode: "cancel" });
+    const result = scopeStop(root, { scope: "nope.xbrief.json", mode: "cancel" });
 
     expect(result).toMatchObject({ ok: false, code: 2 });
   });

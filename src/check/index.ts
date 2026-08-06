@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { readProjectBrief } from "../policy/index.js";
+import { projectQualityBlock, readProjectBrief } from "../policy/index.js";
 import type { GateExitCode } from "../types/index.js";
 
 /**
@@ -66,13 +66,13 @@ const DETECTORS: readonly ((projectRoot: string) => readonly string[])[] = [
   detectPyprojectCommands,
 ];
 
-/** xbrief/PROJECT.json `quality.commands[]` if non-empty, else detect from the toolchain on disk. */
+/** PROJECT.xbrief.json plan["x-canonical/quality"].commands[] if non-empty, else detect from the toolchain on disk. */
 export function resolveCheckCommands(projectRoot: string): ResolveCheckCommandsResult {
   const read = readProjectBrief(projectRoot);
   if (!read.ok) {
     return { ok: false, message: read.message };
   }
-  const configured = read.project.quality?.commands;
+  const configured = projectQualityBlock(read.project).commands;
   if (configured !== undefined && configured.length > 0) {
     return { ok: true, commands: configured };
   }

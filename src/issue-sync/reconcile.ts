@@ -61,7 +61,9 @@ export async function reconcile(
     if (!read.ok) {
       continue;
     }
-    const issueRef = (read.scope.references ?? []).find((r) => r.type === "issue");
+    const issueRef = (read.scope.plan?.references ?? []).find(
+      (r) => r.type === "x-xbrief/github-issue",
+    );
     if (issueRef === undefined) {
       continue;
     }
@@ -73,7 +75,7 @@ export async function reconcile(
       path: ref.relPath,
       issueNumber,
       title: issueRef.title,
-      status: read.scope.plan.status,
+      status: read.scope.plan?.status ?? "",
     });
   }
 

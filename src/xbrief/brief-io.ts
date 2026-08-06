@@ -1,10 +1,15 @@
 import { existsSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { basename, join } from "node:path";
-import { atomicWriteJson } from "../fs/contained-write.js";
-import type { LifecycleFolder, ScopeFile, ScopeStatus } from "../types/index.js";
-import { LIFECYCLE_FOLDERS, SCOPE_FILENAME_RE, STATUS_FOLDER_MAP } from "../types/index.js";
+import { atomicWriteText } from "../fs/contained-write.js";
+import type { LifecycleFolder, ScopeDoc, ScopeStatus } from "../types/index.js";
+import {
+  LIFECYCLE_FOLDERS,
+  SCOPE_FILENAME_RE,
+  STATUS_FOLDER_MAP,
+  withPlan,
+} from "../types/index.js";
 
-/** xbrief/ path helpers + scope file read/write. Reads never throw on bad JSON -- they return result objects. */
+/** xbrief/ path helpers + scope document read/write. Reads never throw on bad JSON -- they return result objects. */
 
 export function xbriefRoot(projectRoot: string): string {
   return join(projectRoot, "xbrief");
@@ -18,17 +23,40 @@ export function xbriefExist(projectRoot: string): boolean {
   return existsSync(xbriefRoot(projectRoot));
 }
 
+/**
+ * Canonical xBRIEF serialization: recursively alphabetized keys, 2-space
+ * indent, trailing newline (the reference library's `canonical: true` form).
+ * Deterministic output keeps git diffs limited to real changes.
+ */
+export function canonicalStringify(value: unknown): string {
+  return `${JSON.stringify(sortJsonValue(value), null, 2)}\n`;
+}
+
+function sortJsonValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(sortJsonValue);
+  }
+  if (typeof value === "object" && value !== null) {
+    const sorted: Record<string, unknown> = {};
+    for (const key of Object.keys(value).sort()) {
+      sorted[key] = sortJsonValue((value as Record<string, unknown>)[key]);
+    }
+    return sorted;
+  }
+  return value;
+}
+
 export interface ScopeRef {
   /** Absolute path. */
   readonly path: string;
-  /** Path relative to project root, POSIX separators (e.g. "xbrief/active/2026-08-04-x.json"). */
+  /** Path relative to project root, POSIX separators (e.g. "xbrief/active/2026-08-04-x.xbrief.json"). */
   readonly relPath: string;
   readonly folder: LifecycleFolder;
   readonly filename: string;
 }
 
 export type ReadScopeResult =
-  | { readonly ok: true; readonly scope: ScopeFile }
+  | { readonly ok: true; readonly scope: ScopeDoc }
   | { readonly ok: false; readonly message: string };
 
 export function readScope(path: string): ReadScopeResult {
@@ -43,7 +71,7 @@ export function readScope(path: string): ReadScopeResult {
     if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
       return { ok: false, message: `${path}: not a JSON object` };
     }
-    return { ok: true, scope: parsed as ScopeFile };
+    return { ok: true, scope: parsed as ScopeDoc };
   } catch (err) {
     return { ok: false, message: `${path}: invalid JSON (${(err as Error).message})` };
   }
@@ -121,9 +149,9 @@ export function isValidScopeFilename(name: string): boolean {
   return slug !== undefined && slug.length <= 80;
 }
 
-/** Write scope JSON in place (atomic). Target expressed relative to project root. */
-export function writeScope(projectRoot: string, relPath: string, scope: ScopeFile): void {
-  atomicWriteJson(projectRoot, relPath, scope);
+/** Write scope JSON in place (atomic, canonical serialization). Target expressed relative to project root. */
+export function writeScope(projectRoot: string, relPath: string, scope: ScopeDoc): void {
+  atomicWriteText(projectRoot, relPath, canonicalStringify(scope));
 }
 
 /**
@@ -133,20 +161,17 @@ export function writeScope(projectRoot: string, relPath: string, scope: ScopeFil
 export function transitionScope(
   projectRoot: string,
   ref: ScopeRef,
-  scope: ScopeFile,
+  scope: ScopeDoc,
   newStatus: ScopeStatus,
   now: Date = new Date(),
 ): ScopeRef {
   const targetFolder = STATUS_FOLDER_MAP[newStatus];
-  const updated: ScopeFile = {
-    ...scope,
-    plan: { ...scope.plan, status: newStatus, updated: now.toISOString() },
-  };
+  const updated = withPlan(scope, { status: newStatus, updated: now.toISOString() });
   const targetRel = `xbrief/${targetFolder}/${ref.filename}`;
-  // Write the updated brief to the TARGET path first (atomicWriteJson mkdirs the
+  // Write the updated brief to the TARGET path first (writeScope mkdirs the
   // folder), then remove the source. Worst case on a crash is a duplicate file
   // (state:validate flags it) -- never a folder/status mismatch or a lost brief.
-  atomicWriteJson(projectRoot, targetRel, updated);
+  writeScope(projectRoot, targetRel, updated);
   if (targetFolder !== ref.folder) {
     rmSync(ref.path, { force: true });
   }

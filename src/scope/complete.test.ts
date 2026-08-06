@@ -37,13 +37,18 @@ function fakeResponse(body: unknown): Response {
 describe("scopeComplete", () => {
   it("completes a non-code-bearing scope (kind: epic) with no disposition required", async () => {
     const root = tempGitRepo();
-    writeScopeFixture(root, "active", "2026-01-01-foo.json", { kind: "epic", plan: status() });
+    writeScopeFixture(
+      root,
+      "active",
+      "2026-01-01-foo.xbrief.json",
+      status({ "x-canonical/kind": "epic" }),
+    );
 
-    const result = await scopeComplete(root, { scope: "2026-01-01-foo.json" });
+    const result = await scopeComplete(root, { scope: "2026-01-01-foo.xbrief.json" });
 
     expect(result).toMatchObject({ ok: true, status: "completed" });
     expect(() =>
-      readFileSync(join(root, "xbrief", "completed", "2026-01-01-foo.json")),
+      readFileSync(join(root, "xbrief", "completed", "2026-01-01-foo.xbrief.json")),
     ).not.toThrow();
     expect(auditLines(root)).toContainEqual(
       expect.objectContaining({ kind: "scope-complete", disposition: null }),
@@ -52,19 +57,29 @@ describe("scopeComplete", () => {
 
   it("a code-bearing scope (kind: story) without --disposition is missing delivery evidence (exit 1)", async () => {
     const root = tempGitRepo();
-    writeScopeFixture(root, "active", "2026-01-01-foo.json", { kind: "story", plan: status() });
+    writeScopeFixture(
+      root,
+      "active",
+      "2026-01-01-foo.xbrief.json",
+      status({ "x-canonical/kind": "story" }),
+    );
 
-    const result = await scopeComplete(root, { scope: "2026-01-01-foo.json" });
+    const result = await scopeComplete(root, { scope: "2026-01-01-foo.xbrief.json" });
 
     expect(result).toMatchObject({ ok: false, code: 1 });
   });
 
   it("rejects an unknown --disposition value (exit 2)", async () => {
     const root = tempGitRepo();
-    writeScopeFixture(root, "active", "2026-01-01-foo.json", { kind: "story", plan: status() });
+    writeScopeFixture(
+      root,
+      "active",
+      "2026-01-01-foo.xbrief.json",
+      status({ "x-canonical/kind": "story" }),
+    );
 
     const result = await scopeComplete(root, {
-      scope: "2026-01-01-foo.json",
+      scope: "2026-01-01-foo.xbrief.json",
       disposition: "shipped",
     });
 
@@ -73,18 +88,23 @@ describe("scopeComplete", () => {
 
   it("accepts a story disposition without git evidence (e.g. accepted_not_delivered)", async () => {
     const root = tempGitRepo();
-    writeScopeFixture(root, "active", "2026-01-01-foo.json", { kind: "story", plan: status() });
+    writeScopeFixture(
+      root,
+      "active",
+      "2026-01-01-foo.xbrief.json",
+      status({ "x-canonical/kind": "story" }),
+    );
 
     const result = await scopeComplete(root, {
-      scope: "2026-01-01-foo.json",
+      scope: "2026-01-01-foo.xbrief.json",
       disposition: "accepted_not_delivered",
     });
 
     expect(result).toMatchObject({ ok: true, status: "completed" });
     const written = JSON.parse(
-      readFileSync(join(root, "xbrief", "completed", "2026-01-01-foo.json"), "utf8"),
+      readFileSync(join(root, "xbrief", "completed", "2026-01-01-foo.xbrief.json"), "utf8"),
     );
-    expect(written.delivery).toMatchObject({
+    expect(written.plan["x-canonical/delivery"]).toMatchObject({
       disposition: "accepted_not_delivered",
       branch: "main",
     });
@@ -93,10 +113,15 @@ describe("scopeComplete", () => {
   it("delivered + --sha that IS an ancestor of the delivery branch verifies and writes the delivery block", async () => {
     const root = tempGitRepo();
     const sha = git(root, "rev-parse", "HEAD").trim();
-    writeScopeFixture(root, "active", "2026-01-01-foo.json", { kind: "story", plan: status() });
+    writeScopeFixture(
+      root,
+      "active",
+      "2026-01-01-foo.xbrief.json",
+      status({ "x-canonical/kind": "story" }),
+    );
 
     const result = await scopeComplete(root, {
-      scope: "2026-01-01-foo.json",
+      scope: "2026-01-01-foo.xbrief.json",
       disposition: "delivered",
       sha,
       pr: "https://github.com/acme/widgets/pull/9",
@@ -104,9 +129,9 @@ describe("scopeComplete", () => {
 
     expect(result).toMatchObject({ ok: true, status: "completed" });
     const written = JSON.parse(
-      readFileSync(join(root, "xbrief", "completed", "2026-01-01-foo.json"), "utf8"),
+      readFileSync(join(root, "xbrief", "completed", "2026-01-01-foo.xbrief.json"), "utf8"),
     );
-    expect(written.delivery).toMatchObject({
+    expect(written.plan["x-canonical/delivery"]).toMatchObject({
       disposition: "delivered",
       sha,
       pr: "https://github.com/acme/widgets/pull/9",
@@ -116,7 +141,12 @@ describe("scopeComplete", () => {
 
   it("delivered + --sha that is NOT an ancestor of the delivery branch fails (exit 1)", async () => {
     const root = tempGitRepo();
-    writeScopeFixture(root, "active", "2026-01-01-foo.json", { kind: "story", plan: status() });
+    writeScopeFixture(
+      root,
+      "active",
+      "2026-01-01-foo.xbrief.json",
+      status({ "x-canonical/kind": "story" }),
+    );
     // an orphan commit unrelated to main's history
     git(root, "checkout", "-q", "--orphan", "orphan-branch");
     git(root, "commit", "-q", "--allow-empty", "-m", "orphan");
@@ -124,7 +154,7 @@ describe("scopeComplete", () => {
     git(root, "checkout", "-q", "main");
 
     const result = await scopeComplete(root, {
-      scope: "2026-01-01-foo.json",
+      scope: "2026-01-01-foo.xbrief.json",
       disposition: "delivered",
       sha: orphanSha,
     });
@@ -134,13 +164,21 @@ describe("scopeComplete", () => {
 
   it("closes the origin issue via the injected gh client when a gh client can be built", async () => {
     const root = tempGitRepo();
-    writeScopeFixture(root, "active", "2026-01-01-foo.json", {
-      kind: "story",
-      plan: status(),
-      references: [
-        { uri: "https://github.com/acme/widgets/issues/42", type: "issue", trust: "external" },
-      ],
-    });
+    writeScopeFixture(
+      root,
+      "active",
+      "2026-01-01-foo.xbrief.json",
+      status({
+        "x-canonical/kind": "story",
+        references: [
+          {
+            uri: "https://github.com/acme/widgets/issues/42",
+            type: "x-xbrief/github-issue",
+            "x-canonical/trust": "external",
+          },
+        ],
+      }),
+    );
 
     const calls: { readonly method: string; readonly url: string; readonly body?: unknown }[] = [];
     const fetchFn = vi.fn(async (url: string | URL, init?: RequestInit) => {
@@ -155,7 +193,7 @@ describe("scopeComplete", () => {
     };
 
     const result = await scopeComplete(root, {
-      scope: "2026-01-01-foo.json",
+      scope: "2026-01-01-foo.xbrief.json",
       disposition: "accepted_not_delivered",
       pr: "https://github.com/acme/widgets/pull/9",
       ghSeams,
@@ -178,13 +216,21 @@ describe("scopeComplete", () => {
 
   it("warns to stderr and does not fail when gh cannot be configured (GhConfigError)", async () => {
     const root = tempGitRepo();
-    writeScopeFixture(root, "active", "2026-01-01-foo.json", {
-      kind: "story",
-      plan: status(),
-      references: [
-        { uri: "https://github.com/acme/widgets/issues/42", type: "issue", trust: "external" },
-      ],
-    });
+    writeScopeFixture(
+      root,
+      "active",
+      "2026-01-01-foo.xbrief.json",
+      status({
+        "x-canonical/kind": "story",
+        references: [
+          {
+            uri: "https://github.com/acme/widgets/issues/42",
+            type: "x-xbrief/github-issue",
+            "x-canonical/trust": "external",
+          },
+        ],
+      }),
+    );
 
     const warnSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
     const ghSeams: GhSeams = {
@@ -193,7 +239,7 @@ describe("scopeComplete", () => {
     };
 
     const result = await scopeComplete(root, {
-      scope: "2026-01-01-foo.json",
+      scope: "2026-01-01-foo.xbrief.json",
       disposition: "accepted_not_delivered",
       ghSeams,
     });
@@ -206,7 +252,7 @@ describe("scopeComplete", () => {
   it("unknown scope id is a config error (exit 2)", async () => {
     const root = tempGitRepo();
 
-    const result = await scopeComplete(root, { scope: "nope.json" });
+    const result = await scopeComplete(root, { scope: "nope.xbrief.json" });
 
     expect(result).toMatchObject({ ok: false, code: 2 });
   });

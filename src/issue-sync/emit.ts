@@ -1,5 +1,6 @@
 import type { GhClient, RepoSlug } from "../gh/rest.js";
-import type { ScopeFile, ScopeReference } from "../types/index.js";
+import type { ScopeDoc, ScopeReference } from "../types/index.js";
+import { withPlan } from "../types/index.js";
 import { findScope, readScope, writeScope } from "../xbrief/brief-io.js";
 
 /** Exit codes per content/canonical-tasks.md `issue:sync emit`. */
@@ -49,12 +50,14 @@ export async function emit(
     return { code: 2, message: read.message };
   }
   const scope = read.scope;
-  const title = scope.title;
-  const body = scope.narratives?.Description ?? "";
+  const title = scope.plan.title;
+  const body = scope.plan.narratives?.Description ?? "";
   const base = `/repos/${repo.owner}/${repo.repo}`;
 
   try {
-    const existingRef = (scope.references ?? []).find((r) => r.type === "issue");
+    const existingRef = (scope.plan.references ?? []).find(
+      (r) => r.type === "x-xbrief/github-issue",
+    );
     if (existingRef !== undefined) {
       const issueNumber = issueNumberFromUri(existingRef.uri);
       if (issueNumber === undefined) {
@@ -72,15 +75,17 @@ export async function emit(
     const createdIssue = (await client.post(`${base}/issues`, { title, body })) as IssuePayload;
     const newRef: ScopeReference = {
       uri: createdIssue.html_url,
-      type: "issue",
+      type: "x-xbrief/github-issue",
       title,
-      trust: "external",
+      "x-canonical/trust": "external",
     };
-    const updated: ScopeFile = {
-      ...scope,
-      references: [...(scope.references ?? []), newRef],
-      narratives: { ...scope.narratives, Origin: `Emitted to issue #${createdIssue.number}` },
-    };
+    const updated: ScopeDoc = withPlan(scope, {
+      references: [...(scope.plan.references ?? []), newRef],
+      narratives: {
+        ...scope.plan.narratives,
+        Origin: `Emitted to issue #${createdIssue.number}`,
+      },
+    });
     writeScope(projectRoot, found.relPath, updated);
     return {
       code: 0,

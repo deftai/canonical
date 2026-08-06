@@ -1,7 +1,7 @@
 {
   "name": "@deftai/canonical",
   "version": "0.2.2",
-  "description": "The canonical pack: a compact, deterministic agent-workflow framework -- briefs-based state, 20 CLI verbs, fail-closed git gates. Install globally, run `canon init` in any project.",
+  "description": "The canonical pack: a compact, deterministic agent-workflow framework -- xBRIEF-based state, 20 CLI verbs, fail-closed git gates. Install globally, run `canon init` in any project.",
   "license": "MIT",
   "type": "module",
   "bin": {
@@ -50,6 +50,8 @@
     "@biomejs/biome": "^2.5.0",
     "@types/node": "^24.0.0",
     "@vitest/coverage-v8": "^3.2.0",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
     "typescript": "^5.9.0",
     "vitest": "^3.2.0"
   }

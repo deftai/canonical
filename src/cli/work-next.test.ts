@@ -50,13 +50,9 @@ describe("work-next handler", () => {
 
   it("exits 0 and prints the next pending scope's path", () => {
     const root = tempGitRepo();
-    const rel = writeScopeFixture(root, "pending", "2026-01-01-do-me.json", {
+    const rel = writeScopeFixture(root, "pending", "2026-01-01-do-me.xbrief.json", {
       title: "Do me",
-      plan: {
-        status: "pending",
-        created: "2026-01-01T00:00:00.000Z",
-        updated: "2026-01-01T00:00:00.000Z",
-      },
+      status: "pending",
     });
     const code = run(["--project-root", root]);
     expect(code).toBe(0);
@@ -65,23 +61,19 @@ describe("work-next handler", () => {
     expect(err.join("")).toBe("");
   });
 
-  it("exits 2 when xbrief/plan.json is corrupt", () => {
+  it("exits 2 when xbrief/plan.xbrief.json is corrupt", () => {
     const root = tempGitRepo();
     mkdirSync(join(root, "xbrief"), { recursive: true });
-    writeFileSync(join(root, "xbrief", "plan.json"), "{ not json");
+    writeFileSync(join(root, "xbrief", "plan.xbrief.json"), "{ not json");
     const code = run(["--project-root", root]);
     expect(code).toBe(2);
   });
 
   it("--json prints the found item on stdout with exit 0", () => {
     const root = tempGitRepo();
-    const rel = writeScopeFixture(root, "pending", "2026-01-01-do-me.json", {
+    const rel = writeScopeFixture(root, "pending", "2026-01-01-do-me.xbrief.json", {
       title: "Do me",
-      plan: {
-        status: "pending",
-        created: "2026-01-01T00:00:00.000Z",
-        updated: "2026-01-01T00:00:00.000Z",
-      },
+      status: "pending",
     });
     const code = run(["--project-root", root, "--json"]);
     expect(code).toBe(0);

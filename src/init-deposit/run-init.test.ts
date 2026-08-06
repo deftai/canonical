@@ -68,8 +68,16 @@ describe("runInit", () => {
     for (const folder of ["proposed", "pending", "active", "completed", "cancelled"]) {
       expect(existsSync(join(root, "xbrief", folder, ".gitkeep"))).toBe(true);
     }
-    const project = JSON.parse(readFileSync(join(root, "xbrief", "PROJECT.json"), "utf8"));
-    expect(project).toEqual({ title: expect.any(String), policy: {} });
+    const project = JSON.parse(readFileSync(join(root, "xbrief", "PROJECT.xbrief.json"), "utf8"));
+    expect(project).toEqual({
+      xBRIEFInfo: { version: "0.8" },
+      plan: {
+        title: expect.any(String),
+        status: "running",
+        items: [],
+        "x-canonical/policy": {},
+      },
+    });
 
     // git hooks wired
     expect(existsSync(join(root, ".githooks", "pre-commit"))).toBe(true);

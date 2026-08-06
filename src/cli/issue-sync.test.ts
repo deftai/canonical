@@ -112,13 +112,13 @@ describe("issue-sync run()", () => {
     it("dedup skip: exits 1 when the issue is already ingested", async () => {
       const root = tempDir("canon-issue-sync-cli-");
       scaffoldXbrief(root);
-      writeScopeFixture(root, "pending", "2026-01-01-dup-issue-9.json", {
+      writeScopeFixture(root, "pending", "2026-01-01-dup-issue-9.xbrief.json", {
         references: [
           {
             uri: "https://github.com/acme/widgets/issues/9",
-            type: "issue",
+            type: "x-xbrief/github-issue",
             title: "x",
-            trust: "external",
+            "x-canonical/trust": "external",
           },
         ],
       });
@@ -171,12 +171,12 @@ describe("issue-sync run()", () => {
     it("round-trips: creates then updates the same issue", async () => {
       const root = tempDir("canon-issue-sync-cli-");
       scaffoldXbrief(root);
-      const rel = writeScopeFixture(root, "pending", "2026-01-01-emit-me.json", {
+      const rel = writeScopeFixture(root, "pending", "2026-01-01-emit-me.xbrief.json", {
         title: "Emit me",
         references: [],
       });
       const created = await run(
-        ["emit", "2026-01-01-emit-me.json", `--project-root=${root}`, "--json"],
+        ["emit", "2026-01-01-emit-me.xbrief.json", `--project-root=${root}`, "--json"],
         {
           env: { GH_TOKEN: "t" },
           exec: fakeExec,
@@ -189,13 +189,16 @@ describe("issue-sync run()", () => {
       );
       expect(created).toBe(0);
       const scope = JSON.parse(readFileSync(join(root, rel), "utf8"));
-      expect(scope.references[0].uri).toBe("https://github.com/acme/widgets/issues/77");
+      expect(scope.plan.references[0].uri).toBe("https://github.com/acme/widgets/issues/77");
 
-      const updated = await run(["emit", "2026-01-01-emit-me.json", `--project-root=${root}`], {
-        env: { GH_TOKEN: "t" },
-        exec: fakeExec,
-        fetchFn: fakeFetch({ "PATCH /repos/acme/widgets/issues/77": { body: {} } }),
-      });
+      const updated = await run(
+        ["emit", "2026-01-01-emit-me.xbrief.json", `--project-root=${root}`],
+        {
+          env: { GH_TOKEN: "t" },
+          exec: fakeExec,
+          fetchFn: fakeFetch({ "PATCH /repos/acme/widgets/issues/77": { body: {} } }),
+        },
+      );
       expect(updated).toBe(0);
     });
   });
