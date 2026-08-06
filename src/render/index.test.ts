@@ -80,6 +80,21 @@ describe("renderRoadmap: golden output", () => {
     expect(written).toContain("| First story | blocked | - | - |");
   });
 
+  it("escapes pipes and newlines in data-derived cells so rows cannot break the table", () => {
+    const root = emptyProject();
+    writeScopeFixture(root, "proposed", "2026-01-04-tricky.xbrief.json", {
+      title: "Fix a | b\nparsing",
+    });
+
+    const result = renderRoadmap(root);
+    expect(result.ok).toBe(true);
+
+    const written = readFileSync(join(root, "ROADMAP.md"), "utf8");
+    expect(written).toContain("| Fix a \\| b parsing | proposed | - | - |");
+    // every non-header line inside the tables stays a single row
+    expect(written).not.toContain("\nparsing");
+  });
+
   it("--check passes when the committed file matches the regenerated output", () => {
     const root = emptyProject();
     writeScopeFixture(root, "proposed", "2026-01-01-a.xbrief.json", { title: "A" });
@@ -154,7 +169,25 @@ describe("renderSpec: golden output", () => {
     expect(result).toEqual({ ok: false, code: 1, message: "xbrief/spec.xbrief.json missing" });
   });
 
-  it("--check passes when the committed file matches the regenerated output", () => {
+  it("returns a misconfig (code 2) when spec.xbrief.json is not a JSON object", () => {
+    const root = emptyProject();
+    writeFileSync(join(root, "xbrief", "spec.xbrief.json"), "[1, 2]");
+    const result = renderSpec(root);
+    expect(result.ok).toBe(false);
+    expect(result.code).toBe(2);
+    expect(result.message).toContain("not a JSON object");
+  });
+
+  it("returns a misconfig (code 2) when spec.xbrief.json lacks a plan object", () => {
+    const root = emptyProject();
+    writeFileSync(join(root, "xbrief", "spec.xbrief.json"), JSON.stringify({ title: "legacy" }));
+    const result = renderSpec(root);
+    expect(result.ok).toBe(false);
+    expect(result.code).toBe(2);
+    expect(result.message).toContain("not an xBRIEF document");
+  });
+
+  it("spec --check passes when the committed file matches the regenerated output", () => {
     const root = emptyProject();
     writeFileSync(
       join(root, "xbrief", "spec.xbrief.json"),
@@ -168,7 +201,7 @@ describe("renderSpec: golden output", () => {
     expect(check).toEqual({ ok: true, code: 0, message: "SPEC.md up to date", path: check.path });
   });
 
-  it("--check fails (violation, code 1) when the committed file is stale", () => {
+  it("spec --check fails (violation, code 1) when the committed file is stale", () => {
     const root = emptyProject();
     writeFileSync(
       join(root, "xbrief", "spec.xbrief.json"),

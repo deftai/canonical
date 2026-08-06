@@ -84,14 +84,19 @@ const ROADMAP_SECTION_TITLES: Readonly<Record<LifecycleFolder, string>> = {
   cancelled: "Cancelled",
 };
 
+/** Data-derived strings must not break table structure: escape pipes, collapse newlines. */
+function mdCell(value: string): string {
+  return value.replace(/\|/g, "\\|").replace(/\r?\n/g, " ");
+}
+
 function firstIssueOriginLink(scope: ScopeDoc): string {
   const ref = (scope.plan.references ?? []).find((r) => r.type === "x-xbrief/github-issue");
-  return ref === undefined ? "-" : `[${ref.uri}](${ref.uri})`;
+  return ref === undefined ? "-" : mdCell(`[${ref.uri}](${ref.uri})`);
 }
 
 function dependenciesCell(scope: ScopeDoc): string {
   const deps = scopeDependencies(scope);
-  return deps.length > 0 ? deps.join(", ") : "-";
+  return deps.length > 0 ? mdCell(deps.join(", ")) : "-";
 }
 
 function buildRoadmapContent(projectRoot: string): string {
@@ -102,7 +107,7 @@ function buildRoadmapContent(projectRoot: string): string {
       continue;
     }
     const scope = read.scope;
-    const row = `| ${scope.plan.title} | ${scope.plan.status} | ${firstIssueOriginLink(scope)} | ${dependenciesCell(scope)} |`;
+    const row = `| ${mdCell(scope.plan.title)} | ${scope.plan.status} | ${firstIssueOriginLink(scope)} | ${dependenciesCell(scope)} |`;
     rowsByFolder.get(ref.folder)?.push(row);
   }
 

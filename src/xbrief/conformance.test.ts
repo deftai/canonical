@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { Ajv2020 } from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
 import { afterAll, describe, expect, it } from "vitest";
@@ -24,7 +25,13 @@ import { validateCoreDocument } from "./validate.js";
  * xBRIEF" a checked invariant instead of an aspiration.
  */
 
-const XBRIEF_ROOT = join(__dirname, "..", "..", "third_party", "xBRIEF");
+const XBRIEF_ROOT = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "..",
+  "third_party",
+  "xBRIEF",
+);
 const SCHEMA_PATH = join(XBRIEF_ROOT, "schemas", "xbrief-core-0.8.schema.json");
 const EXAMPLES_DIR = join(XBRIEF_ROOT, "examples");
 

@@ -129,10 +129,6 @@ export function scopeSwarm(doc: ScopeDoc): SwarmBlock | undefined {
   return doc.plan["x-canonical/swarm"];
 }
 
-export function scopeDelivery(doc: ScopeDoc): DeliveryBlock | undefined {
-  return doc.plan["x-canonical/delivery"];
-}
-
 /** Copy of `doc` with `fields` merged into its plan (envelope + foreign keys preserved). */
 export function withPlan(doc: ScopeDoc, fields: Partial<ScopePlan>): ScopeDoc {
   return { ...doc, plan: { ...doc.plan, ...fields } };
