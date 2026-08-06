@@ -1,4 +1,4 @@
-/** Typed project policy (content/state.md "Project Policy"). Lives in xbrief/PROJECT.json -> policy.* */
+/** Typed project policy (content/state.md "Project Policy"). Lives in xbrief/PROJECT.xbrief.json -> plan["x-canonical/policy"]. */
 
 export interface RuntimeAuthority {
   readonly denyPaths: readonly string[];
@@ -47,11 +47,25 @@ export interface PolicyAuditRecord {
   readonly actor: string;
 }
 
-/** PROJECT.json shape. */
-export interface ProjectBrief {
-  readonly title?: string;
-  readonly policy?: Partial<Omit<ProjectPolicy, "runtimeAuthority">> & {
-    readonly runtimeAuthority?: Partial<RuntimeAuthority>;
+export type PolicyBlock = Partial<Omit<ProjectPolicy, "runtimeAuthority">> & {
+  readonly runtimeAuthority?: Partial<RuntimeAuthority>;
+};
+
+export interface QualityBlock {
+  readonly commands?: readonly string[];
+  readonly forwardCoverageRoots?: readonly string[];
+}
+
+/** PROJECT.xbrief.json shape: an xBRIEF document whose plan carries the project identity + policy. */
+export interface ProjectDoc {
+  readonly xBRIEFInfo?: { readonly version?: string; readonly [key: string]: unknown };
+  readonly plan?: {
+    readonly title?: string;
+    readonly status?: string;
+    readonly items?: readonly unknown[];
+    readonly "x-canonical/policy"?: PolicyBlock;
+    readonly "x-canonical/quality"?: QualityBlock;
+    readonly [key: string]: unknown;
   };
-  readonly quality?: { readonly commands?: readonly string[] };
+  readonly [key: string]: unknown;
 }

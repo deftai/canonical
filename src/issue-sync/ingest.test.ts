@@ -61,19 +61,20 @@ describe("ingest", () => {
     expect(result.code).toBe(0);
     expect(result.written).toHaveLength(1);
     const path = result.written[0] as string;
-    expect(path).toBe("xbrief/proposed/2026-08-04-fix-the-widget-issue-9.json");
+    expect(path).toBe("xbrief/proposed/2026-08-04-fix-the-widget-issue-9.xbrief.json");
     const scope = JSON.parse(readFileSync(join(root, path), "utf8"));
-    expect(scope.kind).toBe("story");
+    expect(scope.xBRIEFInfo).toEqual({ version: "0.8" });
+    expect(scope.plan["x-canonical/kind"]).toBe("story");
     expect(scope.plan.status).toBe("proposed");
-    expect(scope.narratives.Description).toContain("Some description");
-    expect(scope.narratives.Acceptance).toBe("first thing\nsecond thing");
-    expect(scope.narratives.Origin).toBe("Ingested from issue #9");
-    expect(scope.references).toEqual([
+    expect(scope.plan.narratives.Description).toContain("Some description");
+    expect(scope.plan.narratives.Acceptance).toBe("first thing\nsecond thing");
+    expect(scope.plan.narratives.Origin).toBe("Ingested from issue #9");
+    expect(scope.plan.references).toEqual([
       {
         uri: "https://github.com/acme/widgets/issues/9",
-        type: "issue",
+        type: "x-xbrief/github-issue",
         title: "Fix the widget",
-        trust: "external",
+        "x-canonical/trust": "external",
       },
     ]);
   });
@@ -81,13 +82,13 @@ describe("ingest", () => {
   it("skips (not error) an issue already referenced by an existing scope", async () => {
     const root = tempDir("canon-ingest-");
     scaffoldXbrief(root);
-    writeScopeFixture(root, "pending", "2026-01-01-existing-issue-9.json", {
+    writeScopeFixture(root, "pending", "2026-01-01-existing-issue-9.xbrief.json", {
       references: [
         {
           uri: "https://github.com/acme/widgets/issues/9",
-          type: "issue",
+          type: "x-xbrief/github-issue",
           title: "x",
-          trust: "external",
+          "x-canonical/trust": "external",
         },
       ],
     });
@@ -112,13 +113,13 @@ describe("ingest", () => {
   it("ingests --all open issues, filtering out pull requests, and skips duplicates", async () => {
     const root = tempDir("canon-ingest-");
     scaffoldXbrief(root);
-    writeScopeFixture(root, "pending", "2026-01-01-already-there-issue-5.json", {
+    writeScopeFixture(root, "pending", "2026-01-01-already-there-issue-5.xbrief.json", {
       references: [
         {
           uri: "https://github.com/acme/widgets/issues/5",
-          type: "issue",
+          type: "x-xbrief/github-issue",
           title: "x",
-          trust: "external",
+          "x-canonical/trust": "external",
         },
       ],
     });
@@ -149,7 +150,7 @@ describe("ingest", () => {
     });
     const result = await ingest(c, REPO, root, { all: true }, NOW);
     expect(result.code).toBe(0);
-    expect(result.written).toEqual(["xbrief/proposed/2026-08-04-new-one-issue-6.json"]);
+    expect(result.written).toEqual(["xbrief/proposed/2026-08-04-new-one-issue-6.xbrief.json"]);
     expect(result.skipped).toHaveLength(1);
     expect(result.skipped[0]?.issueNumber).toBe(5);
   });
@@ -170,9 +171,11 @@ describe("ingest", () => {
     const result = await ingest(c, REPO, root, { number: 9, dryRun: true }, NOW);
     expect(result.code).toBe(0);
     expect(result.dryRun).toBe(true);
-    expect(result.written).toEqual(["xbrief/proposed/2026-08-04-fix-the-widget-issue-9.json"]);
+    expect(result.written).toEqual([
+      "xbrief/proposed/2026-08-04-fix-the-widget-issue-9.xbrief.json",
+    ]);
     expect(
-      existsSync(join(root, "xbrief", "proposed", "2026-08-04-fix-the-widget-issue-9.json")),
+      existsSync(join(root, "xbrief", "proposed", "2026-08-04-fix-the-widget-issue-9.xbrief.json")),
     ).toBe(false);
     expect(
       readdirSync(join(root, "xbrief", "proposed")).filter((f) => f !== ".gitkeep"),
@@ -182,13 +185,13 @@ describe("ingest", () => {
   it("returns 1 when all matching issues are skipped as duplicates", async () => {
     const root = tempDir("canon-ingest-");
     scaffoldXbrief(root);
-    writeScopeFixture(root, "pending", "2026-01-01-dup-issue-9.json", {
+    writeScopeFixture(root, "pending", "2026-01-01-dup-issue-9.xbrief.json", {
       references: [
         {
           uri: "https://github.com/acme/widgets/issues/9",
-          type: "issue",
+          type: "x-xbrief/github-issue",
           title: "x",
-          trust: "external",
+          "x-canonical/trust": "external",
         },
       ],
     });

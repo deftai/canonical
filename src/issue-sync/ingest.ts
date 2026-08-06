@@ -1,5 +1,6 @@
 import type { GhClient, RepoSlug } from "../gh/rest.js";
-import type { ScopeFile } from "../types/index.js";
+import type { ScopeDoc } from "../types/index.js";
+import { XBRIEF_VERSION } from "../types/index.js";
 import { isoDate, listScopes, normalizeSlug, readScope, writeScope } from "../xbrief/brief-io.js";
 
 /** Exit codes per content/canonical-tasks.md `issue:sync ingest`. */
@@ -56,8 +57,8 @@ function existingIssueUris(projectRoot: string): ReadonlySet<string> {
     if (!read.ok) {
       continue;
     }
-    for (const reference of read.scope.references ?? []) {
-      if (reference.type === "issue") {
+    for (const reference of read.scope.plan?.references ?? []) {
+      if (reference.type === "x-xbrief/github-issue") {
         uris.add(reference.uri);
       }
     }
@@ -65,20 +66,32 @@ function existingIssueUris(projectRoot: string): ReadonlySet<string> {
   return uris;
 }
 
-function buildScope(issue: IssuePayload, now: Date): ScopeFile {
+function buildScope(issue: IssuePayload, now: Date): ScopeDoc {
   const body = issue.body ?? "";
   const checklist = extractChecklist(body);
   return {
-    title: issue.title,
-    kind: "story",
-    plan: { status: "proposed", created: now.toISOString(), updated: now.toISOString() },
-    narratives: {
-      Description: body,
-      ...(checklist !== "" ? { Acceptance: checklist } : {}),
-      Origin: `Ingested from issue #${issue.number}`,
+    xBRIEFInfo: { version: XBRIEF_VERSION },
+    plan: {
+      title: issue.title,
+      status: "proposed",
+      created: now.toISOString(),
+      updated: now.toISOString(),
+      items: [],
+      narratives: {
+        Description: body,
+        ...(checklist !== "" ? { Acceptance: checklist } : {}),
+        Origin: `Ingested from issue #${issue.number}`,
+      },
+      references: [
+        {
+          uri: issue.html_url,
+          type: "x-xbrief/github-issue",
+          title: issue.title,
+          "x-canonical/trust": "external",
+        },
+      ],
+      "x-canonical/kind": "story",
     },
-    items: [],
-    references: [{ uri: issue.html_url, type: "issue", title: issue.title, trust: "external" }],
   };
 }
 
@@ -131,7 +144,7 @@ export async function ingest(
     // An all-punctuation issue title normalizes to an empty slug; fall back so
     // the filename contract holds.
     const slug = normalizeSlug(issue.title) || "untitled";
-    const filename = `${isoDate(now)}-${slug}-issue-${issue.number}.json`;
+    const filename = `${isoDate(now)}-${slug}-issue-${issue.number}.xbrief.json`;
     const relPath = `xbrief/proposed/${filename}`;
     if (opts.dryRun !== true) {
       writeScope(projectRoot, relPath, scope);

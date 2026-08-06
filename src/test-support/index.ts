@@ -60,29 +60,53 @@ export function tempGitRepo(opts: TempRepoOptions = {}): string {
   return root;
 }
 
-/** Create xbrief/ with the five lifecycle dirs and a minimal PROJECT.json. */
+/** Create xbrief/ with the five lifecycle dirs and a minimal PROJECT.xbrief.json. */
 export function scaffoldXbrief(root: string): void {
   for (const folder of ["proposed", "pending", "active", "completed", "cancelled"]) {
     mkdirSync(join(root, "xbrief", folder), { recursive: true });
     writeFileSync(join(root, "xbrief", folder, ".gitkeep"), "");
   }
   writeFileSync(
-    join(root, "xbrief", "PROJECT.json"),
-    `${JSON.stringify({ title: "test-project", policy: {} }, null, 2)}\n`,
+    join(root, "xbrief", "PROJECT.xbrief.json"),
+    `${JSON.stringify(
+      {
+        xBRIEFInfo: { version: "0.8" },
+        plan: { title: "test-project", status: "running", items: [], "x-canonical/policy": {} },
+      },
+      null,
+      2,
+    )}\n`,
   );
 }
 
-/** Minimal valid scope file body for fixtures. */
-export function scopeFixture(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+/** Acceptance criterion as a spec PlanItem ({id, title, status}). */
+export function acceptanceItem(id: string, title: string, done = false): Record<string, unknown> {
+  return { id, title, status: done ? "completed" : "pending" };
+}
+
+/**
+ * Minimal valid scope document (xBRIEF v0.8 envelope) for fixtures.
+ * `planOverrides` merge into `plan`; `rootOverrides` merge at document root.
+ */
+export function scopeFixture(
+  planOverrides: Record<string, unknown> = {},
+  rootOverrides: Record<string, unknown> = {},
+): Record<string, unknown> {
   const now = "2026-01-01T00:00:00.000Z";
   return {
-    title: "Test scope",
-    kind: "story",
-    plan: { status: "proposed", created: now, updated: now },
-    narratives: { Description: "test", Acceptance: "observable outcome" },
-    items: [{ id: "ac1", text: "does the thing", done: false }],
-    references: [],
-    ...overrides,
+    xBRIEFInfo: { version: "0.8" },
+    plan: {
+      title: "Test scope",
+      status: "proposed",
+      created: now,
+      updated: now,
+      items: [acceptanceItem("ac1", "does the thing")],
+      narratives: { Description: "test", Acceptance: "observable outcome" },
+      references: [],
+      "x-canonical/kind": "story",
+      ...planOverrides,
+    },
+    ...rootOverrides,
   };
 }
 
@@ -91,10 +115,14 @@ export function writeScopeFixture(
   root: string,
   folder: string,
   filename: string,
-  overrides: Record<string, unknown> = {},
+  planOverrides: Record<string, unknown> = {},
+  rootOverrides: Record<string, unknown> = {},
 ): string {
   const rel = join("xbrief", folder, filename);
   mkdirSync(join(root, "xbrief", folder), { recursive: true });
-  writeFileSync(join(root, rel), `${JSON.stringify(scopeFixture(overrides), null, 2)}\n`);
+  writeFileSync(
+    join(root, rel),
+    `${JSON.stringify(scopeFixture(planOverrides, rootOverrides), null, 2)}\n`,
+  );
   return rel;
 }

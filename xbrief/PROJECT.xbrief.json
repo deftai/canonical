@@ -1,0 +1,14 @@
+{
+  "plan": {
+    "items": [],
+    "status": "running",
+    "title": "directive-canonical-merged",
+    "x-canonical/policy": {},
+    "x-canonical/quality": {
+      "commands": ["pnpm run lint", "pnpm run build", "pnpm run test:fast"]
+    }
+  },
+  "xBRIEFInfo": {
+    "version": "0.8"
+  }
+}

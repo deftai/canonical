@@ -2,7 +2,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
 import { atomicWriteJson } from "../fs/contained-write.js";
 import { currentBranch } from "../git/index.js";
-import type { ScopeFile } from "../types/index.js";
+import type { ScopeDoc } from "../types/index.js";
+import { scopeKind, scopeSwarm, withPlan } from "../types/index.js";
 import { appendAudit } from "../xbrief/audit.js";
 import { findScope, listScopes, readScope, transitionScope } from "../xbrief/brief-io.js";
 
@@ -70,7 +71,7 @@ export interface SwarmRunFinalizeResult {
 export type SwarmRunResult = SwarmRunStoriesResult | SwarmRunFinalizeResult;
 
 /**
- * Reduce a file_scope entry to the literal path prefix it claims. A glob
+ * Reduce a filesScope entry to the literal path prefix it claims. A glob
  * (`*` anywhere) claims everything under the path up to its first wildcard
  * segment -- `src/**` claims all of `src/`, so it overlaps any entry that
  * shares that prefix.
@@ -104,7 +105,7 @@ interface ResolvedStory {
   readonly identifier: string;
   readonly relPath: string;
   readonly filename: string;
-  readonly scope: ScopeFile;
+  readonly scope: ScopeDoc;
 }
 
 export function swarmRun(
@@ -166,19 +167,20 @@ function runReadiness(projectRoot: string, options: SwarmRunStoriesOptions): Swa
   const violations: SwarmViolation[] = [];
   for (const story of resolved) {
     const label = story.relPath;
-    if (story.scope.kind !== "story") {
-      violations.push({ story: label, reason: `kind must be "story", got "${story.scope.kind}"` });
+    const kind = scopeKind(story.scope);
+    if (kind !== "story") {
+      violations.push({ story: label, reason: `kind must be "story", got "${kind}"` });
     }
-    const swarm = story.scope.swarm;
-    const fileScope = swarm?.file_scope ?? [];
-    const verifyCommands = swarm?.verify_commands ?? [];
-    if (fileScope.length === 0) {
-      violations.push({ story: label, reason: "swarm.file_scope is empty or missing" });
+    const swarm = scopeSwarm(story.scope);
+    const filesScope = swarm?.filesScope ?? [];
+    const verifyCommands = swarm?.verifyCommands ?? [];
+    if (filesScope.length === 0) {
+      violations.push({ story: label, reason: "swarm.filesScope is empty or missing" });
     }
     if (verifyCommands.length === 0) {
-      violations.push({ story: label, reason: "swarm.verify_commands is empty or missing" });
+      violations.push({ story: label, reason: "swarm.verifyCommands is empty or missing" });
     }
-    const itemCount = story.scope.items?.length ?? 0;
+    const itemCount = story.scope.plan.items?.length ?? 0;
     if (itemCount < 2 || itemCount > 5) {
       violations.push({
         story: label,
@@ -194,18 +196,18 @@ function runReadiness(projectRoot: string, options: SwarmRunStoriesOptions): Swa
       if (a === undefined || b === undefined) {
         continue;
       }
-      const aScope = a.scope.swarm?.file_scope ?? [];
-      const bScope = b.scope.swarm?.file_scope ?? [];
+      const aScope = scopeSwarm(a.scope)?.filesScope ?? [];
+      const bScope = scopeSwarm(b.scope)?.filesScope ?? [];
       for (const pa of aScope) {
         for (const pb of bScope) {
           if (pathOverlaps(pa, pb)) {
             violations.push({
               story: a.relPath,
-              reason: `file_scope "${pa}" overlaps "${pb}" in ${b.relPath}`,
+              reason: `filesScope "${pa}" overlaps "${pb}" in ${b.relPath}`,
             });
             violations.push({
               story: b.relPath,
-              reason: `file_scope "${pb}" overlaps "${pa}" in ${a.relPath}`,
+              reason: `filesScope "${pb}" overlaps "${pa}" in ${a.relPath}`,
             });
           }
         }
@@ -224,7 +226,7 @@ function runReadiness(projectRoot: string, options: SwarmRunStoriesOptions): Swa
     stories: resolved.map((s) => ({
       story_id: s.filename,
       story_path: s.relPath,
-      worktree_path: `.scratch/worktrees/${s.filename.replace(/\.json$/, "")}`,
+      worktree_path: `.scratch/worktrees/${s.filename.replace(/\.xbrief\.json$/, "")}`,
       base_branch: base,
     })),
   };
@@ -307,10 +309,9 @@ function runFinalize(
     // the manifest before transitioning (content/state.md forbids completed
     // code work with no delivery block).
     const baseBranch = typeof entry.base_branch === "string" ? entry.base_branch : "main";
-    const withDelivery = {
-      ...read.scope,
-      delivery: { disposition: "delivered" as const, branch: baseBranch },
-    };
+    const withDelivery = withPlan(read.scope, {
+      "x-canonical/delivery": { disposition: "delivered", branch: baseBranch },
+    });
     const newRef = transitionScope(projectRoot, ref, withDelivery, "completed", now);
     appendAudit(projectRoot, { kind: "swarm-finalize", scope: newRef.relPath }, now);
     finalized.push(newRef.relPath);

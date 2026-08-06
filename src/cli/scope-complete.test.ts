@@ -28,16 +28,12 @@ describe("canon scope:complete", () => {
 
   it("happy path (non-code-bearing) returns 0 and --json emits sorted snake_case", async () => {
     const root = tempGitRepo();
-    writeScopeFixture(root, "active", "2026-01-01-foo.json", {
-      kind: "epic",
-      plan: {
-        status: "running",
-        created: "2026-01-01T00:00:00.000Z",
-        updated: "2026-01-01T00:00:00.000Z",
-      },
+    writeScopeFixture(root, "active", "2026-01-01-foo.xbrief.json", {
+      "x-canonical/kind": "epic",
+      status: "running",
     });
 
-    const code = await run(["2026-01-01-foo.json", "--project-root", root, "--json"]);
+    const code = await run(["2026-01-01-foo.xbrief.json", "--project-root", root, "--json"]);
 
     expect(code).toBe(0);
     const printed = (outSpy.mock.calls[0]?.[0] as string) ?? "";
@@ -48,33 +44,25 @@ describe("canon scope:complete", () => {
 
   it("gate failure: story without --disposition returns 1", async () => {
     const root = tempGitRepo();
-    writeScopeFixture(root, "active", "2026-01-01-foo.json", {
-      kind: "story",
-      plan: {
-        status: "running",
-        created: "2026-01-01T00:00:00.000Z",
-        updated: "2026-01-01T00:00:00.000Z",
-      },
+    writeScopeFixture(root, "active", "2026-01-01-foo.xbrief.json", {
+      "x-canonical/kind": "story",
+      status: "running",
     });
 
-    const code = await run(["2026-01-01-foo.json", "--project-root", root]);
+    const code = await run(["2026-01-01-foo.xbrief.json", "--project-root", root]);
 
     expect(code).toBe(1);
   });
 
   it("invalid --disposition value returns 2", async () => {
     const root = tempGitRepo();
-    writeScopeFixture(root, "active", "2026-01-01-foo.json", {
-      kind: "story",
-      plan: {
-        status: "running",
-        created: "2026-01-01T00:00:00.000Z",
-        updated: "2026-01-01T00:00:00.000Z",
-      },
+    writeScopeFixture(root, "active", "2026-01-01-foo.xbrief.json", {
+      "x-canonical/kind": "story",
+      status: "running",
     });
 
     const code = await run([
-      "2026-01-01-foo.json",
+      "2026-01-01-foo.xbrief.json",
       "--project-root",
       root,
       "--disposition",

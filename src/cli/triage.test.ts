@@ -36,9 +36,9 @@ describe("canon triage", () => {
 
   it("happy path: accept prints status and returns 0, --json emits sorted snake_case", () => {
     const root = tempGitRepo();
-    writeScopeFixture(root, "proposed", "2026-01-01-foo.json");
+    writeScopeFixture(root, "proposed", "2026-01-01-foo.xbrief.json");
 
-    const code = run(["accept", "2026-01-01-foo.json", "--project-root", root, "--json"]);
+    const code = run(["accept", "2026-01-01-foo.xbrief.json", "--project-root", root, "--json"]);
 
     expect(code).toBe(0);
     const printed = (outSpy.mock.calls[0]?.[0] as string) ?? "";
@@ -49,10 +49,13 @@ describe("canon triage", () => {
 
   it("gate failure (WIP cap) returns 1", () => {
     const root = tempGitRepo();
-    atomicWriteJson(root, "xbrief/PROJECT.json", { title: "t", policy: { wipCap: 0 } });
-    writeScopeFixture(root, "proposed", "2026-01-01-foo.json");
+    atomicWriteJson(root, "xbrief/PROJECT.xbrief.json", {
+      xBRIEFInfo: { version: "0.8" },
+      plan: { title: "t", status: "running", items: [], "x-canonical/policy": { wipCap: 0 } },
+    });
+    writeScopeFixture(root, "proposed", "2026-01-01-foo.xbrief.json");
 
-    const code = run(["accept", "2026-01-01-foo.json", "--project-root", root]);
+    const code = run(["accept", "2026-01-01-foo.xbrief.json", "--project-root", root]);
 
     expect(code).toBe(1);
   });

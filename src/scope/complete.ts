@@ -1,8 +1,8 @@
 import { GhConfigError, type GhSeams, ghClient, resolveRepo } from "../gh/rest.js";
 import { defaultBranch, type GitRunner, isAncestorOf, isGitRepo } from "../git/index.js";
 import { resolvePolicy } from "../policy/index.js";
-import type { DeliveryDisposition, ScopeFile } from "../types/index.js";
-import { DELIVERY_DISPOSITIONS } from "../types/index.js";
+import type { DeliveryDisposition, ScopeDoc } from "../types/index.js";
+import { DELIVERY_DISPOSITIONS, scopeKind, withPlan } from "../types/index.js";
 import { appendAudit } from "../xbrief/audit.js";
 import { findScope, readScope, transitionScope } from "../xbrief/brief-io.js";
 
@@ -43,12 +43,12 @@ const ISSUE_NUMBER_RE = /\/issues\/(\d+)(?:[/?#]|$)/;
 
 async function tryCloseIssue(
   projectRoot: string,
-  scope: ScopeFile,
+  scope: ScopeDoc,
   relPath: string,
   pr: string | undefined,
   seams: GhSeams | undefined,
 ): Promise<boolean | undefined> {
-  const issueRef = scope.references?.find((r) => r.type === "issue");
+  const issueRef = scope.plan.references?.find((r) => r.type === "x-xbrief/github-issue");
   if (issueRef === undefined) {
     return undefined;
   }
@@ -114,7 +114,7 @@ export async function scopeComplete(
     return { ok: false, code: 2, message: readResult.message };
   }
   const scope = readResult.scope;
-  const codeBearing = scope.kind === "story";
+  const codeBearing = scopeKind(scope) === "story";
 
   // Lifecycle gate: complete is active -> completed (content/state.md). A
   // terminal or not-yet-started scope cannot be completed.
@@ -150,7 +150,7 @@ export async function scopeComplete(
     return { ok: false, code: 2, message: policy.error };
   }
 
-  let updated: ScopeFile = scope;
+  let updated: ScopeDoc = scope;
   if (disposition !== undefined) {
     const gitAvailable = isGitRepo(projectRoot, opts.runner);
     const branch =
@@ -181,15 +181,14 @@ export async function scopeComplete(
         );
       }
     }
-    updated = {
-      ...scope,
-      delivery: {
+    updated = withPlan(scope, {
+      "x-canonical/delivery": {
         disposition,
         ...(opts.pr !== undefined ? { pr: opts.pr } : {}),
         ...(opts.sha !== undefined ? { sha: opts.sha } : {}),
         branch,
       },
-    };
+    });
   }
 
   const newRef = transitionScope(projectRoot, ref, updated, "completed", now);

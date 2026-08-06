@@ -1,7 +1,12 @@
 import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanupTempDirs, tempGitRepo, writeScopeFixture } from "../test-support/index.js";
+import {
+  acceptanceItem,
+  cleanupTempDirs,
+  tempGitRepo,
+  writeScopeFixture,
+} from "../test-support/index.js";
 import { run } from "./swarm-run.js";
 
 afterAll(() => {
@@ -31,21 +36,23 @@ afterEach(() => {
   errSpy.mockRestore();
 });
 
-function readyOverrides(fileScope: readonly string[]) {
+function readyOverrides(filesScope: readonly string[]) {
   return {
-    kind: "story",
-    items: [
-      { id: "ac1", text: "one", done: false },
-      { id: "ac2", text: "two", done: false },
-    ],
-    swarm: { file_scope: fileScope, verify_commands: ["task check"], readiness: "ready" },
+    "x-canonical/kind": "story",
+    items: [acceptanceItem("ac1", "one"), acceptanceItem("ac2", "two")],
+    "x-canonical/swarm": { filesScope, verifyCommands: ["task check"], readiness: "ready" },
   };
 }
 
 describe("canon swarm-run -- stories mode", () => {
   it("exits 0 and prints the manifest for a ready cohort", () => {
     const root = tempGitRepo({ withBriefs: true });
-    const a = writeScopeFixture(root, "active", "2026-01-01-a.json", readyOverrides(["src/foo/"]));
+    const a = writeScopeFixture(
+      root,
+      "active",
+      "2026-01-01-a.xbrief.json",
+      readyOverrides(["src/foo/"]),
+    );
     const code = run(["--project-root", root, a]);
     expect(code).toBe(0);
     expect(existsSync(join(root, ".canonical", "cache", "launch-manifest.json"))).toBe(true);
@@ -54,7 +61,9 @@ describe("canon swarm-run -- stories mode", () => {
 
   it("exits 1 and lists violations when not ready", () => {
     const root = tempGitRepo({ withBriefs: true });
-    const a = writeScopeFixture(root, "active", "2026-01-01-a.json", { kind: "chore" });
+    const a = writeScopeFixture(root, "active", "2026-01-01-a.xbrief.json", {
+      "x-canonical/kind": "chore",
+    });
     const code = run(["--project-root", root, a]);
     expect(code).toBe(1);
     expect(err).toContain("not ready");
@@ -62,7 +71,9 @@ describe("canon swarm-run -- stories mode", () => {
 
   it("--json on failure emits a machine-readable violation list", () => {
     const root = tempGitRepo({ withBriefs: true });
-    const a = writeScopeFixture(root, "active", "2026-01-01-a.json", { kind: "chore" });
+    const a = writeScopeFixture(root, "active", "2026-01-01-a.xbrief.json", {
+      "x-canonical/kind": "chore",
+    });
     const code = run(["--project-root", root, a, "--json"]);
     expect(code).toBe(1);
     const parsed = JSON.parse(out.trim());
@@ -86,7 +97,7 @@ describe("canon swarm-run -- finalize mode", () => {
 
   it("finalizes stories from a manifest and prints the finalized scopes", () => {
     const root = tempGitRepo({ withBriefs: true });
-    writeScopeFixture(root, "active", "2026-01-01-a.json", readyOverrides(["src/foo/"]));
+    writeScopeFixture(root, "active", "2026-01-01-a.xbrief.json", readyOverrides(["src/foo/"]));
     const manifestPath = join(root, "manifest.json");
     writeFileSync(
       manifestPath,
@@ -94,8 +105,8 @@ describe("canon swarm-run -- finalize mode", () => {
         created: "2026-01-01T00:00:00.000Z",
         stories: [
           {
-            story_id: "2026-01-01-a.json",
-            story_path: "xbrief/active/2026-01-01-a.json",
+            story_id: "2026-01-01-a.xbrief.json",
+            story_path: "xbrief/active/2026-01-01-a.xbrief.json",
             worktree_path: ".scratch/worktrees/2026-01-01-a",
             base_branch: "main",
           },
@@ -104,7 +115,7 @@ describe("canon swarm-run -- finalize mode", () => {
     );
     const code = run(["--project-root", root, "--finalize", "--manifest", manifestPath]);
     expect(code).toBe(0);
-    expect(out).toContain("finalized: xbrief/completed/2026-01-01-a.json");
-    expect(existsSync(join(root, "xbrief", "completed", "2026-01-01-a.json"))).toBe(true);
+    expect(out).toContain("finalized: xbrief/completed/2026-01-01-a.xbrief.json");
+    expect(existsSync(join(root, "xbrief", "completed", "2026-01-01-a.xbrief.json"))).toBe(true);
   });
 });

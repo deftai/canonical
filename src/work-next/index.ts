@@ -1,13 +1,14 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import type { ScopeFile, ScopeStatus } from "../types/index.js";
+import type { ScopeDoc, ScopeStatus } from "../types/index.js";
+import { PLAN_BRIEF_NAME, scopeDependencies } from "../types/index.js";
 import { listScopes, readScope, xbriefRoot } from "../xbrief/brief-io.js";
 
 /**
  * `work:next` -- pure ranking logic (content/canonical-tasks.md):
- *  1. `xbrief/plan.json` `sequence: string[]` (rel-paths) -> first entry
- *     whose scope status is not terminal.
- *  2. else `xbrief/pending/*.json` ranked dependencies-satisfied-first,
+ *  1. `xbrief/plan.xbrief.json` `x-canonical/sequence: string[]` (rel-paths)
+ *     -> first entry whose scope status is not terminal.
+ *  2. else `xbrief/pending/*.xbrief.json` ranked dependencies-satisfied-first,
  *     then oldest `plan.created`.
  *  3. else empty.
  *
@@ -29,11 +30,11 @@ export type WorkNextResult =
   | { readonly kind: "error"; readonly message: string };
 
 function planPath(projectRoot: string): string {
-  return join(xbriefRoot(projectRoot), "plan.json");
+  return join(xbriefRoot(projectRoot), PLAN_BRIEF_NAME);
 }
 
-function toItem(relPath: string, scope: ScopeFile): WorkNextItem {
-  return { relPath, title: scope.title, status: scope.plan.status };
+function toItem(relPath: string, scope: ScopeDoc): WorkNextItem {
+  return { relPath, title: scope.plan.title, status: scope.plan.status };
 }
 
 export function workNext(projectRoot: string): WorkNextResult {
@@ -43,9 +44,9 @@ export function workNext(projectRoot: string): WorkNextResult {
     if (!planRead.ok) {
       return { kind: "error", message: planRead.message };
     }
-    const plan = planRead.scope as unknown as { readonly sequence?: unknown };
-    if (plan.sequence !== undefined) {
-      return resolveSequence(projectRoot, planFile, plan.sequence);
+    const sequence = planRead.scope.plan?.["x-canonical/sequence"];
+    if (sequence !== undefined) {
+      return resolveSequence(projectRoot, planFile, sequence);
     }
   }
   return rankPending(projectRoot);
@@ -53,7 +54,10 @@ export function workNext(projectRoot: string): WorkNextResult {
 
 function resolveSequence(projectRoot: string, planFile: string, sequence: unknown): WorkNextResult {
   if (!Array.isArray(sequence) || !sequence.every((v) => typeof v === "string")) {
-    return { kind: "error", message: `${planFile}: plan.sequence must be an array of strings` };
+    return {
+      kind: "error",
+      message: `${planFile}: plan["x-canonical/sequence"] must be an array of strings`,
+    };
   }
   for (const relPath of sequence as readonly string[]) {
     const abs = join(projectRoot, relPath);
@@ -70,7 +74,7 @@ function resolveSequence(projectRoot: string, planFile: string, sequence: unknow
 
 interface Candidate {
   readonly relPath: string;
-  readonly scope: ScopeFile;
+  readonly scope: ScopeDoc;
   readonly satisfied: boolean;
 }
 
@@ -89,7 +93,7 @@ function rankPending(projectRoot: string): WorkNextResult {
     if (!read.ok) {
       return { kind: "error", message: read.message };
     }
-    const deps = read.scope.dependencies ?? [];
+    const deps = scopeDependencies(read.scope);
     let satisfied = true;
     for (const dep of deps) {
       const depRef = byFilename.get(dep);

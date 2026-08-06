@@ -1,5 +1,6 @@
 import { resolvePolicy } from "../policy/index.js";
-import type { ScopeFile, ScopeReference } from "../types/index.js";
+import type { ScopeDoc, ScopeReference } from "../types/index.js";
+import { withPlan } from "../types/index.js";
 import { appendAudit } from "../xbrief/audit.js";
 import {
   findScope,
@@ -33,7 +34,7 @@ export interface TriageOptions {
   readonly force?: boolean;
   /**
    * duplicate: URI of the winning scope/origin this candidate duplicates.
-   * Recorded as a `{type: "scope", trust: "internal"}` reference.
+   * Recorded as a `{type: "x-xbrief/plan", "x-canonical/trust": "internal"}` reference.
    */
   readonly winningUri?: string;
   readonly now?: Date;
@@ -126,11 +127,13 @@ export function triageDecide(projectRoot: string, opts: TriageOptions): TriageRe
       if (opts.note === undefined || opts.note.trim() === "") {
         return { ok: false, code: 2, message: "defer requires --note" };
       }
-      const updated: ScopeFile = {
-        ...scope,
-        plan: { ...scope.plan, updated: now.toISOString() },
-        narratives: { ...scope.narratives, Note: appendNote(scope.narratives?.Note, opts.note) },
-      };
+      const updated: ScopeDoc = withPlan(scope, {
+        updated: now.toISOString(),
+        narratives: {
+          ...scope.plan.narratives,
+          Note: appendNote(scope.plan.narratives?.Note, opts.note),
+        },
+      });
       writeScope(projectRoot, ref.relPath, updated);
       break;
     }
@@ -138,11 +141,14 @@ export function triageDecide(projectRoot: string, opts: TriageOptions): TriageRe
       if (opts.winningUri === undefined || opts.winningUri.trim() === "") {
         return { ok: false, code: 2, message: "duplicate requires a winning-uri" };
       }
-      const reference: ScopeReference = { uri: opts.winningUri, type: "scope", trust: "internal" };
-      const withReference: ScopeFile = {
-        ...scope,
-        references: [...(scope.references ?? []), reference],
+      const reference: ScopeReference = {
+        uri: opts.winningUri,
+        type: "x-xbrief/plan",
+        "x-canonical/trust": "internal",
       };
+      const withReference: ScopeDoc = withPlan(scope, {
+        references: [...(scope.plan.references ?? []), reference],
+      });
       transitionScope(projectRoot, ref, withReference, "cancelled", now);
       break;
     }

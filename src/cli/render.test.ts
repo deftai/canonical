@@ -55,7 +55,7 @@ describe("canon render", () => {
 
   it("writes ROADMAP.md and exits 0", () => {
     const root = emptyProject();
-    writeScopeFixture(root, "proposed", "2026-01-01-a.json", { title: "A" });
+    writeScopeFixture(root, "proposed", "2026-01-01-a.xbrief.json", { title: "A" });
     const code = run(["roadmap", "--project-root", root]);
     expect(code).toBe(0);
     expect(readFileSync(join(root, "ROADMAP.md"), "utf8")).toContain("| A | proposed | - | - |");
@@ -75,11 +75,11 @@ describe("canon render", () => {
     expect(code).toBe(0);
   });
 
-  it("spec exits 1 (violation) when xbrief/spec.json is absent", () => {
+  it("spec exits 1 (violation) when xbrief/spec.xbrief.json is absent", () => {
     const root = emptyProject();
     const code = run(["spec", "--project-root", root]);
     expect(code).toBe(1);
-    expect(errBuf.join("")).toContain("xbrief/spec.json missing");
+    expect(errBuf.join("")).toContain("xbrief/spec.xbrief.json missing");
   });
 
   it("--json prints a one-line key-sorted payload to stdout", () => {
@@ -91,7 +91,7 @@ describe("canon render", () => {
     expect(line.split("\n")).toHaveLength(1);
     expect(JSON.parse(line)).toEqual({
       code: 1,
-      message: "xbrief/spec.json missing",
+      message: "xbrief/spec.xbrief.json missing",
       ok: false,
       path: null,
     });

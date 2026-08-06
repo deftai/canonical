@@ -12,21 +12,21 @@ Legend: `!` MUST · `~` SHOULD · `≉` SHOULD NOT · `⊗` MUST NOT · `?` MAY
   3. The 3–6 must-have features for a first working version.
   4. Explicit non-goals (what v1 will NOT do).
   5. Stack (offer a recommended default for their platform; accept "you pick").
-- ! Then generate the state, without further prompting:
-  1. `xbrief/PROJECT.json` — title, a `narratives.Description` one-paragraph gestalt, and `quality.commands` for the chosen stack.
-  2. `xbrief/spec.json` — narratives `Problem`, `Users`, `NonGoals`; `items` = the must-have list.
-  3. One scope per must-have feature: `task scope:new -- "<feature>"`, then edit each brief to fill `narratives.Description` and 2–5 observable acceptance `items` derived from the interview.
+- ! Then generate the state, without further prompting (every file is an xBRIEF v0.8 document — fields below live on its `plan`; see state.md):
+  1. `xbrief/PROJECT.xbrief.json` — `plan.title`, a `plan.narratives.Description` one-paragraph gestalt, and `plan["x-canonical/quality"].commands` for the chosen stack.
+  2. `xbrief/spec.xbrief.json` — `plan.narratives` `Problem`, `Users`, `NonGoals`; `plan.items` = the must-have list (each `{ "title": …, "status": "pending" }`).
+  3. One scope per must-have feature: `task scope:new -- "<feature>"`, then edit each brief to fill `plan.narratives.Description` and 2–5 observable acceptance `plan.items` derived from the interview.
   4. `task -x state:validate` (must exit 0), then `task -x render -- roadmap`.
 - ! Finish with a short summary and a numbered menu: (1) accept all into pending, (2) review scopes one by one, (3) add/remove a feature, then `Discuss`, `Back`. On accept, use `task triage -- accept <scope>` per scope.
 - ⊗ Skip the interview because the request seems clear — confirm the one-sentence restatement at minimum.
 
 ## New Feature ("oh, and I also want Z")
 
-- ! `task scope:new -- "<feature>"`, fill `narratives.Description` and 2–5 acceptance `items`, `task -x state:validate`, then present the triage menu (accept into pending now, or leave proposed).
+- ! `task scope:new -- "<feature>"`, fill `plan.narratives.Description` and 2–5 acceptance `plan.items`, `task -x state:validate`, then present the triage menu (accept into pending now, or leave proposed).
 - ~ Ask clarifying questions (max 3) ONLY when you cannot write observable acceptance criteria from what the user said; otherwise write your best criteria and show them for confirmation.
 
 ## Underspecified Scope at Start Time
 
 - ! Before `scope:start` on any scope with fewer than 2 acceptance items or an empty `Description`: stop, run a mini-interview (max 3 questions, numbered options), update the brief, `task -x state:validate`, THEN start.
 - ⊗ Begin implementing a scope whose acceptance you could not state as observable outcomes.
-- ~ While implementing, flip each acceptance item's `done` to `true` as it is verifiably satisfied; all items `done` before `scope:complete`.
+- ~ While implementing, set each acceptance item's `status` to `completed` as it is verifiably satisfied; all items `completed` before `scope:complete`.

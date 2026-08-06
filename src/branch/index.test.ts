@@ -6,8 +6,14 @@ import { ENV_ALLOW_DEFAULT_BRANCH_COMMIT, evaluateBranch } from "./index.js";
 
 afterAll(cleanupTempDirs);
 
-function writeProjectJson(root: string, body: unknown): void {
-  writeFileSync(join(root, "xbrief", "PROJECT.json"), JSON.stringify(body));
+function writeProjectBrief(root: string, policy: unknown): void {
+  writeFileSync(
+    join(root, "xbrief", "PROJECT.xbrief.json"),
+    JSON.stringify({
+      xBRIEFInfo: { version: "0.8" },
+      plan: { title: "t", status: "running", items: [], "x-canonical/policy": policy },
+    }),
+  );
 }
 
 describe("evaluateBranch", () => {
@@ -39,7 +45,7 @@ describe("evaluateBranch", () => {
 
   it("exits 0 when policy.allowDirectCommitsToDefault is true", () => {
     const root = tempGitRepo({ branch: "main" });
-    writeProjectJson(root, { policy: { allowDirectCommitsToDefault: true } });
+    writeProjectBrief(root, { allowDirectCommitsToDefault: true });
     const result = evaluateBranch(root, { env: {} });
     expect(result.code).toBe(0);
     expect(result.override).toBe("policy");
@@ -47,16 +53,16 @@ describe("evaluateBranch", () => {
 
   it("prefers the env override over the policy override when both apply", () => {
     const root = tempGitRepo({ branch: "main" });
-    writeProjectJson(root, { policy: { allowDirectCommitsToDefault: true } });
+    writeProjectBrief(root, { allowDirectCommitsToDefault: true });
     const result = evaluateBranch(root, {
       env: { [ENV_ALLOW_DEFAULT_BRANCH_COMMIT]: "1" },
     });
     expect(result.override).toBe("env");
   });
 
-  it("exits 2 when PROJECT.json is malformed and no override applies", () => {
+  it("exits 2 when PROJECT.xbrief.json is malformed and no override applies", () => {
     const root = tempGitRepo({ branch: "main" });
-    writeFileSync(join(root, "xbrief", "PROJECT.json"), "{not json");
+    writeFileSync(join(root, "xbrief", "PROJECT.xbrief.json"), "{not json");
     const result = evaluateBranch(root, { env: {} });
     expect(result.code).toBe(2);
     expect(result.message).toContain("cannot resolve policy");

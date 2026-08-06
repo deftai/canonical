@@ -80,13 +80,21 @@ describe("evaluateForwardCoverage", () => {
     expect(result.code).toBe(0);
   });
 
-  it("reads quality.forwardCoverageRoots from xbrief/PROJECT.json when roots are not overridden", () => {
+  it("reads x-canonical/quality forwardCoverageRoots from xbrief/PROJECT.xbrief.json when roots are not overridden", () => {
     const root = tempGitRepo();
     writeFileSync(
-      join(root, "xbrief", "PROJECT.json"),
-      JSON.stringify({ quality: { forwardCoverageRoots: ["app/"] } }),
+      join(root, "xbrief", "PROJECT.xbrief.json"),
+      JSON.stringify({
+        xBRIEFInfo: { version: "0.8" },
+        plan: {
+          title: "t",
+          status: "running",
+          items: [],
+          "x-canonical/quality": { forwardCoverageRoots: ["app/"] },
+        },
+      }),
     );
-    git(root, "add", "xbrief/PROJECT.json");
+    git(root, "add", "xbrief/PROJECT.xbrief.json");
     git(root, "commit", "-q", "-m", "configure roots");
     stage(root, "app/widget.ts", "export const widget = 1;\n");
     const result = evaluateForwardCoverage(root);

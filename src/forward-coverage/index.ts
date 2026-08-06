@@ -1,13 +1,13 @@
 import { basename } from "node:path";
 import { type GitRunner, stagedFiles, stagedNewFiles } from "../git/index.js";
-import { readProjectBrief } from "../policy/index.js";
+import { projectQualityBlock, readProjectBrief } from "../policy/index.js";
 import type { GateResult } from "../types/index.js";
 
 /**
  * verify:forward-coverage (content/canonical-tasks.md): every STAGED NEW
  * source file under a configured root must ship with a staged new-or-modified
  * test file in the same commit. Pure function of the staged git index +
- * xbrief/PROJECT.json `quality.forwardCoverageRoots` override.
+ * PROJECT.xbrief.json plan["x-canonical/quality"].forwardCoverageRoots override.
  */
 
 export const DEFAULT_ROOTS: readonly string[] = ["src/", "lib/", "cmd/", "scripts/", "packages/"];
@@ -97,10 +97,7 @@ function loadConfiguredRoots(projectRoot: string): readonly string[] {
   if (!read.ok) {
     return DEFAULT_ROOTS;
   }
-  const quality = (read.project as Record<string, unknown>).quality as
-    | Record<string, unknown>
-    | undefined;
-  const raw = quality?.forwardCoverageRoots;
+  const raw = projectQualityBlock(read.project).forwardCoverageRoots;
   if (Array.isArray(raw) && raw.length > 0 && raw.every((r) => typeof r === "string")) {
     return raw as string[];
   }

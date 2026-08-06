@@ -1,7 +1,0 @@
-{
-  "title": "directive-canonical-merged",
-  "policy": {},
-  "quality": {
-    "commands": ["pnpm run lint", "pnpm run build", "pnpm run test:fast"]
-  }
-}

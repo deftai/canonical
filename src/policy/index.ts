@@ -1,18 +1,47 @@
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
-import { atomicWriteJson } from "../fs/contained-write.js";
-import type { PolicyFieldName, ProjectBrief, ProjectPolicy } from "../types/index.js";
-import { POLICY_DEFAULTS, REGISTERED_POLICY_FIELDS } from "../types/index.js";
+import { basename, join, resolve } from "node:path";
+import { atomicWriteText } from "../fs/contained-write.js";
+import type {
+  PolicyBlock,
+  PolicyFieldName,
+  ProjectDoc,
+  ProjectPolicy,
+  QualityBlock,
+} from "../types/index.js";
+import {
+  POLICY_DEFAULTS,
+  PROJECT_BRIEF_NAME,
+  REGISTERED_POLICY_FIELDS,
+  XBRIEF_VERSION,
+} from "../types/index.js";
 import { appendAudit } from "../xbrief/audit.js";
+import { canonicalStringify } from "../xbrief/brief-io.js";
 
-/** Typed policy read/write over xbrief/PROJECT.json (content/state.md "Project Policy"). */
+/**
+ * Typed policy read/write over xbrief/PROJECT.xbrief.json (content/state.md
+ * "Project Policy"). The project brief is an xBRIEF v0.8 document; policy and
+ * quality ride in `x-canonical/*` extension properties on its plan.
+ */
 
 export function projectBriefPath(projectRoot: string): string {
-  return join(projectRoot, "xbrief", "PROJECT.json");
+  return join(projectRoot, "xbrief", PROJECT_BRIEF_NAME);
+}
+
+/** Minimal conformant PROJECT.xbrief.json body: the project as perpetual root plan. */
+export function buildProjectSkeleton(title: string): ProjectDoc {
+  return {
+    xBRIEFInfo: { version: XBRIEF_VERSION },
+    plan: {
+      title,
+      status: "running",
+      items: [],
+      "x-canonical/policy": {},
+    },
+  };
 }
 
 export type ReadProjectResult =
-  | { readonly ok: true; readonly project: ProjectBrief }
+  | { readonly ok: true; readonly project: ProjectDoc }
   | { readonly ok: false; readonly message: string };
 
 export function readProjectBrief(projectRoot: string): ReadProjectResult {
@@ -25,19 +54,29 @@ export function readProjectBrief(projectRoot: string): ReadProjectResult {
     if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
       return { ok: false, message: `${path}: not a JSON object` };
     }
-    return { ok: true, project: parsed as ProjectBrief };
+    return { ok: true, project: parsed as ProjectDoc };
   } catch (err) {
     return { ok: false, message: `${path}: invalid JSON (${(err as Error).message})` };
   }
 }
 
-/** Effective policy: PROJECT.json policy.* over POLICY_DEFAULTS. requireHumanMerge defaults true when autoDeployOnMerge. */
+/** The plan["x-canonical/policy"] block, or {} when absent. */
+export function projectPolicyBlock(project: ProjectDoc): PolicyBlock {
+  return project.plan?.["x-canonical/policy"] ?? {};
+}
+
+/** The plan["x-canonical/quality"] block, or {} when absent. */
+export function projectQualityBlock(project: ProjectDoc): QualityBlock {
+  return project.plan?.["x-canonical/quality"] ?? {};
+}
+
+/** Effective policy: PROJECT doc x-canonical/policy over POLICY_DEFAULTS. requireHumanMerge defaults true when autoDeployOnMerge. */
 export function resolvePolicy(projectRoot: string): ProjectPolicy | { readonly error: string } {
   const read = readProjectBrief(projectRoot);
   if (!read.ok) {
     return { error: read.message };
   }
-  const p = read.project.policy ?? {};
+  const p = projectPolicyBlock(read.project);
   const autoDeploy = p.autoDeployOnMerge ?? POLICY_DEFAULTS.autoDeployOnMerge;
   return {
     allowDirectCommitsToDefault:
@@ -113,8 +152,14 @@ export function setPolicy(projectRoot: string, opts: SetPolicyOptions): SetPolic
     return { ok: false, message: coercedResult.bad };
   }
   const coerced = coercedResult.value;
-  const project = read.project as Record<string, unknown>;
-  const policy = { ...((project.policy as Record<string, unknown> | undefined) ?? {}) };
+  // A missing PROJECT doc gets the conformant skeleton before the policy write.
+  const base =
+    read.project.plan === undefined
+      ? buildProjectSkeleton(basename(resolve(projectRoot)))
+      : read.project;
+  const project = base as Record<string, unknown>;
+  const plan = { ...((project.plan as Record<string, unknown> | undefined) ?? {}) };
+  const policy = { ...((plan["x-canonical/policy"] as Record<string, unknown> | undefined) ?? {}) };
 
   let oldValue: unknown;
   if (opts.field === "runtimeAuthority.denyPaths") {
@@ -127,8 +172,9 @@ export function setPolicy(projectRoot: string, opts: SetPolicyOptions): SetPolic
     policy[opts.field] = coerced;
   }
 
-  const next = { ...project, policy };
-  atomicWriteJson(projectRoot, "xbrief/PROJECT.json", next);
+  plan["x-canonical/policy"] = policy;
+  const next = { ...project, plan };
+  atomicWriteText(projectRoot, `xbrief/${PROJECT_BRIEF_NAME}`, canonicalStringify(next));
   appendAudit(projectRoot, {
     kind: "policy-set",
     field: opts.field,

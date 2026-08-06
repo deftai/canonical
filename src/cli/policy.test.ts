@@ -12,8 +12,15 @@ function writeProject(policy: Record<string, unknown> = {}): string {
   const root = tempDir("cli-policy-test-");
   mkdirSync(join(root, "xbrief"), { recursive: true });
   writeFileSync(
-    join(root, "xbrief", "PROJECT.json"),
-    `${JSON.stringify({ title: "t", policy }, null, 2)}\n`,
+    join(root, "xbrief", "PROJECT.xbrief.json"),
+    `${JSON.stringify(
+      {
+        xBRIEFInfo: { version: "0.8" },
+        plan: { title: "t", status: "running", items: [], "x-canonical/policy": policy },
+      },
+      null,
+      2,
+    )}\n`,
   );
   return root;
 }
@@ -73,7 +80,7 @@ describe("canon policy", () => {
       expect(text).toContain("policy.runtimeAuthority.denyPaths = [] (default)");
     });
 
-    it("omits the (default) marker for a field explicitly set in PROJECT.json", () => {
+    it("omits the (default) marker for a field explicitly set in PROJECT.xbrief.json", () => {
       const root = writeProject({ wipCap: 5 });
       const code = run(["show", "--project-root", root]);
       expect(code).toBe(0);
@@ -112,7 +119,7 @@ describe("canon policy", () => {
 
   describe("set", () => {
     it("writes the new value, prints old->new, and appends an audit row", () => {
-      // PROJECT.json has no wipCap key yet, so the raw stored "old" value is
+      // PROJECT.xbrief.json has no wipCap key yet, so the raw stored "old" value is
       // null (the default is a resolvePolicy-time fallback, not a stored value).
       const root = writeProject();
       const code = run([
@@ -128,8 +135,8 @@ describe("canon policy", () => {
       expect(code).toBe(0);
       expect(outBuf.join("")).toContain("policy.wipCap: null -> 7");
 
-      const project = JSON.parse(readFileSync(join(root, "xbrief", "PROJECT.json"), "utf8"));
-      expect(project.policy.wipCap).toBe(7);
+      const project = JSON.parse(readFileSync(join(root, "xbrief", "PROJECT.xbrief.json"), "utf8"));
+      expect(project.plan["x-canonical/policy"].wipCap).toBe(7);
 
       const rows = auditRows(root);
       expect(rows).toHaveLength(1);

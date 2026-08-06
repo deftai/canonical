@@ -15,7 +15,7 @@ describe("scopeSkeletonFilename", () => {
   it("joins the ISO date and normalized slug", () => {
     const now = new Date("2026-08-04T12:34:56.000Z");
     expect(scopeSkeletonFilename("Fix the Widget Loader!", now)).toBe(
-      "2026-08-04-fix-the-widget-loader.json",
+      "2026-08-04-fix-the-widget-loader.xbrief.json",
     );
   });
 });
@@ -24,14 +24,15 @@ describe("buildScopeSkeleton", () => {
   it("builds a valid, minimal proposed ScopeFile", () => {
     const now = new Date("2026-08-04T12:00:00.000Z");
     const scope = buildScopeSkeleton("Fix the widget loader", now);
-    expect(scope.title).toBe("Fix the widget loader");
-    expect(scope.kind).toBe("story");
+    expect(scope.xBRIEFInfo).toEqual({ version: "0.8" });
+    expect(scope.plan.title).toBe("Fix the widget loader");
+    expect(scope.plan["x-canonical/kind"]).toBe("story");
     expect(scope.plan.status).toBe("proposed");
     expect(scope.plan.created).toBe(now.toISOString());
     expect(scope.plan.updated).toBe(now.toISOString());
-    expect(scope.narratives?.Description).toBe("");
-    expect(scope.items).toEqual([]);
-    expect(scope.references).toEqual([]);
+    expect(scope.plan.narratives?.Description).toBe("");
+    expect(scope.plan.items).toEqual([]);
+    expect(scope.plan.references).toEqual([]);
   });
 
   it("produces a scope that state:validate accepts once written to the right filename", () => {
@@ -45,28 +46,24 @@ describe("buildScopeSkeleton", () => {
 describe("findScopeFilenameCollision", () => {
   it("returns null when the filename is unused", () => {
     const root = tempGitRepo();
-    expect(findScopeFilenameCollision(root, "2026-08-04-unused.json")).toBeNull();
+    expect(findScopeFilenameCollision(root, "2026-08-04-unused.xbrief.json")).toBeNull();
   });
 
   it("finds a collision in the same folder", () => {
     const root = tempGitRepo();
-    writeScopeFixture(root, "proposed", "2026-08-04-taken.json");
-    const hit = findScopeFilenameCollision(root, "2026-08-04-taken.json");
+    writeScopeFixture(root, "proposed", "2026-08-04-taken.xbrief.json");
+    const hit = findScopeFilenameCollision(root, "2026-08-04-taken.xbrief.json");
     expect(hit).not.toBeNull();
-    expect(hit?.relPath).toBe("xbrief/proposed/2026-08-04-taken.json");
+    expect(hit?.relPath).toBe("xbrief/proposed/2026-08-04-taken.xbrief.json");
   });
 
   it("finds a collision even after the scope moved to a different lifecycle folder", () => {
     const root = tempGitRepo();
     // Same filename, but now living in completed/ -- filenames are immutable identifiers.
-    writeScopeFixture(root, "completed", "2026-08-04-shipped.json", {
-      plan: {
-        status: "completed",
-        created: "2026-08-04T00:00:00.000Z",
-        updated: "2026-08-04T00:00:00.000Z",
-      },
+    writeScopeFixture(root, "completed", "2026-08-04-shipped.xbrief.json", {
+      status: "completed",
     });
-    const hit = findScopeFilenameCollision(root, "2026-08-04-shipped.json");
+    const hit = findScopeFilenameCollision(root, "2026-08-04-shipped.xbrief.json");
     expect(hit).not.toBeNull();
     expect(hit?.folder).toBe("completed");
   });

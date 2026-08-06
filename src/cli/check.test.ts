@@ -8,12 +8,25 @@ afterAll(() => {
   cleanupTempDirs();
 });
 
-function writeProject(overrides: Record<string, unknown> = {}): string {
+function writeProject(planOverrides: Record<string, unknown> = {}): string {
   const root = tempDir("cli-check-test-");
   mkdirSync(join(root, "xbrief"), { recursive: true });
   writeFileSync(
-    join(root, "xbrief", "PROJECT.json"),
-    `${JSON.stringify({ title: "t", policy: {}, ...overrides }, null, 2)}\n`,
+    join(root, "xbrief", "PROJECT.xbrief.json"),
+    `${JSON.stringify(
+      {
+        xBRIEFInfo: { version: "0.8" },
+        plan: {
+          title: "t",
+          status: "running",
+          items: [],
+          "x-canonical/policy": {},
+          ...planOverrides,
+        },
+      },
+      null,
+      2,
+    )}\n`,
   );
   return root;
 }
@@ -70,7 +83,7 @@ describe("canon check", () => {
     // real dispatch seam for the built-in stages without spawning any toolchain.
     // state:validate and verify:encoding are real now: an empty xbrief tree and a
     // non-git temp dir pass both, so the whole gate reports success.
-    const root = writeProject({ quality: { commands: ["true"] } });
+    const root = writeProject({ "x-canonical/quality": { commands: ["true"] } });
     const code = await run(["--project-root", root, "--json"]);
     expect(code).toBe(0);
     // The built-in stages write their own success lines to stdout before the
@@ -82,7 +95,7 @@ describe("canon check", () => {
   });
 
   it("real dispatcher surfaces a failing built-in stage by name (invalid brief -> state:validate)", async () => {
-    const root = writeProject({ quality: { commands: ["true"] } });
+    const root = writeProject({ "x-canonical/quality": { commands: ["true"] } });
     mkdirSync(join(root, "xbrief", "active"), { recursive: true });
     writeFileSync(join(root, "xbrief", "active", "not-a-valid-name.json"), "{}\n");
     const code = await run(["--project-root", root, "--json"]);
