@@ -28,9 +28,9 @@
       "Description": "Port two high-value clusters from the Directive audit into the pack, in canonical compressed style with no new files or verbs: (1) security -- TOCTOU scan-once rules, agent tool constraint tiers, trusted-signal environment verification, backups-as-destructive; (2) kickoff -- plain-English interview rules and third-party IP screening with monetization intent and three protection scope items."
     },
     "references": [],
-    "status": "pending",
+    "status": "running",
     "title": "security gates and plain-english kickoff content",
-    "updated": "2026-08-07T13:17:11.318Z",
+    "updated": "2026-08-07T13:17:22.200Z",
     "x-canonical/kind": "story"
   },
   "xBRIEFInfo": {
