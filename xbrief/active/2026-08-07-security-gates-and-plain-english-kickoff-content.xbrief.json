@@ -4,22 +4,22 @@
     "items": [
       {
         "id": "ac1",
-        "status": "pending",
+        "status": "completed",
         "title": "engineering.md Security Floor gains TOCTOU/pin-by-hash and agent tool constraint-tier rules"
       },
       {
         "id": "ac2",
-        "status": "pending",
+        "status": "completed",
         "title": "scm.md Deployment & Secrets requires trusted non-prompt environment verification and treats backups as first-class destructive state"
       },
       {
         "id": "ac3",
-        "status": "pending",
+        "status": "completed",
         "title": "kickoff.md gains Plain English interview rules and a Third-Party IP Check section"
       },
       {
         "id": "ac4",
-        "status": "pending",
+        "status": "completed",
         "title": "canonical.md always-on invariant names backups; task check passes and CHANGELOG has an Unreleased entry"
       }
     ],
@@ -30,7 +30,7 @@
     "references": [],
     "status": "running",
     "title": "security gates and plain-english kickoff content",
-    "updated": "2026-08-07T13:17:22.200Z",
+    "updated": "2026-08-07T13:21:53.000Z",
     "x-canonical/kind": "story"
   },
   "xBRIEFInfo": {

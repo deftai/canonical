@@ -37,6 +37,7 @@ Legend: `!` MUST · `~` SHOULD · `≉` SHOULD NOT · `⊗` MUST NOT · `?` MAY
 
 ## Deployment & Secrets
 
-- ! Before any destructive platform command (delete app/service/env), confirm with the user; before any environment-modifying command, confirm the target org/space/environment; warn explicitly when the target is production. ~ Production deploys get manual approval regardless of automation.
+- ! Before any destructive or environment-mutating platform command, confirm with the user AND verify the target environment (prod/staging/dev) from a trusted NON-PROMPT signal — env var, config file, or connection-string introspection. The user's wording ("clean up the staging DB") is not a trusted signal; when a trusted signal disagrees with the prompt, the signal wins. Cannot verify → refuse and escalate: "probably staging" is a refusal, not an approval. Warn explicitly when the verified target is production; production deploys get manual approval regardless of automation.
+- ! Backups are first-class state: deleting, overwriting, truncating, or "rotating" a backup is itself a destructive operation — same confirmation gate, plus a tested rollback path before executing. A verified non-prod target may relax the confirmation, never the rollback-path requirement.
 - ! Secrets live in env vars, CI secret stores, or gitignored files only. ⊗ Commit secrets, tokens, or state files containing them; ⊗ print their values (presence only).
 - ! Bind credentials at the invocation layer — pre-authenticated clients, injected tokens, wrapper commands. The agent gets the capability, never the credential in readable form.

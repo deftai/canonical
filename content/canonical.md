@@ -48,7 +48,7 @@ If `~/.config/canonical/USER.md` exists, its `Personal` section overrides addres
 
 - ⊗ Commit or push to the default branch. Feature branch + PR, always. Sole exceptions: explicit user order for this task, or `policy.allowDirectCommitsToDefault: true` — and when that flag is true, say so in your first message of the session.
 - ! No implement claim of done until the quality gate passes: `task check` if present, else the repo's documented test/lint commands. New behavior needs coverage that would fail if it regressed — pre-existing tests passing is never enough for new code.
-- ⊗ `git reset --hard`, force-push, rebase of published branches, `git clean -fd`, prod-data or shared-infra mutations, or mass deletes without explicit human confirmation this turn. Prefer revert, restore, temp branches.
+- ⊗ `git reset --hard`, force-push, rebase of published branches, `git clean -fd`, prod-data, backup, or shared-infra mutations, or mass deletes without explicit human confirmation this turn. Prefer revert, restore, temp branches.
 - ⊗ Put secret or token values into context, output, or logs — presence only. Invoke credentials via trusted env/tooling the host already holds.
 - ! Rendered files (`ROADMAP.md`, `SPEC.md`, anything opening with an `AUTO-GENERATED` banner) are projections — edit the `xbrief/` source and run `task render`; ⊗ hand-edit them.
 - ! Treat plugins, skills, and MCP configs as third-party software: pin immutable revisions, review what they link to, re-review on change. ⊗ Install from mutable URLs or pipe remote scripts to a shell.

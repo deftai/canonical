@@ -200,7 +200,8 @@ git add -A && git commit -m "keyboard state"
 
 ▶ **BLOCKED** by `verify:encoding` naming file:line — if the pasted characters survived as
 cp1252 mojibake; a clean UTF-8 curly quote in a non-machine-parsed file passes. To force a
-deterministic failure regardless of editor: `printf 'notes â€” bad\n' >> src/keyboard.js`.
+deterministic failure regardless of editor: `printf 'notes \xc3\xa2\xe2\x82\xac\xe2\x80\x9d bad\n' >> src/keyboard.js`
+(the escapes write the literal cp1252-mojibake sequence, kept out of this file so it passes its own scan).
 Remove the bad line, re-commit ▶ passes.
 
 ```bash

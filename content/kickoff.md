@@ -20,6 +20,23 @@ Legend: `!` MUST · `~` SHOULD · `≉` SHOULD NOT · `⊗` MUST NOT · `?` MAY
 - ! Finish with a short summary and a numbered menu: (1) accept all into pending, (2) review scopes one by one, (3) add/remove a feature, then `Discuss`, `Back`. On accept, use `task triage -- accept <scope>` per scope.
 - ⊗ Skip the interview because the request seems clear — confirm the one-sentence restatement at minimum.
 
+## Plain English (every interview)
+
+Assume a non-technical reader unless the user has demonstrated otherwise; these rules cost engineers nothing.
+
+- ! Every technical question opens with one plain-English line stating the CONSEQUENCE of the choice ("Where will this app actually run for users? This decides whether you maintain a server or rent a cloud account."). Option labels are plain English, the technical term in parentheses only when load-bearing.
+- ! Expand every acronym inline on first use — "PRD (Product Requirements Document)"; bare afterward.
+- ! Recommend a stack with a reason the user cares about (cost, hosting, hiring, example-code availability) — or present it as a plain default they can override. ⊗ One-word justifications ("modern", "industry-standard").
+- ! Menu labels state what will happen ("Approve and continue — locks the spec, starts implementation"), never bare verbs ("Accept").
+- ! Preface any diff with "red = removed, green = added — nothing is broken; this is a normal review", or summarize changes in prose on the first pass and show the diff only on request.
+
+## Third-Party IP Check
+
+- ! During the interview, judge whether the project builds on IP someone else owns — franchises/games, fictional universes, named characters, sports leagues, trademarked products, artists/films. Err permissive: one wasted question is cheap. Absence of a recognizable name is not proof it's IP-free — ask directly when the description is vague.
+- ! On a hit, before generating any briefs, ask monetization intent (numbered menu): personal-only vs commercial/public. Default is commercial — unclear intent takes the stricter path; "I don't know" blocks brief generation until answered.
+- ! Emit a plain-English risk note: opens with "not legal advice", names the specific IP; for commercial intent, "consult a lawyer before public release" is non-optional output. Record the note in `xbrief/spec.xbrief.json` `plan.narratives`.
+- ! Add three scope items regardless of intent: (1) a not-affiliated/not-endorsed disclaimer on the first user-visible surface; (2) third-party assets reach the app only via official APIs that grant a license — never bundled in the repo or build artifacts; (3) hosting plan gated on monetization intent — self-hosted private is the default, commercial hosting requires lawyer review.
+
 ## New Feature ("oh, and I also want Z")
 
 - ! `task scope:new -- "<feature>"`, fill `plan.narratives.Description` and 2–5 acceptance `plan.items`, `task -x state:validate`, then present the triage menu (accept into pending now, or leave proposed).
