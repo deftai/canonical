@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+- Pack content: the engineering security floor gains TOCTOU/pin-by-hash rules
+  for mutable external resources and constraint-tier rules for agent tool
+  registries; scm deployment now requires verifying the target environment
+  from a trusted non-prompt signal and treats backups as first-class
+  destructive state; kickoff gains plain-English interview rules and a
+  third-party IP check (monetization intent plus three protection scope
+  items). Ported from the Directive high-value audit.
+
 ## [0.3.0] - 2026-08-06
 
 - BREAKING: every durable state file under `xbrief/` is now a conformant

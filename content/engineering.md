@@ -43,6 +43,8 @@ External canon, linked not restated: OWASP ASVS is the reference standard; the [
 - ! Code touching authentication, authorization, session handling, or money is checked against the relevant OWASP cheatsheet before scope completion. Auth checks cover EVERY path to a protected resource, not the happy path — build it in; the completion stub-scan is a backstop, not the plan.
 - ! Treat all external input as hostile until validated at the trust boundary: parameterized queries only, output encoding matched to the sink, allowlists over denylists.
 - ~ Wire security scanners the project has (SAST, dependency audit, secret scan) into `xbrief/PROJECT.xbrief.json` `plan["x-canonical/quality"].commands[]` — they then gate `task check` like any other stage. Security findings are P0 in review.
+- ! A scan or validation of a mutable external resource (URL, registry entry, remote config, cached issue body, skill install target) certifies only that snapshot — never future fetches of the same reference. Couple validation with use in the same trust boundary, or pin by content hash / immutable version and re-validate on any change signal; re-fetch before acting on a cached copy whose source can mutate. ⊗ Pin by self-reported metadata (package name, semver label, a "verified" badge).
+- ! When building agent systems: every tool in a registry declares a constraint tier — `read-only` / `reversible` / `irreversible` / `destructive` — and an untiered tool is treated as `destructive`. Gate `irreversible`/`destructive` tools behind a deterministic preflight outside the model (allowlist, environment check, ack token) — text-level model alignment provides no guarantee at the tool boundary. Audit-log every tool call with arguments secret-redacted.
 
 ## Cross-Language Floor
 
