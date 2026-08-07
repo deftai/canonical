@@ -28,9 +28,15 @@
       "Description": "Port two high-value clusters from the Directive audit into the pack, in canonical compressed style with no new files or verbs: (1) security -- TOCTOU scan-once rules, agent tool constraint tiers, trusted-signal environment verification, backups-as-destructive; (2) kickoff -- plain-English interview rules and third-party IP screening with monetization intent and three protection scope items."
     },
     "references": [],
-    "status": "running",
+    "status": "completed",
     "title": "security gates and plain-english kickoff content",
-    "updated": "2026-08-07T13:21:53.000Z",
+    "updated": "2026-08-07T14:52:44.601Z",
+    "x-canonical/delivery": {
+      "branch": "main",
+      "disposition": "delivered",
+      "pr": "https://github.com/deftai/canonical/pull/3",
+      "sha": "9584ef02d3c4226d30a45a6ecbcd99757a98320b"
+    },
     "x-canonical/kind": "story"
   },
   "xBRIEFInfo": {
