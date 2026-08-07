@@ -1,0 +1,39 @@
+{
+  "plan": {
+    "created": "2026-08-07T13:16:27.352Z",
+    "items": [
+      {
+        "id": "ac1",
+        "status": "pending",
+        "title": "engineering.md Security Floor gains TOCTOU/pin-by-hash and agent tool constraint-tier rules"
+      },
+      {
+        "id": "ac2",
+        "status": "pending",
+        "title": "scm.md Deployment & Secrets requires trusted non-prompt environment verification and treats backups as first-class destructive state"
+      },
+      {
+        "id": "ac3",
+        "status": "pending",
+        "title": "kickoff.md gains Plain English interview rules and a Third-Party IP Check section"
+      },
+      {
+        "id": "ac4",
+        "status": "pending",
+        "title": "canonical.md always-on invariant names backups; task check passes and CHANGELOG has an Unreleased entry"
+      }
+    ],
+    "narratives": {
+      "Acceptance": "The four content files carry the new rules within budget (canonical.md unchanged in length, engineering ~64 lines, scm ~47, kickoff ~54); task check exits 0; CHANGELOG [Unreleased] describes the pack content change.",
+      "Description": "Port two high-value clusters from the Directive audit into the pack, in canonical compressed style with no new files or verbs: (1) security -- TOCTOU scan-once rules, agent tool constraint tiers, trusted-signal environment verification, backups-as-destructive; (2) kickoff -- plain-English interview rules and third-party IP screening with monetization intent and three protection scope items."
+    },
+    "references": [],
+    "status": "pending",
+    "title": "security gates and plain-english kickoff content",
+    "updated": "2026-08-07T13:17:11.318Z",
+    "x-canonical/kind": "story"
+  },
+  "xBRIEFInfo": {
+    "version": "0.8"
+  }
+}
