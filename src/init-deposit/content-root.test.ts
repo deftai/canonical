@@ -20,6 +20,8 @@ describe("resolveContentRoot", () => {
       "canonical.md",
       "canonical-tasks.md",
       "engineering.md",
+      "feedback.md",
+      "kickoff.md",
       "multi-agent.md",
       "scm.md",
       "state.md",

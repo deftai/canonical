@@ -2,9 +2,10 @@
 "use strict";
 
 /**
- * Spawn the canon CLI from CANON_ENGINE_CMD without shell-interpolating operator
- * text (#2547). go-task forwards user args into ENGINE_CMD; apostrophes in
- * --summary and similar free-text flags must not break mvdan/sh parsing.
+ * Spawn the canon CLI without shell-interpolating operator free-text
+ * (#2547, #8). Prefer CANON_ENGINE_VERB + CANON_ENGINE_CLI_ARGS_JSON (true
+ * argv array from go-task CLI_ARGS_LIST). Legacy CANON_ENGINE_CMD_JSON still
+ * shellSplits a reconstructed string and is unsafe for unquoted newlines.
  *
  * Lives under tasks/ (not repo-root scripts/) so @canonpack/content
  * prepack ships it beside tasks/engine.yml (#2022 Phase 3).
@@ -73,24 +74,76 @@ function shellSplit(input) {
   return out;
 }
 
-function main() {
-  const mode = process.argv[2];
-  const target = process.argv[3];
-  let cmdLine = "";
-  if (process.env.CANON_ENGINE_CMD_JSON) {
+/**
+ * Resolve spawn argv without shell-splitting free-text values (#8).
+ *
+ * Precedence:
+ * 1. CANON_ENGINE_ARGV_JSON — full JSON string array
+ * 2. CANON_ENGINE_VERB + CANON_ENGINE_CLI_ARGS_JSON (+ optional PROJECT_ROOT)
+ * 3. Legacy CANON_ENGINE_CMD_JSON / CANON_ENGINE_CMD string + shellSplit
+ *
+ * @param {NodeJS.ProcessEnv} [env]
+ * @returns {string[]}
+ */
+function resolveEngineArgv(env = process.env) {
+  if (env.CANON_ENGINE_ARGV_JSON) {
+    let parsed;
     try {
-      cmdLine = JSON.parse(process.env.CANON_ENGINE_CMD_JSON);
+      parsed = JSON.parse(env.CANON_ENGINE_ARGV_JSON);
+    } catch {
+      console.error("canon: CANON_ENGINE_ARGV_JSON is not valid JSON");
+      process.exit(2);
+    }
+    if (!Array.isArray(parsed) || parsed.some((x) => typeof x !== "string")) {
+      console.error("canon: CANON_ENGINE_ARGV_JSON must be a JSON array of strings");
+      process.exit(2);
+    }
+    return parsed;
+  }
+
+  const verb = env.CANON_ENGINE_VERB;
+  if (verb !== undefined && verb !== null && String(verb).trim() !== "") {
+    let cliArgs = [];
+    if (env.CANON_ENGINE_CLI_ARGS_JSON) {
+      try {
+        cliArgs = JSON.parse(env.CANON_ENGINE_CLI_ARGS_JSON);
+      } catch {
+        console.error("canon: CANON_ENGINE_CLI_ARGS_JSON is not valid JSON");
+        process.exit(2);
+      }
+      if (!Array.isArray(cliArgs) || cliArgs.some((x) => typeof x !== "string")) {
+        console.error("canon: CANON_ENGINE_CLI_ARGS_JSON must be a JSON array of strings");
+        process.exit(2);
+      }
+    }
+    const argv = [String(verb), ...cliArgs];
+    const root = env.CANON_ENGINE_PROJECT_ROOT;
+    if (root !== undefined && root !== null && String(root) !== "") {
+      argv.push(`--project-root=${root}`);
+    }
+    return argv;
+  }
+
+  let cmdLine = "";
+  if (env.CANON_ENGINE_CMD_JSON) {
+    try {
+      cmdLine = JSON.parse(env.CANON_ENGINE_CMD_JSON);
     } catch {
       console.error("canon: CANON_ENGINE_CMD_JSON is not valid JSON");
       process.exit(2);
     }
   } else {
-    cmdLine = String(process.env.CANON_ENGINE_CMD || "");
+    cmdLine = String(env.CANON_ENGINE_CMD || "");
   }
-  cmdLine = cmdLine.trim();
-  const argv = shellSplit(cmdLine);
+  return shellSplit(String(cmdLine).trim());
+}
+
+function main() {
+  const mode = process.argv[2];
+  const target = process.argv[3];
+  const argv = resolveEngineArgv(process.env);
   if (argv.length === 0) {
-    console.error("canon: CANON_ENGINE_CMD is empty");
+    console.error("canon: engine argv is empty (set CANON_ENGINE_VERB or CANON_ENGINE_CMD_JSON)");
     process.exit(2);
   }
   if (!mode || !target) {
@@ -107,6 +160,10 @@ function main() {
   // Command transport is one-hop: a spawned CLI may invoke Task again with a
   // different ENGINE_CMD, which must not be shadowed by this inherited value.
   const childEnv = { ...process.env };
+  delete childEnv.CANON_ENGINE_ARGV_JSON;
+  delete childEnv.CANON_ENGINE_CLI_ARGS_JSON;
+  delete childEnv.CANON_ENGINE_VERB;
+  delete childEnv.CANON_ENGINE_PROJECT_ROOT;
   delete childEnv.CANON_ENGINE_CMD_JSON;
   delete childEnv.CANON_ENGINE_CMD;
 
@@ -169,4 +226,10 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { shellSplit, quoteWin32Arg, buildSpawnPlan, WIN32_CMD_METACHAR_RE };
+module.exports = {
+  shellSplit,
+  quoteWin32Arg,
+  buildSpawnPlan,
+  resolveEngineArgv,
+  WIN32_CMD_METACHAR_RE,
+};

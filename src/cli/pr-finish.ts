@@ -1,4 +1,5 @@
 import { parseArgs, renderJson } from "../args/index.js";
+import { softEmitUsage } from "../collection/index.js";
 import type { GhSeams } from "../gh/index.js";
 import { GhConfigError, resolveRepo } from "../gh/index.js";
 import { finishPr } from "../pr/index.js";
@@ -56,6 +57,9 @@ export async function run(argv: string[], seams: GhSeams = {}): Promise<number> 
     );
   } else {
     process.stdout.write(`${result.message}\n`);
+  }
+  if (result.code === 0 && result.merged === true) {
+    await softEmitUsage(projectRoot, "pr_finish_merged");
   }
   return result.code;
 }

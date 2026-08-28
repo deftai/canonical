@@ -1,4 +1,5 @@
 import { parseArgs, renderJson } from "../args/index.js";
+import { softEmitUsage } from "../collection/index.js";
 import type { GhSeams } from "../gh/index.js";
 import { GhConfigError, ghClient, resolveRepo } from "../gh/index.js";
 import { watchPr } from "../pr/index.js";
@@ -84,6 +85,9 @@ export async function run(argv: string[], seams: GhSeams = {}): Promise<number> 
         process.stdout.write(`  - ${reason}\n`);
       }
     }
+  }
+  if (result.code === 0) {
+    await softEmitUsage(projectRoot, "pr_watch_clean");
   }
   return result.code;
 }

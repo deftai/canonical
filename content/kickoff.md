@@ -18,6 +18,7 @@ Legend: `!` MUST · `~` SHOULD · `≉` SHOULD NOT · `⊗` MUST NOT · `?` MAY
   3. One scope per must-have feature: `task scope:new -- "<feature>"`, then edit each brief to fill `plan.narratives.Description` and 2–5 observable acceptance `plan.items` derived from the interview.
   4. `task -x state:validate` (must exit 0), then `task -x render -- roadmap`.
 - ! Finish with a short summary and a numbered menu: (1) accept all into pending, (2) review scopes one by one, (3) add/remove a feature, then `Discuss`, `Back`. On accept, use `task triage -- accept <scope>` per scope.
+- ~ After kickoff succeeds, if collection usage is consented: `task -x collection:metric -- --metric=kickoff_done --value=1` (soft-fail ok).
 - ⊗ Skip the interview because the request seems clear — confirm the one-sentence restatement at minimum.
 
 ## Plain English (every interview)

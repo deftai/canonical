@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { ghClient } from "../gh/rest.js";
 import {
@@ -8,6 +8,7 @@ import {
   tempDir,
   writeScopeFixture,
 } from "../test-support/index.js";
+import { isValidScopeFilename } from "../xbrief/brief-io.js";
 import { ingest } from "./ingest.js";
 
 interface Route {
@@ -222,5 +223,46 @@ describe("ingest", () => {
     });
     const result = await ingest(c, REPO, root, { number: 9 }, NOW);
     expect(result.code).toBe(2);
+  });
+
+  it("truncates long titles so slug including -issue-N stays <=80 and cuts at a hyphen", async () => {
+    const cases = [
+      {
+        number: 47,
+        title:
+          "fix(billing): POST /api/credits lets any org member mint credits (client-supplied admin_adjust)",
+      },
+      {
+        number: 50,
+        title:
+          "fix(billing): signup grant is unreachable -- POST /api/billing 503s on missing STRIPE_SECRET_KEY before the grant block",
+      },
+    ] as const;
+
+    for (const { number, title } of cases) {
+      const root = tempDir("canon-ingest-");
+      scaffoldXbrief(root);
+      const c = client({
+        [`GET /repos/acme/widgets/issues/${number}`]: {
+          body: {
+            number,
+            title,
+            body: "",
+            html_url: `https://github.com/acme/widgets/issues/${number}`,
+          },
+        },
+      });
+      const result = await ingest(c, REPO, root, { number }, NOW);
+      expect(result.code).toBe(0);
+      expect(result.written).toHaveLength(1);
+      const filename = basename(result.written[0] as string);
+      expect(isValidScopeFilename(filename)).toBe(true);
+      const slug = filename.replace(/^\d{4}-\d{2}-\d{2}-/, "").replace(/\.xbrief\.json$/, "");
+      expect(slug.length).toBeLessThanOrEqual(80);
+      expect(slug.endsWith(`-issue-${number}`)).toBe(true);
+      // No mid-word fragment like the old "...-supplied-ad-issue-N" truncation.
+      expect(slug).not.toMatch(/-ad-issue-\d+$/);
+      expect(slug).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
+    }
   });
 });

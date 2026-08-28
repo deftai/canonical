@@ -1,0 +1,55 @@
+{
+  "name": "@deft/schemas",
+  "version": "0.0.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./schemas": {
+      "types": "./dist/schemas/index.d.ts",
+      "import": "./dist/schemas/index.js"
+    },
+    "./schemas/bug": {
+      "types": "./dist/schemas/bug.d.ts",
+      "import": "./dist/schemas/bug.js"
+    },
+    "./schemas/feature": {
+      "types": "./dist/schemas/feature.d.ts",
+      "import": "./dist/schemas/feature.js"
+    },
+    "./schemas/feedback": {
+      "types": "./dist/schemas/feedback.d.ts",
+      "import": "./dist/schemas/feedback.js"
+    },
+    "./schemas/usage": {
+      "types": "./dist/schemas/usage.d.ts",
+      "import": "./dist/schemas/usage.js"
+    },
+    "./deployment": {
+      "types": "./dist/deployment.d.ts",
+      "import": "./dist/deployment.js"
+    },
+    "./correlator": {
+      "types": "./dist/correlator.d.ts",
+      "import": "./dist/correlator.js"
+    },
+    "./errors": {
+      "types": "./dist/errors.d.ts",
+      "import": "./dist/errors.js"
+    },
+    "./routes": {
+      "types": "./dist/routes.d.ts",
+      "import": "./dist/routes.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "zod": "^4.4.3"
+  }
+}

@@ -18,6 +18,17 @@ describe("orient", () => {
     expect(snapshot.isGitRepo).toBe(true);
     expect(snapshot.xbriefReadable).toBe(true);
     expect(snapshot.dirty).toBe(false);
+    expect(snapshot.consent).toEqual({
+      metrics: "not_prompted",
+      submissions: "not_granted",
+      identity: "anonymous",
+    });
+    expect(snapshot.consentLine).toBe(
+      "metrics=not_prompted submissions=not_granted identity=anonymous",
+    );
+    expect(snapshot.message).toContain(
+      "metrics=not_prompted submissions=not_granted identity=anonymous",
+    );
   });
 
   it("exits 1 when xbrief/ is missing", () => {

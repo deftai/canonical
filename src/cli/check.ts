@@ -1,6 +1,7 @@
 /** `check` -- content/canonical-tasks.md. Quality gate over resolveCheckCommands/runCheck. */
 import { parseArgs, renderJson } from "../args/index.js";
 import { runCheck } from "../check/index.js";
+import { softEmitUsage } from "../collection/index.js";
 import { dispatch } from "./dispatch.js";
 
 export async function run(argv: string[]): Promise<number> {
@@ -26,13 +27,21 @@ export async function run(argv: string[]): Promise<number> {
         message: result.message,
       })}\n`,
     );
-    return result.code;
-  }
-
-  if (result.ok) {
+  } else if (result.ok) {
     process.stdout.write(`${result.message}\n`);
   } else {
     process.stderr.write(`${result.message}\n`);
+  }
+
+  if (result.code === 0) {
+    await softEmitUsage(projectRoot, "check_pass");
+  } else if (result.code === 1) {
+    await softEmitUsage(
+      projectRoot,
+      "check_fail",
+      1,
+      result.failingStage !== undefined ? { failed_stage: result.failingStage } : undefined,
+    );
   }
   return result.code;
 }

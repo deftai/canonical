@@ -16,6 +16,13 @@ import { createRequire } from "node:module";
 
 export const CLI_MODULE_VERBS = [
   "check",
+  "collection-decline",
+  "collection-identity",
+  "collection-metric",
+  "collection-opt-in",
+  "collection-opt-out",
+  "collection-status",
+  "feedback",
   "init",
   "issue-sync",
   "orient",
@@ -40,6 +47,12 @@ export const CLI_MODULE_VERBS = [
 ] as const;
 
 export const VERB_ALIASES: Readonly<Record<string, string>> = {
+  "collection:decline": "collection-decline",
+  "collection:identity": "collection-identity",
+  "collection:metric": "collection-metric",
+  "collection:opt-in": "collection-opt-in",
+  "collection:opt-out": "collection-opt-out",
+  "collection:status": "collection-status",
   "issue:sync": "issue-sync",
   "pr:finish": "pr-finish",
   "pr:watch": "pr-watch",

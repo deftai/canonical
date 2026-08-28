@@ -13,7 +13,8 @@
     "content",
     "tasks",
     ".githooks",
-    "Taskfile.yml"
+    "Taskfile.yml",
+    "vendor/@deft"
   ],
   "repository": {
     "type": "git",
@@ -44,7 +45,13 @@
     "test": "vitest run --coverage",
     "test:fast": "vitest run",
     "lint": "biome check .",
-    "format": "biome format --write ."
+    "format": "biome format --write .",
+    "vendor:collection-sdk": "node scripts/vendor-collection-sdk.mjs"
+  },
+  "dependencies": {
+    "@deft/collection-sdk": "file:./vendor/@deft/collection-sdk",
+    "@deft/schemas": "file:./vendor/@deft/schemas",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.0",

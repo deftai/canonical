@@ -5,6 +5,7 @@ import type { LifecycleFolder, ScopeDoc, ScopeStatus } from "../types/index.js";
 import {
   LIFECYCLE_FOLDERS,
   SCOPE_FILENAME_RE,
+  SCOPE_SLUG_MAX_LENGTH,
   STATUS_FOLDER_MAP,
   withPlan,
 } from "../types/index.js";
@@ -183,16 +184,32 @@ export function transitionScope(
   };
 }
 
-/** Normalize a title to the canonical slug: lowercase [a-z0-9-], <=80 chars. */
-export function normalizeSlug(title: string): string {
-  const slug = title
+/**
+ * Normalize a title to a slug, reserving `suffix.length` of the 80-char budget
+ * so `${slug}${suffix}` stays <=80. Truncates at a hyphen boundary (no mid-token
+ * fragment). `suffix` is not appended -- callers compose it.
+ */
+export function normalizeSlugWithReserve(title: string, suffix: string): string {
+  const maxLen = Math.max(0, SCOPE_SLUG_MAX_LENGTH - suffix.length);
+  let slug = title
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
-    .replace(/-{2,}/g, "-")
-    .slice(0, 80)
-    .replace(/-+$/, "");
-  return slug;
+    .replace(/-{2,}/g, "-");
+  if (slug.length <= maxLen) {
+    return slug;
+  }
+  slug = slug.slice(0, maxLen);
+  const lastHyphen = slug.lastIndexOf("-");
+  if (lastHyphen > 0) {
+    slug = slug.slice(0, lastHyphen);
+  }
+  return slug.replace(/-+$/, "");
+}
+
+/** Normalize a title to the canonical slug: lowercase [a-z0-9-], <=80 chars. */
+export function normalizeSlug(title: string): string {
+  return normalizeSlugWithReserve(title, "");
 }
 
 /** Today's date as YYYY-MM-DD (UTC). */

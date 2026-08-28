@@ -1,8 +1,8 @@
 version: '3'
 
 # Multi-agent verbs (Stream G): swarm:run, review-monitor.
-# EVERY task: dir USER_WORKING_DIR, deps on engine:_ts-build, ENGINE_CMD with
-# {{.CLI_ARGS}} forwarded bare and --project-root appended. NO sources:/generates:.
+# EVERY task: dir USER_WORKING_DIR, deps on engine:_ts-build, ENGINE_VERB + CLI_ARGS_LIST argv-array transport;
+# --project-root appended by engine-invoke. NO sources:/generates:.
 # NOTE: no leading colon on engine:* refs -- with `flatten: true` on this
 # include, a leading-colon (root-absolute) reference does not resolve to the
 # internal `engine` namespace and go-task reports "Task does not exist".
@@ -17,7 +17,7 @@ tasks:
     cmds:
       - task: engine:invoke
         vars:
-          ENGINE_CMD: 'swarm:run {{.CLI_ARGS}} --project-root "{{.USER_WORKING_DIR}}"'
+          ENGINE_VERB: 'swarm:run'
 
   "review-monitor":
     desc: "Sticky PR review-ownership lease: register, release, or check."
@@ -27,4 +27,4 @@ tasks:
     cmds:
       - task: engine:invoke
         vars:
-          ENGINE_CMD: 'review-monitor {{.CLI_ARGS}} --project-root "{{.USER_WORKING_DIR}}"'
+          ENGINE_VERB: 'review-monitor'

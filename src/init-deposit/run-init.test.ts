@@ -32,6 +32,8 @@ describe("runInit", () => {
       "canonical.md",
       "canonical-tasks.md",
       "engineering.md",
+      "feedback.md",
+      "kickoff.md",
       "multi-agent.md",
       "scm.md",
       "state.md",
@@ -62,6 +64,7 @@ describe("runInit", () => {
     const gitignore = readFileSync(join(root, ".gitignore"), "utf8");
     expect(gitignore).toContain(".canonical/core/");
     expect(gitignore).toContain(".canonical/cache/");
+    expect(gitignore).toContain(".canonical/collection.json");
     expect(gitignore).toContain("xbrief/*.lock");
 
     // xbrief/ scaffold

@@ -1,0 +1,8 @@
+{
+  "vendoredAt": "2026-08-28T16:45:44.468Z",
+  "sourceRoot": "/Users/polfer/Projects/deft-collection/deft-collection-endpoint",
+  "packages": {
+    "@deft/schemas": "/Users/polfer/Projects/canonical/vendor/@deft/schemas",
+    "@deft/collection-sdk": "/Users/polfer/Projects/canonical/vendor/@deft/collection-sdk"
+  }
+}

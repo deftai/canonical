@@ -1,0 +1,26 @@
+{
+  "name": "@deft/collection-sdk",
+  "version": "0.0.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./openapi/generate": {
+      "types": "./dist/openapi/generate.d.ts",
+      "import": "./dist/openapi/generate.js"
+    },
+    "./openapi.json": "./openapi.json"
+  },
+  "files": [
+    "dist",
+    "openapi.json"
+  ],
+  "dependencies": {
+    "@deft/schemas": "file:../schemas",
+    "zod": "^4.4.3"
+  }
+}

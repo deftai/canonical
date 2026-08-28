@@ -7,13 +7,14 @@ Maintainer-facing map of this repository. Repo-only: `docs/` is not in the npm
 
 `@deftai/canonical` is two artifacts that share one contract:
 
-1. **The pack** — seven markdown rule files in [`content/`](../content/) that an
+1. **The pack** — markdown rule files in [`content/`](../content/) that an
    AI agent loads and obeys. [`content/canonical.md`](../content/canonical.md) is
-   the always-loaded root; the other six are demand-loaded per its load table.
-2. **The `canon` CLI** — the 20 pack verbs (the contract below) plus the two
-   installer commands `init` and `update`: 22 entries total in the dispatch
-   table (`CLI_MODULE_VERBS` in `src/cli/dispatch.ts`), which is also what
-   `canon --help` prints. If those counts drift, the table, this file, and
+   the always-loaded root; the others are demand-loaded per its load table
+   (including `feedback.md` for opt-in collection).
+2. **The `canon` CLI** — the pack verbs (the contract below, including
+   collection/feedback) plus the two installer commands `init` and `update`.
+   The dispatch table (`CLI_MODULE_VERBS` in `src/cli/dispatch.ts`) is also
+   what `canon --help` prints. If those counts drift, the table, this file, and
    `content/canonical-tasks.md` disagree — fix whichever is wrong.
 
 The contract between them is [`content/canonical-tasks.md`](../content/canonical-tasks.md):
@@ -37,7 +38,7 @@ src/              the canon CLI (TypeScript, ESM, strict)
   <verb modules>  one directory per domain: orient, check, scope, triage,
                   work-next, render, policy, branch, encoding,
                   forward-coverage, hooks, init-deposit, issue-sync, pr,
-                  review-monitor, swarm, xbrief, args
+                  review-monitor, swarm, xbrief, args, collection
   test-support/   test helpers (temp git repos); excluded from build + package
 tasks/            go-task fragments + engine shims (see below)
 .githooks/        pre-commit / pre-push gate scripts
@@ -109,8 +110,9 @@ Three layers repeat the same rules so no single layer is load-bearing:
 ## What ships vs what stays
 
 The npm package (`files` in `package.json`) contains `dist/**/*.js`,
-`dist/**/*.d.ts`, `content/`, `tasks/`, `.githooks/`, and `Taskfile.yml`.
-Everything else — `docs/`, `src/`, tests, `xbrief/`, workflows — is repo-only.
+`dist/**/*.d.ts`, `content/`, `tasks/`, `.githooks/`, `Taskfile.yml`, and
+`vendor/@deft/` (vendored collection SDK until published). Everything else —
+`docs/`, `src/`, tests, `xbrief/`, workflows — is repo-only.
 
 See [DEPLOY.md](./DEPLOY.md) for CI/CD and the release process, and
 [manual-test-plan.md](./manual-test-plan.md) for the end-to-end acceptance

@@ -1,5 +1,6 @@
 /** `canon scope:complete` -- content/canonical-tasks.md #scope:complete. */
 import { parseArgs, renderJson } from "../args/index.js";
+import { softEmitUsage } from "../collection/index.js";
 import { scopeComplete } from "../scope/index.js";
 
 export async function run(argv: string[]): Promise<number> {
@@ -44,5 +45,18 @@ export async function run(argv: string[]): Promise<number> {
   } else {
     process.stdout.write(`${result.scope}: completed\n`);
   }
+  const dimensions: Record<string, string | number | boolean> = {};
+  if (parsed.values.disposition !== undefined) {
+    dimensions.disposition = parsed.values.disposition;
+  }
+  if (parsed.values.pr !== undefined) {
+    dimensions.had_delivery_pr = true;
+  }
+  await softEmitUsage(
+    projectRoot,
+    "scope_complete",
+    1,
+    Object.keys(dimensions).length > 0 ? dimensions : undefined,
+  );
   return 0;
 }

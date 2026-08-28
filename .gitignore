@@ -1,6 +1,14 @@
 node_modules/
 dist/
+# Vendored npm packages ship their built dist/ trees.
+!vendor/
+!vendor/@deft/
+!vendor/@deft/**/
+!vendor/@deft/**/dist/
+!vendor/@deft/**/dist/**
 coverage/
 *.tsbuildinfo
 .canonical/cache/
+.canonical/collection.json
 xbrief/*.lock
+*.tgz

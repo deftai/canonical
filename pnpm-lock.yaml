@@ -7,6 +7,16 @@ settings:
 importers:
 
   .:
+    dependencies:
+      '@deft/collection-sdk':
+        specifier: file:./vendor/@deft/collection-sdk
+        version: file:vendor/@deft/collection-sdk
+      '@deft/schemas':
+        specifier: file:./vendor/@deft/schemas
+        version: file:vendor/@deft/schemas
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.5.0
@@ -113,6 +123,12 @@ packages:
     engines: {node: '>=14.21.3'}
     cpu: [x64]
     os: [win32]
+
+  '@deft/collection-sdk@file:vendor/@deft/collection-sdk':
+    resolution: {directory: vendor/@deft/collection-sdk, type: directory}
+
+  '@deft/schemas@file:vendor/@deft/schemas':
+    resolution: {directory: vendor/@deft/schemas, type: directory}
 
   '@esbuild/aix-ppc64@0.28.1':
     resolution: {integrity: sha512-Svl7tq8k/08+p6CXPpRjQ1fKX+1odH/BQbb48fV6fj3CWHhsoIOoY87w1oHXm0qEpkIK3ZfVgp0hed3XBXzXMQ==}
@@ -921,6 +937,9 @@ packages:
     resolution: {integrity: sha512-si7QWI6zUMq56bESFvagtmzMdGOtoxfR+Sez11Mobfc7tm+VkUckk9bW2UeffTGVUbOksxmSw0AA2gs8g71NCQ==}
     engines: {node: '>=12'}
 
+  zod@4.4.3:
+    resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
+
 snapshots:
 
   '@ampproject/remapping@2.3.0':
@@ -977,6 +996,15 @@ snapshots:
 
   '@biomejs/cli-win32-x64@2.5.6':
     optional: true
+
+  '@deft/collection-sdk@file:vendor/@deft/collection-sdk':
+    dependencies:
+      '@deft/schemas': file:vendor/@deft/schemas
+      zod: 4.4.3
+
+  '@deft/schemas@file:vendor/@deft/schemas':
+    dependencies:
+      zod: 4.4.3
 
   '@esbuild/aix-ppc64@0.28.1':
     optional: true
@@ -1670,3 +1698,5 @@ snapshots:
       ansi-styles: 6.2.3
       string-width: 5.1.2
       strip-ansi: 7.2.0
+
+  zod@4.4.3: {}

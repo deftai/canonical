@@ -1,9 +1,11 @@
 # canonical
 
-A compact, deterministic agent-workflow framework: 7 rule files an AI agent reads,
-20 CLI verbs that make the workflow checkable, and fail-closed git gates. The pack
+A compact, deterministic agent-workflow framework: rule files an AI agent reads,
+CLI verbs that make the workflow checkable, and fail-closed git gates. The pack
 lives in [content/](content/) (root: [content/canonical.md](content/canonical.md);
 verb contracts: [content/canonical-tasks.md](content/canonical-tasks.md)).
+Optional anonymous opt-in feedback/usage collection uses the vendored
+`@deft/collection-sdk` (`/feedback`, `collection:*` verbs).
 
 ## Install
 
@@ -12,7 +14,7 @@ npm i -g @deftai/canonical
 ```
 
 Requirements: Node ≥ 20, git. For the `task <verb>` surface, install
-[go-task](https://taskfile.dev) ≥ 3.33 separately (`brew install go-task` /
+[go-task](https://taskfile.dev) ≥ 3.44 separately (`brew install go-task` /
 `scoop install task` / see taskfile.dev) — it is not an npm dependency. Every
 verb also works directly as `canon <verb>` without go-task.
 
