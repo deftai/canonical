@@ -14,6 +14,7 @@ Legend: `!` MUST · `~` SHOULD · `≉` SHOULD NOT · `⊗` MUST NOT · `?` MAY
 | [scm.md](./scm.md) | Committing, opening/reviewing/merging PRs, or releasing |
 | [multi-agent.md](./multi-agent.md) | Spawning workers, running a cohort, or owning a long review-to-merge loop |
 | [canonical-tasks.md](./canonical-tasks.md) | You need a task verb's exact args and exit codes |
+| [feedback.md](./feedback.md) | `/feedback`, bug/feature report, or `orient` shows `metrics=not_prompted` / expired / `submissions=not_granted` |
 
 If `~/.config/canonical/USER.md` exists, its `Personal` section overrides addressing and personal rules.
 
@@ -64,7 +65,7 @@ If `~/.config/canonical/USER.md` exists, its `Personal` section overrides addres
 ## 6. Session
 
 - ! Read-only answers need only this pack + relevant code — no orient, no setup, no state mutation for pure Q&A.
-- ! On first mutation of a session: run `task orient` if present; else verify git status and that `xbrief/` is readable.
+- ! On first mutation of a session: run `task orient` if present; else verify git status and that `xbrief/` is readable. If orient reports `metrics=not_prompted`, load [feedback.md](./feedback.md) and run the one-time metrics consent offer before other mutation work.
 - ! On session end, interruption, or context exhaustion mid-work: write the checkpoint (`xbrief/continue.xbrief.json`, see state.md). On resume: read the checkpoint, not chat history; ⊗ re-debate decisions recorded there.
 
 ## 7. Documentation Discipline

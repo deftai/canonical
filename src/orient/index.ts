@@ -1,4 +1,10 @@
 import { spawnSync } from "node:child_process";
+import {
+  type ConsentSignal,
+  formatConsentSignal,
+  readCollectionFile,
+  resolveConsentSignal,
+} from "../collection/index.js";
 import { currentBranch, type GitRunner, isDirty, isGitRepo } from "../git/index.js";
 import type { GateResult } from "../types/index.js";
 import { xbriefExist } from "../xbrief/index.js";
@@ -51,6 +57,10 @@ export interface OrientSnapshot extends GateResult {
   readonly dirty: boolean;
   readonly xbriefReadable: boolean;
   readonly tools: readonly ToolProbe[];
+  /** Local collection consent signal for agents (offline; no network). */
+  readonly consent: ConsentSignal;
+  /** Machine-parseable `metrics=… submissions=… identity=…`. */
+  readonly consentLine: string;
 }
 
 /**
@@ -62,6 +72,9 @@ export interface OrientSnapshot extends GateResult {
 export function orient(projectRoot: string, opts: OrientOptions = {}): OrientSnapshot {
   const probeTool = opts.probeTool ?? defaultProbeTool;
   const tools = REQUIRED_TOOLS.map((bin) => probeTool(bin));
+  const collectionFile = readCollectionFile(projectRoot);
+  const consent = resolveConsentSignal(collectionFile);
+  const consentLine = formatConsentSignal(collectionFile);
   const broken = tools.filter((t) => !t.ok);
   if (broken.length > 0) {
     return {
@@ -71,6 +84,8 @@ export function orient(projectRoot: string, opts: OrientOptions = {}): OrientSna
       dirty: false,
       xbriefReadable: false,
       tools,
+      consent,
+      consentLine,
       message: `orient: tool(s) broken -- ${broken.map((t) => `${t.name} (${t.detail})`).join(", ")}.`,
     };
   }
@@ -88,6 +103,8 @@ export function orient(projectRoot: string, opts: OrientOptions = {}): OrientSna
       dirty,
       xbriefReadable,
       tools,
+      consent,
+      consentLine,
       message:
         "orient: xbrief/ not found -- not ready for mutation (run `canon scope:new` after bootstrapping).",
     };
@@ -101,6 +118,8 @@ export function orient(projectRoot: string, opts: OrientOptions = {}): OrientSna
       dirty,
       xbriefReadable,
       tools,
+      consent,
+      consentLine,
       message: "orient: working tree is dirty -- pass --allow-dirty, or commit/stash first.",
     };
   }
@@ -112,6 +131,8 @@ export function orient(projectRoot: string, opts: OrientOptions = {}): OrientSna
     dirty,
     xbriefReadable,
     tools,
-    message: `orient: ready on branch '${branch ?? "(detached)"}'.`,
+    consent,
+    consentLine,
+    message: `orient: ready on branch '${branch ?? "(detached)"}'. ${consentLine}`,
   };
 }

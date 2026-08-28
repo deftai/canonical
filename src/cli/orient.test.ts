@@ -28,47 +28,61 @@ function captureStd(): { out: string[]; err: string[]; restore: () => void } {
 }
 
 describe("orient handler", () => {
-  it("exits 0 ready on a clean repo with xbrief/", () => {
+  it("exits 0 ready on a clean repo with xbrief/", async () => {
     const root = tempGitRepo();
     const cap = captureStd();
-    const code = run(["--project-root", root]);
+    const code = await run(["--project-root", root]);
     cap.restore();
     expect(code).toBe(0);
     expect(cap.out.join("")).toContain("ready");
+    expect(cap.out.join("")).toContain(
+      "metrics=not_prompted submissions=not_granted identity=anonymous",
+    );
   });
 
-  it("exits 1 when the tree is dirty without --allow-dirty", () => {
+  it("exits 1 when the tree is dirty without --allow-dirty", async () => {
     const root = tempGitRepo();
     writeFileSync(join(root, "README.md"), "# dirty\n");
     const cap = captureStd();
-    const code = run(["--project-root", root]);
+    const code = await run(["--project-root", root]);
     cap.restore();
     expect(code).toBe(1);
     expect(cap.err.join("")).toContain("dirty");
   });
 
-  it("exits 0 when dirty and --allow-dirty is passed", () => {
+  it("exits 0 when dirty and --allow-dirty is passed", async () => {
     const root = tempGitRepo();
     writeFileSync(join(root, "README.md"), "# dirty\n");
     const cap = captureStd();
-    const code = run(["--project-root", root, "--allow-dirty"]);
+    const code = await run(["--project-root", root, "--allow-dirty"]);
     cap.restore();
     expect(code).toBe(0);
   });
 
-  it("--json emits sorted-key JSON", () => {
+  it("--json emits sorted-key JSON including metrics/submissions/identity", async () => {
     const root = tempGitRepo();
     const cap = captureStd();
-    const code = run(["--project-root", root, "--json"]);
+    const code = await run(["--project-root", root, "--json"]);
     cap.restore();
     expect(code).toBe(0);
-    const parsed = JSON.parse(cap.out.join(""));
+    const parsed = JSON.parse(cap.out.join("")) as {
+      metrics: string;
+      submissions: string;
+      identity: string;
+      consent_line: string;
+    };
     expect(Object.keys(parsed)).toEqual([...Object.keys(parsed)].sort());
+    expect(parsed.metrics).toBe("not_prompted");
+    expect(parsed.submissions).toBe("not_granted");
+    expect(parsed.identity).toBe("anonymous");
+    expect(parsed.consent_line).toBe(
+      "metrics=not_prompted submissions=not_granted identity=anonymous",
+    );
   });
 
-  it("returns 2 on a malformed flag", () => {
+  it("returns 2 on a malformed flag", async () => {
     const cap = captureStd();
-    const code = run(["--nope"]);
+    const code = await run(["--nope"]);
     cap.restore();
     expect(code).toBe(2);
   });

@@ -131,7 +131,12 @@ export function ensureXbriefScaffold(projectRoot: string): CopyOutcome {
   return { written, skipped };
 }
 
-const GITIGNORE_BASELINE = [".canonical/core/", ".canonical/cache/", "xbrief/*.lock"] as const;
+const GITIGNORE_BASELINE = [
+  ".canonical/core/",
+  ".canonical/cache/",
+  ".canonical/collection.json",
+  "xbrief/*.lock",
+] as const;
 
 /** Append any of the baseline .gitignore lines that are missing; skip if all present. */
 export function ensureGitignoreBaseline(projectRoot: string): CopyOutcome {

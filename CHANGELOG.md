@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+- Opt-in feedback and usage collection via vendored `@deft/collection-sdk`:
+  per-project credentials in `.canonical/collection.json` (gitignored), anonymous
+  correlator (`userKey` in `~/.config/canonical/identity.json`) sent as SDK
+  `correlator` (4-segment deployment id; never `deployment.customer`). Consent
+  split: **metrics** = explicit `collection:opt-in` (default `usage` only);
+  **submissions** = disclosure-gated via `feedback --disclosure-accepted`.
+  Orient/status print `metrics=… submissions=… identity=…`. Consent version
+  `canonical-2026-09-a`. Legacy all-scopes active files migrate without
+  re-prompt. New verbs: `collection:status|opt-in|decline|opt-out|metric`,
+  `feedback`. Soft usage metrics from `orient` / `check` / `scope:complete` /
+  `pr:watch` / `pr:finish` (never change host exit codes). Default collector
+  URL is staging; override with `CANONICAL_COLLECTION_URL`.
+
 ## [0.3.0] - 2026-08-07
 
 - Pack content: the engineering security floor gains TOCTOU/pin-by-hash rules

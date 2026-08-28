@@ -96,6 +96,43 @@ The `-x` flag makes go-task propagate the verb's exact exit code; without it eve
 **Does:** Sticky PR review-ownership lease. `register --pr=N --owner=…` | `release --pr=N` | `check --pr=N`. Writes `.canonical/review-monitor.json`.
 **Exit:** `check` → `0` active lease · `1` none · `2` error.
 
+## Collection & Feedback
+
+Anonymous collection via `@deft/collection-sdk`. Credentials: `.canonical/collection.json` (gitignored). Correlator: `~/.config/canonical/identity.json` `userKey` → SDK `correlator` (never `deployment.customer`). Default endpoint: staging (`CANONICAL_COLLECTION_URL` / `CANONICAL_COLLECTION_ENV` override). Metrics soft-fail — host verb exit codes unchanged.
+
+Two tracks: **metrics** (usage; explicit `collection:opt-in`) and **submissions** (feedback/bug/feature; disclosure-gated). Orient/status print `metrics=… submissions=… identity=…` (`identity` ∈ `anonymous|identified`). Consent version: `canonical-2026-09-a`. Contact identity is local + opt-in reconfirm only — ⊗ never in event payloads (PRIV-2).
+
+### `collection:status`
+**Does:** Print machine-parseable `metrics=… submissions=… identity=…` (metrics ∈ `not_prompted|declined|active|revoked|expired`; submissions ∈ `not_granted|granted`; identity ∈ `anonymous|identified`). `--live` refreshes from the server when credentials exist.
+**Exit:** `0` when metrics active or submissions granted · `1` otherwise · `2` error.
+
+### `collection:identity`
+**Does:** `--show` | `--clear` | `--update [--first-name=…] [--last-name=…] [--email=…] [--mobile=…]`. Stores identity in `.canonical/collection.json` (0600). `identified` requires email or mobile; otherwise `anonymous`. When credentials exist, `--update` / `--clear` reconfirm via SDK opt-in contact `{ name, email, sms }` (`name` ← `"firstName lastName".trim()`, `sms` ← mobile). `--show` prints fields; other modes avoid logging PII.
+**Exit:** `0` · `1` server sync rejected · `2` bad args / validation.
+
+### `collection:opt-in`
+**Does:** Register (once) + activate **metrics** scopes. Default scopes = `usage` only. `-- --confirm [--scopes=usage] [--consent-version=canonical-2026-09-a] [--email=…] [--name=…]`. Requires `--confirm`. Does not grant submissions. Prefer `collection:identity --update` for reply-channel contact.
+**Exit:** `0` · `1` refused/rejected · `2` error.
+
+### `collection:decline`
+**Does:** Record local **metrics** decline without registering. Does not revoke an existing submissions grant. Preserves local identity. No network.
+**Exit:** `0` · `2` error.
+
+### `collection:opt-out`
+**Does:** `-- --confirm` revoke server consent (when credentials exist) and clear local token; marks metrics revoked, submissions not granted, identity cleared. `-- --identity` clears local identity + server contact only (metrics/submissions unchanged).
+**Exit:** `0` · `1` refused/rejected · `2` error.
+
+### `collection:metric`
+**Does:** Soft usage submit `{ metric, value, period?, dimensions? }`. `--dimensions` is a JSON object of `string|number|boolean` values (≤2KiB). Skips when metrics not active. Always exit 0 on soft skip/failure.
+**Exit:** `0` · `2` bad args only (including invalid/oversized `--dimensions`).
+
+### `feedback`
+**Does:** Submit `--kind=bug|feature|feedback` with kind-specific fields (`--summary`/`--message`, optional `--details`, `--context`, `--rating`, `--stack`, `--logs`, `--os`). File flags `--summary-file`, `--message-file`, `--details-file`, `--context-file`, `--stack-file`, `--logs-file` read the corresponding field (inline+file conflict → exit 2). `--dry-run` validates without submitting. `--disclosure-accepted` grants submission scopes after user disclosure (does not enable metrics). `--as-anonymous` skips contact sync for that submit (PRIV-2: payloads never carry identity). `--help` prints flags + multiline guidance. Exit 1 with disclosure required when `submissions=not_granted` and flag omitted.
+**Exit:** `0` submitted (or dry-run ok) · `1` disclosure required / rejected · `2` bad args.
+**Multiline:** free-text with newlines/spaces/quotes MUST use `--*-file` (temp file outside the worktree; same pattern as scm.md `--body-file`), not inline strings through `task`.
+
+Automatic usage metrics (when `metrics=active`): `orient` → `orient_ok`; `check` → `check_pass`/`check_fail` (fail may include `failed_stage`); `scope:complete` → `scope_complete` (may include `disposition`, `had_delivery_pr`); `pr:watch` CLEAN → `pr_watch_clean`; `pr:finish` merged → `pr_finish_merged`. Agents emit `kickoff_done` via `collection:metric` after kickoff (optional `--dimensions` e.g. `scopes_created`, `stack_family` enum). Soft-skip continues when metrics declined even if submissions were granted. ⊗ Never put titles, paths, chat, or secrets in dimensions.
+
 ## Out of Scope (do not build as agent-facing verbs)
 
 | Skip | Why |
@@ -112,6 +149,9 @@ The `-x` flag makes go-task propagate the verb's exact exit code; without it eve
 | Intent | Task |
 |---|---|
 | First mutation of a session | `orient` |
+| Collection consent / status | `collection:opt-in` / `collection:decline` / `collection:status` |
+| Reply-channel identity | `collection:identity -- --show\|--clear\|--update …` |
+| Send feedback / bug / feature | `feedback` (multiline → `--*-file`; optional `--as-anonymous`) |
 | What's next | `work:next` |
 | Accept/reject a candidate | `triage …` |
 | New local scope | `scope:new` |

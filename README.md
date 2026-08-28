@@ -1,9 +1,11 @@
 # canonical
 
-A compact, deterministic agent-workflow framework: 7 rule files an AI agent reads,
-20 CLI verbs that make the workflow checkable, and fail-closed git gates. The pack
+A compact, deterministic agent-workflow framework: rule files an AI agent reads,
+CLI verbs that make the workflow checkable, and fail-closed git gates. The pack
 lives in [content/](content/) (root: [content/canonical.md](content/canonical.md);
 verb contracts: [content/canonical-tasks.md](content/canonical-tasks.md)).
+Optional anonymous opt-in feedback/usage collection uses the vendored
+`@deft/collection-sdk` (`/feedback`, `collection:*` verbs).
 
 ## Install
 
