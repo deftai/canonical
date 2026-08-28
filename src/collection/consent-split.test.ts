@@ -279,6 +279,33 @@ describe("C4 consent split", () => {
     expect(result.code).toBe(2);
     expect(result.message).toContain("disclosure");
   });
+
+  it("collection:opt-in does not synthesize usage when server omits it", async () => {
+    const root = tempDir("canon-c4-optin-nousage-");
+    const result = await collectionOptIn(root, {
+      confirm: true,
+      scopes: [...METRICS_SCOPES],
+      collector: {
+        ensureRegistered: async () => ({
+          ok: true,
+          installId: "11111111-1111-4111-8111-111111111111",
+          state: "pending",
+        }),
+        optIn: async () => ({
+          ok: true,
+          state: "active",
+          scopes: ["feedback"],
+          expiresAt: Date.now() + 86_400_000,
+        }),
+        optOut: async () => ({ ok: true, state: "revoked" }),
+        status: async () => ({ ok: true, state: "active", scopes: ["feedback"] }),
+        submit: async () => ({ ok: true, id: "n" }),
+      },
+    });
+    expect(result.code).toBe(1);
+    expect(result.message).toContain("usage");
+    expect(resolveConsentSignal(readCollectionFile(root)).metrics).not.toBe("active");
+  });
 });
 
 function hasUsageAfterMigrate(file: ReturnType<typeof readCollectionFile>): boolean {

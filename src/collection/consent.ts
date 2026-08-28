@@ -231,9 +231,15 @@ export async function collectionOptIn(
 
     const now = opts.now ?? new Date();
     const metricsScopes = result.scopes.filter((s) => s === "usage");
+    if (metricsScopes.length === 0) {
+      return {
+        code: 1,
+        message: "collection:opt-in rejected -- server did not grant usage scope",
+      };
+    }
     const mirror: ConsentMirror = {
       decision: "active",
-      scopes: metricsScopes.length > 0 ? metricsScopes : [...METRICS_SCOPES],
+      scopes: metricsScopes,
       consentVersion,
       expiresAt: result.expiresAt,
       decidedAt: now.toISOString(),
@@ -242,8 +248,8 @@ export async function collectionOptIn(
 
     return {
       code: 0,
-      message: `collection: opted in scopes=[${metricsScopes.length > 0 ? metricsScopes.join(",") : METRICS_SCOPES.join(",")}]`,
-      scopes: metricsScopes.length > 0 ? metricsScopes : [...METRICS_SCOPES],
+      message: `collection: opted in scopes=[${metricsScopes.join(",")}]`,
+      scopes: metricsScopes,
     };
   } catch (err) {
     return {
