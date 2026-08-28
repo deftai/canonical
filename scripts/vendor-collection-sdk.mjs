@@ -7,7 +7,15 @@
  *   node scripts/vendor-collection-sdk.mjs
  *   DEFT_COLLECTION_ROOT=/path/to/deft-collection-endpoint node scripts/vendor-collection-sdk.mjs
  */
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -31,31 +39,47 @@ function requireBuilt(pkgRel) {
 function vendorPackage(name, pkgRel, extraFiles = []) {
   const { dist, pkgJson } = requireBuilt(pkgRel);
   const dest = join(vendorRoot, name);
-  rmSync(dest, { recursive: true, force: true });
-  mkdirSync(dest, { recursive: true });
-  cpSync(dist, join(dest, "dist"), { recursive: true });
-  // Slim package.json: drop private/scripts/devDeps; keep runtime exports.
-  const raw = JSON.parse(readFileSync(pkgJson, "utf8"));
-  const slim = {
-    name: raw.name,
-    version: raw.version ?? "0.0.0",
-    type: raw.type ?? "module",
-    main: raw.main,
-    types: raw.types,
-    exports: raw.exports,
-    files: raw.files?.filter((f) => f !== "docs") ?? ["dist"],
-    dependencies: raw.dependencies ?? {},
-  };
-  // Point schemas dep at the sibling vendored package when present.
-  if (slim.dependencies["@deft/schemas"] !== undefined) {
-    slim.dependencies["@deft/schemas"] = "file:../schemas";
-  }
-  writeFileSync(join(dest, "package.json"), `${JSON.stringify(slim, null, 2)}\n`);
-  for (const rel of extraFiles) {
-    const from = join(sourceRoot, pkgRel, rel);
-    if (existsSync(from)) {
-      cpSync(from, join(dest, rel));
+  // Stage into a sibling dir, then atomic-ish swap so a failed copy never
+  // leaves an empty vendor pin (SLizard: Missing Rollback on Failed Copy).
+  const staging = `${dest}.staging-${process.pid}`;
+  const backup = `${dest}.bak-${process.pid}`;
+  rmSync(staging, { recursive: true, force: true });
+  mkdirSync(staging, { recursive: true });
+  try {
+    cpSync(dist, join(staging, "dist"), { recursive: true });
+    const raw = JSON.parse(readFileSync(pkgJson, "utf8"));
+    const slim = {
+      name: raw.name,
+      version: raw.version ?? "0.0.0",
+      type: raw.type ?? "module",
+      main: raw.main,
+      types: raw.types,
+      exports: raw.exports,
+      files: raw.files?.filter((f) => f !== "docs") ?? ["dist"],
+      dependencies: raw.dependencies ?? {},
+    };
+    if (slim.dependencies["@deft/schemas"] !== undefined) {
+      slim.dependencies["@deft/schemas"] = "file:../schemas";
     }
+    writeFileSync(join(staging, "package.json"), `${JSON.stringify(slim, null, 2)}\n`);
+    for (const rel of extraFiles) {
+      const from = join(sourceRoot, pkgRel, rel);
+      if (existsSync(from)) {
+        cpSync(from, join(staging, rel));
+      }
+    }
+    if (existsSync(dest)) {
+      rmSync(backup, { recursive: true, force: true });
+      renameSync(dest, backup);
+    }
+    renameSync(staging, dest);
+    rmSync(backup, { recursive: true, force: true });
+  } catch (err) {
+    rmSync(staging, { recursive: true, force: true });
+    if (existsSync(backup) && !existsSync(dest)) {
+      renameSync(backup, dest);
+    }
+    throw err;
   }
   return dest;
 }
