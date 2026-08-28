@@ -38,7 +38,7 @@ File flags (preferred for multiline / free-text through task):
 Other:
   --project-root PATH   --json   --dry-run (validate, do not submit)
   --disclosure-accepted  after user agrees to submissions disclosure
-  --as-anonymous         do not sync/update contact for this submit (PRIV-2)
+  --as-anonymous         document intent; payloads never include contact (PRIV-2)
   --help
 
 Multiline guidance:

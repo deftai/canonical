@@ -45,7 +45,7 @@ Orient / status are machine-parseable: `metrics=… submissions=… identity=…
 
   `task -x collection:identity -- --update --first-name=… --last-name=… --email=… --mobile=…`
 
-  Show with `--show`; clear with `--clear` (or `task -x collection:opt-out -- --identity`). Feedback may pass `--as-anonymous` to skip contact sync for that submit.
+  Show with `--show`; clear with `--clear` (or `task -x collection:opt-out -- --identity`). Event payloads never include contact (PRIV-2); `--as-anonymous` documents that intent on the submit path.
 
 ## `/feedback` flow (disclosure-gated submissions)
 

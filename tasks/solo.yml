@@ -180,7 +180,7 @@ tasks:
           ENGINE_VERB: 'collection:identity'
 
   "collection:opt-in":
-    desc: "Opt in to anonymous feedback/bug/feature/usage collection."
+    desc: "Opt in to anonymous usage metrics (not submissions)."
     dir: '{{.USER_WORKING_DIR}}'
     deps:
       - task: engine:_ts-build

@@ -89,13 +89,24 @@ export async function collectionStatus(
             CONSENT_VERSION;
           const hasUsage = live.scopes.includes("usage");
           const submissionScopes = SUBMISSION_SCOPES.filter((s) => live.scopes.includes(s));
-          if (hasUsage) {
+          const localMetricsDecision = file.metrics?.decision;
+          // Local decline/revoke is sticky: --live must not re-activate metrics.
+          if (localMetricsDecision === "declined" || localMetricsDecision === "revoked") {
+            // leave metrics mirror unchanged
+          } else if (hasUsage) {
             writeMetricsMirror(projectRoot, {
               decision: "active",
               scopes: [...METRICS_SCOPES],
               consentVersion: version,
               decidedAt,
               ...(live.expiresAt !== undefined ? { expiresAt: live.expiresAt } : {}),
+            });
+          } else if (localMetricsDecision === "active") {
+            writeMetricsMirror(projectRoot, {
+              decision: "revoked",
+              scopes: [],
+              consentVersion: version,
+              decidedAt: new Date().toISOString(),
             });
           }
           if (submissionScopes.length > 0) {
@@ -105,6 +116,13 @@ export async function collectionStatus(
               consentVersion: version,
               decidedAt,
               ...(live.expiresAt !== undefined ? { expiresAt: live.expiresAt } : {}),
+            });
+          } else if (file.submissions?.granted === true) {
+            writeSubmissionsMirror(projectRoot, {
+              granted: false,
+              scopes: [],
+              consentVersion: version,
+              decidedAt: new Date().toISOString(),
             });
           }
           const refreshed = readCollectionFile(projectRoot);
@@ -163,6 +181,15 @@ export async function collectionOptIn(
   if (scopes.length === 0) {
     return { code: 2, message: "collection:opt-in -- scopes must be non-empty" };
   }
+  const illegalSubs = scopes.filter((s) => (SUBMISSION_SCOPES as readonly string[]).includes(s));
+  if (illegalSubs.length > 0) {
+    return {
+      code: 2,
+      message:
+        "collection:opt-in -- submission scopes require feedback disclosure " +
+        `(got ${illegalSubs.join(",")}; use feedback --disclosure-accepted)`,
+    };
+  }
   const consentVersion = opts.consentVersion ?? CONSENT_VERSION;
 
   try {
@@ -213,24 +240,10 @@ export async function collectionOptIn(
     };
     writeMetricsMirror(projectRoot, mirror);
 
-    // If caller explicitly passed submission scopes, treat as submissions grant too.
-    const grantedSubs = result.scopes.filter((s) =>
-      (SUBMISSION_SCOPES as readonly string[]).includes(s),
-    );
-    if (grantedSubs.length > 0 && opts.scopes !== undefined) {
-      writeSubmissionsMirror(projectRoot, {
-        granted: true,
-        scopes: grantedSubs,
-        consentVersion,
-        decidedAt: now.toISOString(),
-        expiresAt: result.expiresAt,
-      });
-    }
-
     return {
       code: 0,
-      message: `collection: opted in scopes=[${result.scopes.join(",")}]`,
-      scopes: result.scopes,
+      message: `collection: opted in scopes=[${metricsScopes.length > 0 ? metricsScopes.join(",") : METRICS_SCOPES.join(",")}]`,
+      scopes: metricsScopes.length > 0 ? metricsScopes : [...METRICS_SCOPES],
     };
   } catch (err) {
     return {

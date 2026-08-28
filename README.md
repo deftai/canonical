@@ -14,7 +14,7 @@ npm i -g @deftai/canonical
 ```
 
 Requirements: Node ≥ 20, git. For the `task <verb>` surface, install
-[go-task](https://taskfile.dev) ≥ 3.33 separately (`brew install go-task` /
+[go-task](https://taskfile.dev) ≥ 3.44 separately (`brew install go-task` /
 `scoop install task` / see taskfile.dev) — it is not an npm dependency. Every
 verb also works directly as `canon <verb>` without go-task.
 

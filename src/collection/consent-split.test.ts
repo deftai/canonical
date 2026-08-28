@@ -238,6 +238,47 @@ describe("C4 consent split", () => {
     expect(result.status.submissions).toBe("not_granted");
     expect(result.status.identity).toBe("anonymous");
   });
+
+  it("status --live does not re-activate metrics after local decline", async () => {
+    const root = tempDir("canon-c4-live-decline-");
+    const optIn = await collectionOptIn(root, {
+      confirm: true,
+      scopes: [...METRICS_SCOPES],
+      fetch: mockFetchForScopes(["usage"]),
+    });
+    expect(optIn.code).toBe(0);
+    expect(collectionDecline(root).code).toBe(0);
+    expect(resolveConsentSignal(readCollectionFile(root)).metrics).toBe("declined");
+
+    const live = await collectionStatus(root, {
+      live: true,
+      collector: {
+        ensureRegistered: async () => ({ ok: true, installId: "x", state: "active" }),
+        optIn: async () => ({ ok: true, state: "active", scopes: ["usage"], expiresAt: 1 }),
+        optOut: async () => ({ ok: true, state: "revoked" }),
+        status: async () => ({
+          ok: true,
+          state: "active",
+          scopes: ["usage"],
+          consentVersion: CONSENT_VERSION,
+        }),
+        submit: async () => ({ ok: true, id: "n" }),
+      },
+    });
+    expect(live.status.metrics).toBe("declined");
+    expect(resolveConsentSignal(readCollectionFile(root)).metrics).toBe("declined");
+  });
+
+  it("collection:opt-in rejects submission scopes without disclosure", async () => {
+    const root = tempDir("canon-c4-optin-subs-");
+    const result = await collectionOptIn(root, {
+      confirm: true,
+      scopes: ["usage", "feedback"],
+      fetch: mockFetchForScopes(["usage", "feedback"]),
+    });
+    expect(result.code).toBe(2);
+    expect(result.message).toContain("disclosure");
+  });
 });
 
 function hasUsageAfterMigrate(file: ReturnType<typeof readCollectionFile>): boolean {
