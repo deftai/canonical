@@ -3,6 +3,7 @@ import { join } from "node:path";
 import type { Collector } from "@deft/collection-sdk";
 import { afterAll, describe, expect, it } from "vitest";
 import { cleanupTempDirs, tempDir } from "../test-support/index.js";
+import { collectionOptOut, collectionStatus, resolveConsentSignal } from "./consent.js";
 import {
   collectionIdentityClear,
   collectionIdentityShow,
@@ -12,7 +13,6 @@ import {
   validateEmail,
   validateMobile,
 } from "./contact-identity.js";
-import { collectionOptOut, collectionStatus, resolveConsentSignal } from "./consent.js";
 import { emitUsage } from "./emit.js";
 import { submitFeedback } from "./feedback.js";
 import { readCollectionFile, writeCollectionFile } from "./storage.js";
@@ -228,9 +228,11 @@ describe("collection:identity show/clear/update", () => {
     expect(resolveConsentSignal(readCollectionFile(root)).identity).toBe("anonymous");
     expect(optInCalls).toBe(1);
     // Empty / omitted contact — must not re-send prior PII
-    expect(seenContact === undefined || seenContact === null || Object.keys(seenContact as object).length === 0).toBe(
-      true,
-    );
+    expect(
+      seenContact === undefined ||
+        seenContact === null ||
+        Object.keys(seenContact as object).length === 0,
+    ).toBe(true);
   });
 
   it("status / resolveConsentSignal wire real identity mode", async () => {
@@ -276,9 +278,11 @@ describe("opt-out --identity", () => {
     expect(readCollectionFile(root).identity).toBeUndefined();
     expect(readCollectionFile(root).installId).toBe("id-1");
     expect(readCollectionFile(root).metrics?.decision).toBe("active");
-    expect(optInContact === undefined || optInContact === null || Object.keys(optInContact as object).length === 0).toBe(
-      true,
-    );
+    expect(
+      optInContact === undefined ||
+        optInContact === null ||
+        Object.keys(optInContact as object).length === 0,
+    ).toBe(true);
   });
 });
 
@@ -297,7 +301,16 @@ describe("PRIV-2 and feedback --as-anonymous", () => {
       { collector: stubCollector() },
     );
 
-    const forbidden = ["email", "mobile", "sms", "firstName", "lastName", "name", "contact", "identity"];
+    const forbidden = [
+      "email",
+      "mobile",
+      "sms",
+      "firstName",
+      "lastName",
+      "name",
+      "contact",
+      "identity",
+    ];
     const payloads: Record<string, unknown>[] = [];
 
     const collector = stubCollector({

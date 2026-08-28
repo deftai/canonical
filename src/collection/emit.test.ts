@@ -119,6 +119,10 @@ describe("emitUsage", () => {
       }),
     });
     expect(submitted).toBe(false);
-    expect(outcome).toEqual({ emitted: false, reason: "submit_failed", code: "dimensions_too_large" });
+    expect(outcome).toEqual({
+      emitted: false,
+      reason: "submit_failed",
+      code: "dimensions_too_large",
+    });
   });
 });

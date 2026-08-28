@@ -1,4 +1,4 @@
-import { type UsageDimensions, emitUsage } from "./emit.js";
+import { emitUsage, type UsageDimensions } from "./emit.js";
 
 /** Awaited soft emit for CLI verbs — swallows all errors, never throws. */
 export async function softEmitUsage(

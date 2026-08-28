@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, it } from "vitest";
-import { cleanupTempDirs, tempDir } from "../test-support/index.js";
 import { writeCollectionFile } from "../collection/storage.js";
 import { CONSENT_VERSION } from "../collection/types.js";
+import { cleanupTempDirs, tempDir } from "../test-support/index.js";
 import { run } from "./collection-metric.js";
 
 afterAll(() => cleanupTempDirs());

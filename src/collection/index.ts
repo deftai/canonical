@@ -33,12 +33,12 @@ export {
   validateMobile,
 } from "./contact-identity.js";
 export {
+  dimensionsJsonByteLength,
   type EmitUsageOptions,
   type EmitUsageOutcome,
-  type UsageDimensions,
-  USAGE_DIMENSIONS_MAX_JSON_BYTES,
-  dimensionsJsonByteLength,
   emitUsage,
+  USAGE_DIMENSIONS_MAX_JSON_BYTES,
+  type UsageDimensions,
 } from "./emit.js";
 export {
   type FeedbackKind,

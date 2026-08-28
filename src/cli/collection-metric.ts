@@ -1,10 +1,10 @@
 /** `canon collection:metric` -- fire-and-forget usage metric (soft-fail). */
 import { parseArgs, renderJson } from "../args/index.js";
 import {
-  type UsageDimensions,
-  USAGE_DIMENSIONS_MAX_JSON_BYTES,
   dimensionsJsonByteLength,
   emitUsage,
+  USAGE_DIMENSIONS_MAX_JSON_BYTES,
+  type UsageDimensions,
 } from "../collection/index.js";
 
 function parseDimensionsFlag(
