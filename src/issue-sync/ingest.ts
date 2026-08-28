@@ -1,7 +1,13 @@
 import type { GhClient, RepoSlug } from "../gh/rest.js";
 import type { ScopeDoc } from "../types/index.js";
 import { XBRIEF_VERSION } from "../types/index.js";
-import { isoDate, listScopes, normalizeSlug, readScope, writeScope } from "../xbrief/brief-io.js";
+import {
+  isoDate,
+  listScopes,
+  normalizeSlugWithReserve,
+  readScope,
+  writeScope,
+} from "../xbrief/brief-io.js";
 
 /** Exit codes per content/canonical-tasks.md `issue:sync ingest`. */
 export type IngestExitCode = 0 | 1 | 2;
@@ -141,10 +147,12 @@ export async function ingest(
       continue;
     }
     const scope = buildScope(issue, now);
+    // Reserve `-issue-<N>` in the 80-char slug budget; truncate at a hyphen.
+    const issueSuffix = `-issue-${issue.number}`;
     // An all-punctuation issue title normalizes to an empty slug; fall back so
     // the filename contract holds.
-    const slug = normalizeSlug(issue.title) || "untitled";
-    const filename = `${isoDate(now)}-${slug}-issue-${issue.number}.xbrief.json`;
+    const slug = normalizeSlugWithReserve(issue.title, issueSuffix) || "untitled";
+    const filename = `${isoDate(now)}-${slug}${issueSuffix}.xbrief.json`;
     const relPath = `xbrief/proposed/${filename}`;
     if (opts.dryRun !== true) {
       writeScope(projectRoot, relPath, scope);

@@ -12,7 +12,16 @@ import type { GateResult } from "../types/index.js";
 
 export const DEFAULT_ROOTS: readonly string[] = ["src/", "lib/", "cmd/", "scripts/", "packages/"];
 
+/** Direct source roots; under workspace prefixes (e.g. packages/) only these nested dirs count. */
+const NESTED_SOURCE_DIRS: readonly string[] = ["src/", "lib/", "cmd/", "scripts/"];
+
+/** Workspace prefixes in roots: require a nested NESTED_SOURCE_DIRS segment after the prefix. */
+const WORKSPACE_ROOTS: ReadonlySet<string> = new Set(["packages/"]);
+
 const SOURCE_EXTENSIONS: ReadonlySet<string> = new Set([".ts", ".js", ".py", ".go"]);
+
+/** Tool/config entrypoints are not coverage targets (vitest.config.ts, eslint.config.js, …). */
+const CONFIG_BASENAME = /\.config\.(?:ts|js|mjs|mts|cjs|cts)$/i;
 
 export interface MissingCoverage {
   readonly path: string;
@@ -54,11 +63,25 @@ export function isTestFile(relPath: string): boolean {
   return false;
 }
 
+function matchesRoot(posix: string, root: string): boolean {
+  if (!posix.startsWith(root)) {
+    return false;
+  }
+  if (!WORKSPACE_ROOTS.has(root)) {
+    return true;
+  }
+  const rest = posix.slice(root.length);
+  return NESTED_SOURCE_DIRS.some((seg) => rest.startsWith(seg) || rest.includes(`/${seg}`));
+}
+
 /** True when `relPath` sits under one of `roots` and is an in-scope, non-test, non-`.d.ts` source file. */
 export function isSourceFile(relPath: string, roots: readonly string[]): boolean {
   const posix = relPath.replace(/\\/g, "/");
   const b = basename(posix).toLowerCase();
   if (b.endsWith(".d.ts")) {
+    return false;
+  }
+  if (CONFIG_BASENAME.test(b)) {
     return false;
   }
   if (!SOURCE_EXTENSIONS.has(extOf(b))) {
@@ -70,7 +93,7 @@ export function isSourceFile(relPath: string, roots: readonly string[]): boolean
   if (roots.length === 0) {
     return true;
   }
-  return roots.some((root) => posix.startsWith(root));
+  return roots.some((root) => matchesRoot(posix, root));
 }
 
 /** Candidate test-file basenames that would satisfy forward coverage for a source file. */
