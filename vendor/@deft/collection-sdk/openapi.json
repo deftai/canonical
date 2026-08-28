@@ -1,0 +1,1076 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Deft Collection API",
+    "version": "1.0.0",
+    "description": "The Deft collection endpoint: per-installation registration/opt-in/opt-out, single-use challenge nonces, and scoped event submission."
+  },
+  "servers": [
+    {
+      "url": "https://api.deft-staging.co/collector",
+      "description": "Staging"
+    },
+    {
+      "url": "http://localhost:8787",
+      "description": "Local development (wrangler dev)"
+    }
+  ],
+  "paths": {
+    "/v1/registrations": {
+      "post": {
+        "operationId": "createRegistration",
+        "summary": "Register a new installation and receive its install token.",
+        "security": [],
+        "parameters": [
+          {
+            "name": "X-Deft-Deployment",
+            "in": "header",
+            "required": true,
+            "description": "The caller's deployment identity, `product:platform:environment:version[:customer]` (DEP-1). Required on every request; missing or malformed values are rejected with `deployment_invalid` before any per-installation state is touched.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Deft-Correlator",
+            "in": "header",
+            "required": false,
+            "description": "Optional opaque install-cluster correlator (CORR-1..CORR-3). When present on a POST it must match the body `correlator` field byte-for-byte; a malformed value is rejected with `correlator_invalid` before any per-installation state is touched.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Register a new installation and receive its install token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "install_id": {
+                      "type": "string"
+                    },
+                    "install_token": {
+                      "type": "string"
+                    },
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "pending"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "install_id",
+                    "install_token",
+                    "state"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "The request was rejected. `error` is one of the closed error codes documented in the `x-error-codes` root extension of this document, alongside its status and a human-readable explanation of the cause and remedy.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "deployment_id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "correlator": {
+                    "type": "string",
+                    "description": "Optional install-cluster correlator (CORR-3). When present must equal the X-Deft-Correlator header byte-for-byte."
+                  }
+                },
+                "required": [
+                  "deployment_id"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/registrations/{id}/optin": {
+      "post": {
+        "operationId": "optInRegistration",
+        "summary": "Opt an installation in to one or more data-collection scopes.",
+        "security": [
+          {
+            "InstallationToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Deft-Deployment",
+            "in": "header",
+            "required": true,
+            "description": "The caller's deployment identity, `product:platform:environment:version[:customer]` (DEP-1). Required on every request; missing or malformed values are rejected with `deployment_invalid` before any per-installation state is touched.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Deft-Correlator",
+            "in": "header",
+            "required": false,
+            "description": "Optional opaque install-cluster correlator (CORR-1..CORR-3). When present on a POST it must match the body `correlator` field byte-for-byte; a malformed value is rejected with `correlator_invalid` before any per-installation state is touched.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The installation id returned at registration.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Opt an installation in to one or more data-collection scopes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "active"
+                      ]
+                    },
+                    "scopes": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "expires_at": {
+                      "type": "integer",
+                      "description": "Epoch milliseconds."
+                    },
+                    "contact_verified": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "state",
+                    "scopes",
+                    "expires_at",
+                    "contact_verified"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "The request was rejected. `error` is one of the closed error codes documented in the `x-error-codes` root extension of this document, alongside its status and a human-readable explanation of the cause and remedy.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "scopes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "minItems": 1
+                  },
+                  "consent_version": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "contact": {
+                    "type": "object",
+                    "properties": {
+                      "email": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "name": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "sms": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "deployment_id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "correlator": {
+                    "type": "string",
+                    "description": "Optional install-cluster correlator (CORR-3). When present must equal the X-Deft-Correlator header byte-for-byte."
+                  }
+                },
+                "required": [
+                  "scopes",
+                  "consent_version",
+                  "deployment_id"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/registrations/{id}/optout": {
+      "post": {
+        "operationId": "optOutRegistration",
+        "summary": "Opt an installation out of data collection, revoking its token.",
+        "security": [
+          {
+            "InstallationToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Deft-Deployment",
+            "in": "header",
+            "required": true,
+            "description": "The caller's deployment identity, `product:platform:environment:version[:customer]` (DEP-1). Required on every request; missing or malformed values are rejected with `deployment_invalid` before any per-installation state is touched.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Deft-Correlator",
+            "in": "header",
+            "required": false,
+            "description": "Optional opaque install-cluster correlator (CORR-1..CORR-3). When present on a POST it must match the body `correlator` field byte-for-byte; a malformed value is rejected with `correlator_invalid` before any per-installation state is touched.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The installation id returned at registration.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Opt an installation out of data collection, revoking its token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "revoked"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "state"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "The request was rejected. `error` is one of the closed error codes documented in the `x-error-codes` root extension of this document, alongside its status and a human-readable explanation of the cause and remedy.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "deployment_id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "correlator": {
+                    "type": "string",
+                    "description": "Optional install-cluster correlator (CORR-3). When present must equal the X-Deft-Correlator header byte-for-byte."
+                  }
+                },
+                "required": [
+                  "deployment_id"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/registrations/{id}/status": {
+      "get": {
+        "operationId": "getRegistrationStatus",
+        "summary": "Read an installation's current opt-in state (no side effects).",
+        "security": [
+          {
+            "InstallationToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Deft-Deployment",
+            "in": "header",
+            "required": true,
+            "description": "The caller's deployment identity, `product:platform:environment:version[:customer]` (DEP-1). Required on every request; missing or malformed values are rejected with `deployment_invalid` before any per-installation state is touched.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Deft-Correlator",
+            "in": "header",
+            "required": false,
+            "description": "Optional opaque install-cluster correlator (CORR-1..CORR-3). When present on a POST it must match the body `correlator` field byte-for-byte; a malformed value is rejected with `correlator_invalid` before any per-installation state is touched.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The installation id returned at registration.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Read an installation's current opt-in state (no side effects).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "type": "string"
+                    },
+                    "scopes": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "expires_at": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "description": "Epoch milliseconds, or null if never opted in."
+                    },
+                    "consent_version": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "contact_verified": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "state",
+                    "scopes",
+                    "expires_at",
+                    "consent_version",
+                    "contact_verified"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "The request was rejected. `error` is one of the closed error codes documented in the `x-error-codes` root extension of this document, alongside its status and a human-readable explanation of the cause and remedy.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/challenge": {
+      "post": {
+        "operationId": "createChallenge",
+        "summary": "Request a single-use nonce, scoped to one installation and scope.",
+        "security": [
+          {
+            "InstallationToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Deft-Deployment",
+            "in": "header",
+            "required": true,
+            "description": "The caller's deployment identity, `product:platform:environment:version[:customer]` (DEP-1). Required on every request; missing or malformed values are rejected with `deployment_invalid` before any per-installation state is touched.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Deft-Correlator",
+            "in": "header",
+            "required": false,
+            "description": "Optional opaque install-cluster correlator (CORR-1..CORR-3). When present on a POST it must match the body `correlator` field byte-for-byte; a malformed value is rejected with `correlator_invalid` before any per-installation state is touched.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Request a single-use nonce, scoped to one installation and scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "nonce": {
+                      "type": "string"
+                    },
+                    "ttl_seconds": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "nonce",
+                    "ttl_seconds"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "The request was rejected. `error` is one of the closed error codes documented in the `x-error-codes` root extension of this document, alongside its status and a human-readable explanation of the cause and remedy.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "install_id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "scope": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "deployment_id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "correlator": {
+                    "type": "string",
+                    "description": "Optional install-cluster correlator (CORR-3). When present must equal the X-Deft-Correlator header byte-for-byte."
+                  }
+                },
+                "required": [
+                  "install_id",
+                  "scope",
+                  "deployment_id"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/submissions/{scope}": {
+      "post": {
+        "operationId": "createSubmission",
+        "summary": "Submit one event's payload for a scope, consuming a previously issued nonce.",
+        "security": [
+          {
+            "InstallationToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-Deft-Deployment",
+            "in": "header",
+            "required": true,
+            "description": "The caller's deployment identity, `product:platform:environment:version[:customer]` (DEP-1). Required on every request; missing or malformed values are rejected with `deployment_invalid` before any per-installation state is touched.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Deft-Correlator",
+            "in": "header",
+            "required": false,
+            "description": "Optional opaque install-cluster correlator (CORR-1..CORR-3). When present on a POST it must match the body `correlator` field byte-for-byte; a malformed value is rejected with `correlator_invalid` before any per-installation state is touched.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "scope",
+            "in": "path",
+            "required": true,
+            "description": "The submission scope.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "feedback",
+                "bug",
+                "feature",
+                "usage"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Submit one event's payload for a scope, consuming a previously issued nonce.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "Server-minted event id."
+                    },
+                    "deduplicated": {
+                      "type": "boolean",
+                      "description": "True when this exact payload was already accepted before."
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "The request was rejected. `error` is one of the closed error codes documented in the `x-error-codes` root extension of this document, alongside its status and a human-readable explanation of the cause and remedy.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "title": "feedback submission",
+                    "type": "object",
+                    "properties": {
+                      "install_id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "nonce": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "deployment_id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "correlator": {
+                        "type": "string",
+                        "description": "Optional install-cluster correlator (CORR-3). When present must equal the X-Deft-Correlator header byte-for-byte."
+                      },
+                      "payload": {
+                        "$ref": "#/components/schemas/FeedbackPayload"
+                      }
+                    },
+                    "required": [
+                      "install_id",
+                      "nonce",
+                      "deployment_id",
+                      "payload"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "title": "bug submission",
+                    "type": "object",
+                    "properties": {
+                      "install_id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "nonce": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "deployment_id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "correlator": {
+                        "type": "string",
+                        "description": "Optional install-cluster correlator (CORR-3). When present must equal the X-Deft-Correlator header byte-for-byte."
+                      },
+                      "payload": {
+                        "$ref": "#/components/schemas/BugPayload"
+                      }
+                    },
+                    "required": [
+                      "install_id",
+                      "nonce",
+                      "deployment_id",
+                      "payload"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "title": "feature submission",
+                    "type": "object",
+                    "properties": {
+                      "install_id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "nonce": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "deployment_id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "correlator": {
+                        "type": "string",
+                        "description": "Optional install-cluster correlator (CORR-3). When present must equal the X-Deft-Correlator header byte-for-byte."
+                      },
+                      "payload": {
+                        "$ref": "#/components/schemas/FeaturePayload"
+                      }
+                    },
+                    "required": [
+                      "install_id",
+                      "nonce",
+                      "deployment_id",
+                      "payload"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "title": "usage submission",
+                    "type": "object",
+                    "properties": {
+                      "install_id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "nonce": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "deployment_id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "correlator": {
+                        "type": "string",
+                        "description": "Optional install-cluster correlator (CORR-3). When present must equal the X-Deft-Correlator header byte-for-byte."
+                      },
+                      "payload": {
+                        "$ref": "#/components/schemas/UsagePayload"
+                      }
+                    },
+                    "required": [
+                      "install_id",
+                      "nonce",
+                      "deployment_id",
+                      "payload"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ErrorEnvelope": {
+        "type": "object",
+        "description": "The shared error envelope every rejected request returns.",
+        "properties": {
+          "error": {
+            "type": "string",
+            "enum": [
+              "invalid_json",
+              "unsupported_media_type",
+              "payload_too_large",
+              "schema_invalid",
+              "token_missing",
+              "token_mismatch",
+              "unknown_installation",
+              "not_opted_in",
+              "optin_expired",
+              "scope_not_consented",
+              "revoked",
+              "nonce_invalid",
+              "nonce_expired",
+              "nonce_used",
+              "nonce_scope_mismatch",
+              "nonce_install_mismatch",
+              "duplicate",
+              "rate_limited",
+              "quota_exceeded",
+              "too_many_nonces",
+              "scope_disabled",
+              "service_disabled",
+              "denied",
+              "method_not_allowed",
+              "not_found",
+              "internal_error",
+              "already_registered",
+              "https_required",
+              "deployment_invalid",
+              "deployment_mismatch",
+              "correlator_invalid",
+              "correlator_mismatch"
+            ]
+          },
+          "detail": {
+            "type": "string",
+            "description": "Optional human-readable elaboration."
+          },
+          "pointer": {
+            "type": "string",
+            "description": "Optional JSON-pointer-ish path into the request body, for schema_invalid."
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "additionalProperties": false
+      },
+      "FeedbackPayload": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 5000
+          },
+          "rating": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "additionalProperties": false
+      },
+      "BugPayload": {
+        "type": "object",
+        "properties": {
+          "summary": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "os": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "stack": {
+            "type": "string",
+            "maxLength": 20000
+          },
+          "logs": {
+            "type": "string",
+            "maxLength": 99000
+          }
+        },
+        "required": [
+          "summary",
+          "os"
+        ],
+        "additionalProperties": false
+      },
+      "FeaturePayload": {
+        "type": "object",
+        "properties": {
+          "summary": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "details": {
+            "type": "string",
+            "maxLength": 20000
+          },
+          "context": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "summary"
+        ],
+        "additionalProperties": false
+      },
+      "UsagePayload": {
+        "type": "object",
+        "properties": {
+          "metric": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "value": {
+            "type": "number"
+          },
+          "period": {
+            "type": "string"
+          },
+          "dimensions": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,63}$"
+            },
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            }
+          }
+        },
+        "required": [
+          "metric",
+          "value"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "securitySchemes": {
+      "InstallationToken": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "The per-installation Installation token. Returned exactly once, in the response body of POST /v1/registrations, and never retrievable again afterward — it is not an API key and is not shared across installations. Losing it means registering a new installation. Send it as `Authorization: Bearer <install_token>` on every request except registration itself."
+      }
+    }
+  },
+  "x-error-codes": {
+    "invalid_json": {
+      "status": 400,
+      "description": "The request body could not be parsed as JSON. Check for truncated or malformed payload text before resending."
+    },
+    "unsupported_media_type": {
+      "status": 415,
+      "description": "The Content-Type header was missing or was not application/json. Send the body as JSON with that exact content type."
+    },
+    "payload_too_large": {
+      "status": 413,
+      "description": "The request body exceeded the size cap for this scope. Trim the payload (e.g. shorten logs or stack traces) and retry."
+    },
+    "schema_invalid": {
+      "status": 400,
+      "description": "The JSON body did not match the schema this route expects. The pointer field, when present, names the offending key; fix the payload shape and retry."
+    },
+    "token_missing": {
+      "status": 403,
+      "description": "No bearer token was supplied. Include an Authorization header of the form 'Bearer <install_token>'."
+    },
+    "token_mismatch": {
+      "status": 403,
+      "description": "The supplied bearer token does not match this installation's stored token. Re-register to obtain a fresh token."
+    },
+    "unknown_installation": {
+      "status": 403,
+      "description": "The install_id in the request does not correspond to any known installation. Register a new installation before retrying."
+    },
+    "not_opted_in": {
+      "status": 403,
+      "description": "This installation has not completed opt-in for any scope yet. Call the optin endpoint before requesting a challenge or submitting data."
+    },
+    "optin_expired": {
+      "status": 403,
+      "description": "The installation's opt-in window has expired. The client must opt in again before it can submit further data."
+    },
+    "scope_not_consented": {
+      "status": 403,
+      "description": "The installation has opted in, but not for this particular scope. Call optin again including this scope."
+    },
+    "revoked": {
+      "status": 403,
+      "description": "This installation has opted out and can no longer submit data. Register a new installation to resume sending data."
+    },
+    "nonce_invalid": {
+      "status": 403,
+      "description": "The supplied nonce is not recognized for this installation and scope. Request a fresh challenge and retry with its nonce."
+    },
+    "nonce_expired": {
+      "status": 403,
+      "description": "The nonce expired before it was used. Request a fresh challenge and submit promptly afterward."
+    },
+    "nonce_used": {
+      "status": 409,
+      "description": "This nonce has already been consumed by an earlier submission. Request a new challenge for every submission attempt."
+    },
+    "nonce_scope_mismatch": {
+      "status": 403,
+      "description": "The nonce was issued for a different scope than the one being submitted. Request a challenge for the correct scope."
+    },
+    "nonce_install_mismatch": {
+      "status": 403,
+      "description": "The nonce was issued to a different installation than the one presenting it. Use the challenge issued to this installation's token."
+    },
+    "duplicate": {
+      "status": 409,
+      "description": "An event with this exact content was already accepted for this installation and scope. The duplicate was acknowledged but not enqueued again."
+    },
+    "rate_limited": {
+      "status": 429,
+      "description": "The caller has been rate-limited. Back off and retry after the number of seconds in the Retry-After header."
+    },
+    "quota_exceeded": {
+      "status": 429,
+      "description": "This installation's daily submission quota has been used up. Retry after the Retry-After header's duration, once the next UTC day begins."
+    },
+    "too_many_nonces": {
+      "status": 429,
+      "description": "Too many outstanding challenge nonces exist for this installation and scope already. Wait for the Retry-After duration before requesting another."
+    },
+    "scope_disabled": {
+      "status": 503,
+      "description": "This scope has been disabled via the operator kill switch. Submissions for it are rejected until an operator re-enables it."
+    },
+    "service_disabled": {
+      "status": 503,
+      "description": "The entire collection service has been disabled via the global kill switch. All submissions are rejected until an operator re-enables it."
+    },
+    "denied": {
+      "status": 403,
+      "description": "This installation is on the deny list and is blocked from issuing challenges or submitting data. Contact the service operator if this is unexpected."
+    },
+    "method_not_allowed": {
+      "status": 405,
+      "description": "The HTTP method used is not supported on this route. Check the API reference for the correct verb for this path."
+    },
+    "not_found": {
+      "status": 404,
+      "description": "The requested route or scope does not exist. Check the URL path and, for submissions, the scope name for typos."
+    },
+    "internal_error": {
+      "status": 500,
+      "description": "An unexpected server error occurred and the request was not processed. Retry later, or contact support if it keeps happening."
+    },
+    "already_registered": {
+      "status": 409,
+      "description": "A registration already exists for the derived identity. Reuse the existing install_id and install_token instead of registering again."
+    },
+    "https_required": {
+      "status": 400,
+      "description": "The request was made over plain HTTP. Resend the exact same request over HTTPS instead."
+    },
+    "deployment_invalid": {
+      "status": 400,
+      "description": "The X-Deft-Deployment header was missing or did not match the required product:platform:environment:version[:customer] grammar. Fix the header value and retry."
+    },
+    "deployment_mismatch": {
+      "status": 400,
+      "description": "The deployment_id field in the request body did not exactly match the X-Deft-Deployment header. Make sure both carry the identical value."
+    },
+    "correlator_invalid": {
+      "status": 400,
+      "description": "The X-Deft-Correlator header or body correlator field did not match the required lowercase alphanumeric-and-hyphen grammar. Fix the value and retry."
+    },
+    "correlator_mismatch": {
+      "status": 400,
+      "description": "The correlator was present in only one of the header or body, or the two values disagreed. Send identical X-Deft-Correlator and body correlator values, or omit both."
+    }
+  }
+}
