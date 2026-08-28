@@ -51,9 +51,14 @@ tasks:
     dir: '{{.USER_WORKING_DIR}}'
     silent: true
     # Operator free-text must not be interpolated into the shell script body --
-    # JSON env transport + argv-spawn in tasks/engine-invoke.cjs.
+    # argv-array JSON env transport + spawn in tasks/engine-invoke.cjs (#8).
+    # Prefer ENGINE_VERB + CLI_ARGS_LIST (true argv); legacy ENGINE_CMD string
+    # still works via shellSplit but splits unquoted newlines/spaces.
     env:
-      CANON_ENGINE_CMD_JSON: '{{ .ENGINE_CMD | toSlash | toJson }}'
+      CANON_ENGINE_VERB: '{{.ENGINE_VERB}}'
+      CANON_ENGINE_CLI_ARGS_JSON: '{{.CLI_ARGS_LIST | toJson}}'
+      CANON_ENGINE_PROJECT_ROOT: '{{.USER_WORKING_DIR}}'
+      CANON_ENGINE_CMD_JSON: '{{ .ENGINE_CMD | default "" | toSlash | toJson }}'
     cmds:
       - |
         set -eu

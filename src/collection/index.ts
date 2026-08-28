@@ -1,0 +1,85 @@
+export {
+  type CreateCanonicalCollectorOptions,
+  createCanonicalCollector,
+  resolveCollectionBaseUrl,
+  resolveCollectionEnv,
+} from "./client.js";
+export {
+  type CollectionStatus,
+  collectionDecline,
+  collectionOptIn,
+  collectionOptOut,
+  collectionStatus,
+  formatConsentSignal,
+  grantSubmissions,
+  type OptInOptions,
+  type OptOutOptions,
+  resolveConsentSignal,
+  type StatusOptions,
+} from "./consent.js";
+export {
+  clearIdentityAndServerContact,
+  collectionIdentityClear,
+  collectionIdentityShow,
+  collectionIdentityUpdate,
+  dropLocalIdentity,
+  type IdentityMutationOptions,
+  type IdentityMutationResult,
+  type IdentityShowResult,
+  identityMode,
+  type SdkContact,
+  toSdkContact,
+  validateEmail,
+  validateMobile,
+} from "./contact-identity.js";
+export {
+  type EmitUsageOptions,
+  type EmitUsageOutcome,
+  type UsageDimensions,
+  USAGE_DIMENSIONS_MAX_JSON_BYTES,
+  dimensionsJsonByteLength,
+  emitUsage,
+} from "./emit.js";
+export {
+  type FeedbackKind,
+  type SubmitFeedbackOptions,
+  type SubmitFeedbackResult,
+  submitFeedback,
+} from "./feedback.js";
+export { defaultConfigDir, ensureUserKey, type IdentityOptions, identityPath } from "./identity.js";
+export { softEmitUsage } from "./soft-emit.js";
+export {
+  collectionFilePath,
+  hasScopeConsent,
+  hasSubmissionsGrant,
+  hasUsageConsent,
+  localPromptState,
+  migrateCollectionFile,
+  projectCredentialStorage,
+  readCollectionFile,
+  writeCollectionFile,
+  writeConsentMirror,
+  writeIdentityMirror,
+  writeMetricsMirror,
+  writeSubmissionsMirror,
+} from "./storage.js";
+export {
+  COLLECTION_FILE_REL,
+  CONSENT_VERSION,
+  type CollectionFile,
+  type CollectionPromptState,
+  type CollectionScope,
+  type ConsentDecision,
+  type ConsentMirror,
+  type ConsentSignal,
+  type ContactIdentity,
+  DEFAULT_COLLECTION_BASE_URL,
+  DEFAULT_COLLECTION_ENV,
+  DEFAULT_SCOPES,
+  type IdentityState,
+  METRICS_SCOPES,
+  type MetricsState,
+  SUBMISSION_SCOPES,
+  type SubmissionsMirror,
+  type SubmissionsState,
+} from "./types.js";

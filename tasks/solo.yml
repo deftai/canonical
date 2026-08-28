@@ -1,8 +1,8 @@
 version: '3'
 
 # Solo-path verbs (Stream G). EVERY task: dir USER_WORKING_DIR, deps on
-# engine:_ts-build, ENGINE_CMD with {{.CLI_ARGS}} forwarded bare and
-# --project-root appended. NO sources:/generates:.
+# engine:_ts-build, ENGINE_VERB + CLI_ARGS_LIST argv-array transport;
+# --project-root appended by engine-invoke. NO sources:/generates:.
 # NOTE: no leading colon on engine:* refs -- with `flatten: true` on this
 # include, a leading-colon (root-absolute) reference does not resolve to the
 # internal `engine` namespace and go-task reports "Task does not exist".
@@ -17,7 +17,7 @@ tasks:
     cmds:
       - task: engine:invoke
         vars:
-          ENGINE_CMD: 'setup {{.CLI_ARGS}} --project-root "{{.USER_WORKING_DIR}}"'
+          ENGINE_VERB: 'setup'
 
   "orient":
     desc: "Mutation-session readiness snapshot: git status, xbrief/, core tools."
@@ -27,7 +27,7 @@ tasks:
     cmds:
       - task: engine:invoke
         vars:
-          ENGINE_CMD: 'orient {{.CLI_ARGS}} --project-root "{{.USER_WORKING_DIR}}"'
+          ENGINE_VERB: 'orient'
 
   "check":
     desc: "Project quality gate: format, lint, build, test, state:validate, verify:encoding."
@@ -37,7 +37,7 @@ tasks:
     cmds:
       - task: engine:invoke
         vars:
-          ENGINE_CMD: 'check {{.CLI_ARGS}} --project-root "{{.USER_WORKING_DIR}}"'
+          ENGINE_VERB: 'check'
 
   "state:validate":
     desc: "Validate all xbrief/**/*.json for schema shape and lifecycle consistency."
@@ -47,7 +47,7 @@ tasks:
     cmds:
       - task: engine:invoke
         vars:
-          ENGINE_CMD: 'state:validate {{.CLI_ARGS}} --project-root "{{.USER_WORKING_DIR}}"'
+          ENGINE_VERB: 'state:validate'
 
   "verify:branch":
     desc: "Exit 1 if HEAD is the default branch, unless overridden by policy or env."
@@ -57,7 +57,7 @@ tasks:
     cmds:
       - task: engine:invoke
         vars:
-          ENGINE_CMD: 'verify:branch {{.CLI_ARGS}} --project-root "{{.USER_WORKING_DIR}}"'
+          ENGINE_VERB: 'verify:branch'
 
   "verify:encoding":
     desc: "Scan tracked text files for BOM, U+FFFD, mojibake, and non-ASCII punctuation."
@@ -67,7 +67,7 @@ tasks:
     cmds:
       - task: engine:invoke
         vars:
-          ENGINE_CMD: 'verify:encoding {{.CLI_ARGS}} --project-root "{{.USER_WORKING_DIR}}"'
+          ENGINE_VERB: 'verify:encoding'
 
   "verify:forward-coverage":
     desc: "Require a staged test file for each staged new source file."
@@ -77,7 +77,7 @@ tasks:
     cmds:
       - task: engine:invoke
         vars:
-          ENGINE_CMD: 'verify:forward-coverage {{.CLI_ARGS}} --project-root "{{.USER_WORKING_DIR}}"'
+          ENGINE_VERB: 'verify:forward-coverage'
 
   "work:next":
     desc: "Print the next work item from xbrief/plan.json or xbrief/pending/."
@@ -87,7 +87,7 @@ tasks:
     cmds:
       - task: engine:invoke
         vars:
-          ENGINE_CMD: 'work:next {{.CLI_ARGS}} --project-root "{{.USER_WORKING_DIR}}"'
+          ENGINE_VERB: 'work:next'
 
   "triage":
     desc: "Record a decision (accept/reject/defer/duplicate) on a candidate."
@@ -97,7 +97,7 @@ tasks:
     cmds:
       - task: engine:invoke
         vars:
-          ENGINE_CMD: 'triage {{.CLI_ARGS}} --project-root "{{.USER_WORKING_DIR}}"'
+          ENGINE_VERB: 'triage'
 
   "scope:new":
     desc: "Create a proposed scope brief."
@@ -107,7 +107,7 @@ tasks:
     cmds:
       - task: engine:invoke
         vars:
-          ENGINE_CMD: 'scope:new {{.CLI_ARGS}} --project-root "{{.USER_WORKING_DIR}}"'
+          ENGINE_VERB: 'scope:new'
 
   "scope:start":
     desc: "Make a scope implementable in one transaction: promote and activate."
@@ -117,7 +117,7 @@ tasks:
     cmds:
       - task: engine:invoke
         vars:
-          ENGINE_CMD: 'scope:start {{.CLI_ARGS}} --project-root "{{.USER_WORKING_DIR}}"'
+          ENGINE_VERB: 'scope:start'
 
   "scope:complete":
     desc: "Terminal success: mark a scope completed with delivery evidence."
@@ -127,7 +127,7 @@ tasks:
     cmds:
       - task: engine:invoke
         vars:
-          ENGINE_CMD: 'scope:complete {{.CLI_ARGS}} --project-root "{{.USER_WORKING_DIR}}"'
+          ENGINE_VERB: 'scope:complete'
 
   "scope:stop":
     desc: "Non-happy terminal or pause: cancel, fail, block/unblock, or demote a scope."
@@ -137,7 +137,7 @@ tasks:
     cmds:
       - task: engine:invoke
         vars:
-          ENGINE_CMD: 'scope:stop {{.CLI_ARGS}} --project-root "{{.USER_WORKING_DIR}}"'
+          ENGINE_VERB: 'scope:stop'
 
   "render":
     desc: "Generate ROADMAP.md or SPEC.md from lifecycle folders / xbrief/spec.json."
@@ -147,7 +147,7 @@ tasks:
     cmds:
       - task: engine:invoke
         vars:
-          ENGINE_CMD: 'render {{.CLI_ARGS}} --project-root "{{.USER_WORKING_DIR}}"'
+          ENGINE_VERB: 'render'
 
   "policy":
     desc: "Show or set policy.* fields."
@@ -157,4 +157,74 @@ tasks:
     cmds:
       - task: engine:invoke
         vars:
-          ENGINE_CMD: 'policy {{.CLI_ARGS}} --project-root "{{.USER_WORKING_DIR}}"'
+          ENGINE_VERB: 'policy'
+
+  "collection:status":
+    desc: "Show local collection consent state (optional --live)."
+    dir: '{{.USER_WORKING_DIR}}'
+    deps:
+      - task: engine:_ts-build
+    cmds:
+      - task: engine:invoke
+        vars:
+          ENGINE_VERB: 'collection:status'
+
+  "collection:identity":
+    desc: "Show, clear, or update reply-channel identity (PRIV-2: not in event payloads)."
+    dir: '{{.USER_WORKING_DIR}}'
+    deps:
+      - task: engine:_ts-build
+    cmds:
+      - task: engine:invoke
+        vars:
+          ENGINE_VERB: 'collection:identity'
+
+  "collection:opt-in":
+    desc: "Opt in to anonymous feedback/bug/feature/usage collection."
+    dir: '{{.USER_WORKING_DIR}}'
+    deps:
+      - task: engine:_ts-build
+    cmds:
+      - task: engine:invoke
+        vars:
+          ENGINE_VERB: 'collection:opt-in'
+
+  "collection:decline":
+    desc: "Decline collection locally without registering."
+    dir: '{{.USER_WORKING_DIR}}'
+    deps:
+      - task: engine:_ts-build
+    cmds:
+      - task: engine:invoke
+        vars:
+          ENGINE_VERB: 'collection:decline'
+
+  "collection:opt-out":
+    desc: "Revoke collection consent and clear credentials."
+    dir: '{{.USER_WORKING_DIR}}'
+    deps:
+      - task: engine:_ts-build
+    cmds:
+      - task: engine:invoke
+        vars:
+          ENGINE_VERB: 'collection:opt-out'
+
+  "collection:metric":
+    desc: "Emit a usage metric when opted in (soft-fail)."
+    dir: '{{.USER_WORKING_DIR}}'
+    deps:
+      - task: engine:_ts-build
+    cmds:
+      - task: engine:invoke
+        vars:
+          ENGINE_VERB: 'collection:metric'
+
+  "feedback":
+    desc: "Submit bug, feature request, or general feedback."
+    dir: '{{.USER_WORKING_DIR}}'
+    deps:
+      - task: engine:_ts-build
+    cmds:
+      - task: engine:invoke
+        vars:
+          ENGINE_VERB: 'feedback'
