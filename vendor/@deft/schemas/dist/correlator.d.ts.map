@@ -1,0 +1,1 @@
+{"version":3,"file":"correlator.d.ts","sourceRoot":"","sources":["../src/correlator.ts"],"names":[],"mappings":"AAIA,MAAM,MAAM,qBAAqB,GAC7B;IAAE,EAAE,EAAE,IAAI,CAAC;IAAC,KAAK,EAAE,MAAM,CAAA;CAAE,GAC3B;IAAE,EAAE,EAAE,KAAK,CAAC;IAAC,MAAM,EAAE,MAAM,CAAA;CAAE,CAAC;AAIlC,6EAA6E;AAC7E,wBAAgB,eAAe,CAAC,GAAG,EAAE,MAAM,GAAG,qBAAqB,CAKlE"}
