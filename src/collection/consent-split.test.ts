@@ -83,7 +83,7 @@ describe("C4 consent split", () => {
     expect([...DEFAULT_SCOPES]).toEqual(["usage"]);
     expect([...METRICS_SCOPES]).toEqual(["usage"]);
     expect([...SUBMISSION_SCOPES]).toEqual(["feedback", "bug", "feature"]);
-    expect(CONSENT_VERSION).toBe("canonical-2026-09-a");
+    expect(CONSENT_VERSION).toBe("canonical-2026-09-b");
   });
 
   it("collection:opt-in --confirm defaults to usage only", async () => {
@@ -102,11 +102,13 @@ describe("C4 consent split", () => {
     const file = readCollectionFile(root);
     const signal = resolveConsentSignal(file);
     expect(signal.metrics).toBe("active");
+    expect(signal.metricsMode).toBe("anonymous");
+    expect(file.metricsMode).toBe("anonymous");
     expect(signal.submissions).toBe("not_granted");
     expect(signal.identity).toBe("anonymous");
   });
 
-  it("feedback requires disclosure when metrics declined and submissions not granted", async () => {
+  it("feedback requires user confirm when metrics declined and submissions not granted", async () => {
     const root = tempDir("canon-c4-disc-");
     collectionDecline(root, { now: new Date("2026-08-01T00:00:00.000Z") });
 
@@ -117,10 +119,11 @@ describe("C4 consent split", () => {
     });
     expect(result.code).toBe(1);
     expect(result.disclosureRequired).toBe(true);
-    expect(result.message.toLowerCase()).toMatch(/disclosure/);
+    expect(result.message.toLowerCase()).toMatch(/confirm|disclosure-accepted/);
 
     const signal = resolveConsentSignal(readCollectionFile(root));
     expect(signal.metrics).toBe("declined");
+    expect(signal.metricsMode).toBe("disallowed");
     expect(signal.submissions).toBe("not_granted");
   });
 
@@ -162,6 +165,7 @@ describe("C4 consent split", () => {
     const file = readCollectionFile(root);
     const signal = resolveConsentSignal(file);
     expect(signal.metrics).toBe("declined");
+    expect(signal.metricsMode).toBe("disallowed");
     expect(signal.submissions).toBe("granted");
     expect(signal.identity).toBe("anonymous");
   });
@@ -228,15 +232,17 @@ describe("C4 consent split", () => {
     expect(file.submissions?.granted).toBe(true);
   });
 
-  it("status message is machine-parseable metrics/submissions/identity", async () => {
+  it("status message is machine-parseable metricsMode/metrics/submissions/identity", async () => {
     const root = tempDir("canon-c4-status-");
     const result = await collectionStatus(root);
     expect(result.message).toMatch(
-      /metrics=not_prompted submissions=not_granted identity=anonymous/,
+      /metricsMode=undecided metrics=not_prompted submissions=not_granted identity=anonymous/,
     );
     expect(result.status.metrics).toBe("not_prompted");
+    expect(result.status.metricsMode).toBe("undecided");
     expect(result.status.submissions).toBe("not_granted");
     expect(result.status.identity).toBe("anonymous");
+    expect(result.status.identityMode).toBe("anonymous");
   });
 
   it("status --live does not re-activate metrics after local decline", async () => {

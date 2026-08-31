@@ -2,18 +2,27 @@
 
 ## [Unreleased]
 
+- Pack consent UX: plain-English Disallow / Anonymous / Attributed dialogue in
+  `feedback.md` (user speech vs silent agent actions); no task recipes to
+  humans; per-submit feedback confirm (even when metrics disallowed); consent
+  version `canonical-2026-09-b`. Persist `metricsMode`
+  (`undecided|disallowed|anonymous|attributed`) in `.canonical/collection.json`;
+  orient/status print `metricsMode=… metrics=… submissions=… identity=…`.
+  Feedback submit works when metrics are disallowed (agent-internal
+  `--disclosure-accepted` after user confirm). Full opt-out rotates install
+  credentials (`installId`/`token` cleared).
+
 - Opt-in feedback and usage collection via vendored `@deft/collection-sdk`:
   per-project credentials in `.canonical/collection.json` (gitignored), anonymous
   correlator (`userKey` in `~/.config/canonical/identity.json`) sent as SDK
   `correlator` (4-segment deployment id; never `deployment.customer`). Consent
   split: **metrics** = explicit `collection:opt-in` (default `usage` only);
-  **submissions** = disclosure-gated via `feedback --disclosure-accepted`.
-  Orient/status print `metrics=… submissions=… identity=…`. Consent version
-  `canonical-2026-09-a`. Legacy all-scopes active files migrate without
-  re-prompt. New verbs: `collection:status|opt-in|decline|opt-out|metric`,
-  `feedback`. Soft usage metrics from `orient` / `check` / `scope:complete` /
-  `pr:watch` / `pr:finish` (never change host exit codes). Default collector
-  URL is staging; override with `CANONICAL_COLLECTION_URL`.
+  **submissions** = per-submit confirm via `feedback --disclosure-accepted`.
+  Legacy all-scopes active files migrate without re-prompt. New verbs:
+  `collection:status|opt-in|decline|opt-out|metric`, `feedback`. Soft usage
+  metrics from `orient` / `check` / `scope:complete` / `pr:watch` /
+  `pr:finish` (never change host exit codes). Default collector URL is
+  staging; override with `CANONICAL_COLLECTION_URL`.
 
 ## [0.3.0] - 2026-08-07
 

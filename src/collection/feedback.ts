@@ -22,8 +22,8 @@ export interface SubmitFeedbackOptions extends CreateCanonicalCollectorOptions {
   /** Validate + consent-check without calling the collector. */
   readonly dryRun?: boolean;
   /**
-   * User accepted the submissions disclosure. Triggers register + submission-scope
-   * opt-in when submissions are not yet granted. Never flips metrics consent.
+   * Agent-internal: user confirmed this submit in plain English. Registers if
+   * needed and grants submission scopes silently. Never flips metrics consent.
    */
   readonly disclosureAccepted?: boolean;
   /**
@@ -99,11 +99,12 @@ function buildPayload(
   return { ok: true, scope: "feature", payload };
 }
 
-function disclosureMessage(kind: FeedbackKind, version: string): string {
+function confirmRequiredMessage(kind: FeedbackKind, version: string): string {
   return (
-    `feedback: disclosure required -- will send: canonical version (${version}), ` +
-    `installId, correlator, and ${kind} fields. Re-run with --disclosure-accepted ` +
-    `after the user agrees (does not enable metrics). Load feedback.md for the full flow.`
+    `feedback: user confirm required -- will send: canonical version (${version}), ` +
+    `installId, correlator, and ${kind} fields. After the user confirms the filing ` +
+    `in plain English, re-run with --disclosure-accepted (agent-internal; does not ` +
+    `enable metrics). Load feedback.md for the dialogue.`
   );
 }
 
@@ -134,13 +135,14 @@ export async function submitFeedback(
       const version = opts.version ?? "unknown";
       return {
         code: 1,
-        message: disclosureMessage(built.scope, version),
+        message: confirmRequiredMessage(built.scope, version),
         disclosureRequired: true,
         scope: built.scope,
         payload: built.payload,
       };
     }
 
+    // Silent internal grant after user confirm — works even when metrics disallowed.
     const granted = await grantSubmissions(projectRoot, {
       configDir: opts.configDir,
       baseUrl: opts.baseUrl,
@@ -159,7 +161,7 @@ export async function submitFeedback(
   if (!hasScopeConsent(file, built.scope)) {
     return {
       code: 1,
-      message: `feedback: not opted in for scope '${built.scope}' (load feedback.md for disclosure)`,
+      message: `feedback: not opted in for scope '${built.scope}' (load feedback.md; pass --disclosure-accepted after user confirm)`,
     };
   }
 

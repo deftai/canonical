@@ -7,7 +7,7 @@
 export const COLLECTION_FILE_REL = ".canonical/collection.json";
 
 /** Pinned consent text version — bump when the user-facing consent copy changes. */
-export const CONSENT_VERSION = "canonical-2026-09-a";
+export const CONSENT_VERSION = "canonical-2026-09-b";
 
 /** Metrics opt-in scopes (usage counters only). */
 export const METRICS_SCOPES = ["usage"] as const;
@@ -21,6 +21,13 @@ export const DEFAULT_SCOPES = METRICS_SCOPES;
 export type CollectionScope = (typeof METRICS_SCOPES)[number] | (typeof SUBMISSION_SCOPES)[number];
 
 export type ConsentDecision = "active" | "declined" | "revoked";
+
+/**
+ * Plain-English metrics mode persisted for agents.
+ * undecided = never prompted / expired; disallowed = decline or opt-out;
+ * anonymous = usage only; attributed = usage + reply-channel identity.
+ */
+export type MetricsMode = "undecided" | "disallowed" | "anonymous" | "attributed";
 
 /** Offline-fast local mirror of metrics consent; authoritative server state via SDK status(). */
 export interface ConsentMirror {
@@ -54,6 +61,11 @@ export interface CollectionFile {
   readonly token?: string;
   /** Metrics (usage) consent — primary after C4. */
   readonly metrics?: ConsentMirror;
+  /**
+   * Explicit tri-state for agents (Disallow / Anonymous / Attributed).
+   * Written on decline / opt-in / identity / opt-out; derived when absent.
+   */
+  readonly metricsMode?: MetricsMode;
   /** Submissions disclosure grant. */
   readonly submissions?: SubmissionsMirror;
   /** Local contact identity (C5); mode identified requires email or mobile. */
@@ -86,10 +98,22 @@ export function identityMode(identity: ContactIdentity | undefined): IdentitySta
   return "anonymous";
 }
 
+export function isMetricsMode(value: unknown): value is MetricsMode {
+  return (
+    value === "undecided" ||
+    value === "disallowed" ||
+    value === "anonymous" ||
+    value === "attributed"
+  );
+}
+
 export interface ConsentSignal {
   readonly metrics: MetricsState;
+  readonly metricsMode: MetricsMode;
   readonly submissions: SubmissionsState;
   readonly identity: IdentityState;
+  /** Alias of identity for pack/agents. */
+  readonly identityMode: IdentityState;
 }
 
 export const DEFAULT_COLLECTION_BASE_URL = "https://api.deft-staging.co/collector";

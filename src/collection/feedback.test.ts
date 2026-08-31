@@ -29,7 +29,7 @@ describe("submitFeedback", () => {
     expect(result.code).toBe(2);
   });
 
-  it("fails closed with disclosure when submissions not granted", async () => {
+  it("fails closed with user-confirm required when submissions not granted", async () => {
     const root = tempDir("canon-fb-noconsent-");
     const result = await submitFeedback(root, {
       kind: "feature",
@@ -37,7 +37,7 @@ describe("submitFeedback", () => {
     });
     expect(result.code).toBe(1);
     expect(result.disclosureRequired).toBe(true);
-    expect(result.message.toLowerCase()).toMatch(/disclosure/);
+    expect(result.message.toLowerCase()).toMatch(/confirm|disclosure-accepted/);
   });
 
   it("submits bug payload when submissions granted", async () => {

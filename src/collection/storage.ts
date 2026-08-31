@@ -11,6 +11,8 @@ import {
   type ContactIdentity,
   type IdentityState,
   identityMode,
+  isMetricsMode,
+  type MetricsMode,
   type MetricsState,
   SUBMISSION_SCOPES,
   type SubmissionsMirror,
@@ -69,6 +71,7 @@ function parseCollectionFile(raw: unknown): CollectionFile {
     ...(typeof o.installId === "string" ? { installId: o.installId } : {}),
     ...(typeof o.token === "string" ? { token: o.token } : {}),
     ...(isConsentMirror(o.metrics) ? { metrics: o.metrics } : {}),
+    ...(isMetricsMode(o.metricsMode) ? { metricsMode: o.metricsMode } : {}),
     ...(isSubmissionsMirror(o.submissions) ? { submissions: o.submissions } : {}),
     ...(isContactIdentity(o.identity) ? { identity: o.identity } : {}),
     ...(isConsentMirror(o.consent) ? { consent: o.consent } : {}),
@@ -107,12 +110,16 @@ export function migrateCollectionFile(file: CollectionFile): {
     ...(file.installId !== undefined ? { installId: file.installId } : {}),
     ...(file.token !== undefined ? { token: file.token } : {}),
     ...(file.identity !== undefined ? { identity: file.identity } : {}),
+    ...(file.metricsMode !== undefined ? { metricsMode: file.metricsMode } : {}),
   };
 
   if (legacy.decision === "active" && legacyHasAllScopes(scopes)) {
+    const metricsMode: MetricsMode =
+      identityMode(file.identity) === "identified" ? "attributed" : "anonymous";
     return {
       file: {
         ...base,
+        metricsMode,
         metrics: {
           decision: "active",
           scopes: ["usage"],
@@ -135,9 +142,15 @@ export function migrateCollectionFile(file: CollectionFile): {
   if (legacy.decision === "active") {
     const hasUsage = scopes.includes("usage");
     const submissionScopes = SUBMISSION_SCOPES.filter((s) => scopes.includes(s));
+    const metricsMode: MetricsMode = hasUsage
+      ? identityMode(file.identity) === "identified"
+        ? "attributed"
+        : "anonymous"
+      : "disallowed";
     return {
       file: {
         ...base,
+        metricsMode,
         ...(hasUsage
           ? {
               metrics: {
@@ -176,6 +189,7 @@ export function migrateCollectionFile(file: CollectionFile): {
   return {
     file: {
       ...base,
+      metricsMode: "disallowed",
       metrics: {
         decision: legacy.decision,
         scopes: [],
@@ -225,9 +239,19 @@ export function writeCollectionFile(projectRoot: string, file: CollectionFile): 
   chmodSecret(projectRoot);
 }
 
-export function writeMetricsMirror(projectRoot: string, metrics: ConsentMirror): void {
+export function writeMetricsMirror(
+  projectRoot: string,
+  metrics: ConsentMirror,
+  metricsMode?: MetricsMode,
+): void {
   const existing = readCollectionFile(projectRoot);
-  writeCollectionFile(projectRoot, { ...existing, metrics });
+  const mode =
+    metricsMode ??
+    deriveMetricsMode({
+      ...existing,
+      metrics,
+    });
+  writeCollectionFile(projectRoot, { ...existing, metrics, metricsMode: mode });
 }
 
 /** @deprecated Prefer writeMetricsMirror — kept for call-site compatibility during C4. */
@@ -240,6 +264,11 @@ export function writeSubmissionsMirror(projectRoot: string, submissions: Submiss
   writeCollectionFile(projectRoot, { ...existing, submissions });
 }
 
+export function writeMetricsMode(projectRoot: string, metricsMode: MetricsMode): void {
+  const existing = readCollectionFile(projectRoot);
+  writeCollectionFile(projectRoot, { ...existing, metricsMode });
+}
+
 export function writeIdentityMirror(
   projectRoot: string,
   identity: ContactIdentity | undefined,
@@ -247,22 +276,32 @@ export function writeIdentityMirror(
   const existing = readCollectionFile(projectRoot);
   if (identity === undefined) {
     const { identity: _drop, ...rest } = existing;
-    writeCollectionFile(projectRoot, rest);
+    const withoutIdentity: CollectionFile = rest;
+    writeCollectionFile(projectRoot, {
+      ...withoutIdentity,
+      metricsMode: deriveMetricsMode(withoutIdentity),
+    });
     return;
   }
-  writeCollectionFile(projectRoot, { ...existing, identity });
+  const next: CollectionFile = { ...existing, identity };
+  writeCollectionFile(projectRoot, {
+    ...next,
+    metricsMode: deriveMetricsMode(next),
+  });
 }
 
 export function clearCredentialsKeepConsent(
   projectRoot: string,
   metrics?: ConsentMirror,
   submissions?: SubmissionsMirror,
+  metricsMode: MetricsMode = "disallowed",
 ): void {
   const existing = readCollectionFile(projectRoot);
   const next: CollectionFile = {
     metrics: metrics ?? existing.metrics,
     submissions: submissions ?? existing.submissions,
-    // Full opt-out path intentionally omits identity (caller drops contact).
+    metricsMode,
+    // Full opt-out path intentionally omits identity + credentials (rotate install).
   };
   writeCollectionFile(projectRoot, next);
 }
@@ -294,6 +333,7 @@ export function projectCredentialStorage(projectRoot: string): CredentialStorage
       const existing = readCollectionFile(projectRoot);
       const next: CollectionFile = {
         ...(existing.metrics !== undefined ? { metrics: existing.metrics } : {}),
+        ...(existing.metricsMode !== undefined ? { metricsMode: existing.metricsMode } : {}),
         ...(existing.submissions !== undefined ? { submissions: existing.submissions } : {}),
         ...(existing.identity !== undefined ? { identity: existing.identity } : {}),
       };
@@ -321,6 +361,42 @@ function metricsStateFromMirror(mirror: ConsentMirror | undefined, nowMs: number
   return "not_prompted";
 }
 
+/** Derive plain-English metricsMode from mirrors + identity. */
+export function deriveMetricsMode(file: CollectionFile, nowMs: number = Date.now()): MetricsMode {
+  const metrics = metricsStateFromMirror(file.metrics, nowMs);
+  if (metrics === "not_prompted" || metrics === "expired") {
+    return "undecided";
+  }
+  if (metrics === "declined" || metrics === "revoked") {
+    return "disallowed";
+  }
+  if (metrics === "active") {
+    return identityMode(file.identity) === "identified" ? "attributed" : "anonymous";
+  }
+  return "undecided";
+}
+
+/**
+ * Resolve metricsMode: prefer persisted value when it matches decision/identity;
+ * otherwise derive (and callers may re-persist).
+ */
+export function resolveMetricsMode(file: CollectionFile, nowMs: number = Date.now()): MetricsMode {
+  const derived = deriveMetricsMode(file, nowMs);
+  const persisted = file.metricsMode;
+  if (persisted === undefined) {
+    return derived;
+  }
+  // Sticky disallowed when declined/revoked even if identity still present briefly.
+  if (derived === "disallowed") {
+    return "disallowed";
+  }
+  // Active metrics: identity wins between anonymous/attributed.
+  if (derived === "anonymous" || derived === "attributed") {
+    return derived;
+  }
+  return persisted;
+}
+
 function submissionsStateFromMirror(
   mirror: SubmissionsMirror | undefined,
   nowMs: number,
@@ -341,14 +417,16 @@ export function resolveConsentSignal(
   const identity: IdentityState = identityMode(file.identity);
   return {
     metrics: metricsStateFromMirror(file.metrics, nowMs),
+    metricsMode: resolveMetricsMode(file, nowMs),
     submissions: submissionsStateFromMirror(file.submissions, nowMs),
     identity,
+    identityMode: identity,
   };
 }
 
 export function formatConsentSignal(file: CollectionFile, nowMs: number = Date.now()): string {
   const s = resolveConsentSignal(file, nowMs);
-  return `metrics=${s.metrics} submissions=${s.submissions} identity=${s.identity}`;
+  return `metricsMode=${s.metricsMode} metrics=${s.metrics} submissions=${s.submissions} identity=${s.identity}`;
 }
 
 /** Metrics-only prompt state (compat for callers that still ask for a single state). */

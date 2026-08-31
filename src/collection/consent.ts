@@ -1,6 +1,11 @@
 import type { Collector } from "@deft/collection-sdk";
 import { type CreateCanonicalCollectorOptions, createCanonicalCollector } from "./client.js";
-import { clearIdentityAndServerContact, dropLocalIdentity } from "./contact-identity.js";
+import {
+  clearIdentityAndServerContact,
+  collectionIdentityUpdate,
+  dropLocalIdentity,
+  identityMode,
+} from "./contact-identity.js";
 import {
   clearCredentialsKeepConsent,
   formatConsentSignal,
@@ -16,9 +21,11 @@ import {
   type CollectionPromptState,
   type ConsentMirror,
   type ConsentSignal,
+  type ContactIdentity,
   DEFAULT_SCOPES,
   type IdentityState,
   METRICS_SCOPES,
+  type MetricsMode,
   type MetricsState,
   SUBMISSION_SCOPES,
   type SubmissionsState,
@@ -27,8 +34,10 @@ import {
 export interface CollectionStatus {
   readonly promptState: CollectionPromptState;
   readonly metrics: MetricsState;
+  readonly metricsMode: MetricsMode;
   readonly submissions: SubmissionsState;
   readonly identity: IdentityState;
+  readonly identityMode: IdentityState;
   readonly scopes: readonly string[];
   readonly consentVersion?: string;
   readonly expiresAt?: number;
@@ -92,22 +101,33 @@ export async function collectionStatus(
           const localMetricsDecision = file.metrics?.decision;
           // Local decline/revoke is sticky: --live must not re-activate metrics.
           if (localMetricsDecision === "declined" || localMetricsDecision === "revoked") {
-            // leave metrics mirror unchanged
+            // leave metrics mirror + metricsMode sticky (disallowed)
           } else if (hasUsage) {
-            writeMetricsMirror(projectRoot, {
-              decision: "active",
-              scopes: [...METRICS_SCOPES],
-              consentVersion: version,
-              decidedAt,
-              ...(live.expiresAt !== undefined ? { expiresAt: live.expiresAt } : {}),
-            });
+            const liveFile = readCollectionFile(projectRoot);
+            const mode: MetricsMode =
+              identityMode(liveFile.identity) === "identified" ? "attributed" : "anonymous";
+            writeMetricsMirror(
+              projectRoot,
+              {
+                decision: "active",
+                scopes: [...METRICS_SCOPES],
+                consentVersion: version,
+                decidedAt,
+                ...(live.expiresAt !== undefined ? { expiresAt: live.expiresAt } : {}),
+              },
+              mode,
+            );
           } else if (localMetricsDecision === "active") {
-            writeMetricsMirror(projectRoot, {
-              decision: "revoked",
-              scopes: [],
-              consentVersion: version,
-              decidedAt: new Date().toISOString(),
-            });
+            writeMetricsMirror(
+              projectRoot,
+              {
+                decision: "revoked",
+                scopes: [],
+                consentVersion: version,
+                decidedAt: new Date().toISOString(),
+              },
+              "disallowed",
+            );
           }
           if (submissionScopes.length > 0) {
             writeSubmissionsMirror(projectRoot, {
@@ -140,8 +160,10 @@ export async function collectionStatus(
   const status: CollectionStatus = {
     promptState: signal.metrics,
     metrics: signal.metrics,
+    metricsMode: signal.metricsMode,
     submissions: signal.submissions,
     identity: signal.identity,
+    identityMode: signal.identityMode,
     scopes,
     consentVersion,
     expiresAt,
@@ -152,7 +174,7 @@ export async function collectionStatus(
   return {
     code,
     status,
-    message: `metrics=${signal.metrics} submissions=${signal.submissions} identity=${signal.identity}`,
+    message: `metricsMode=${signal.metricsMode} metrics=${signal.metrics} submissions=${signal.submissions} identity=${signal.identity}`,
   };
 }
 
@@ -244,11 +266,16 @@ export async function collectionOptIn(
       expiresAt: result.expiresAt,
       decidedAt: now.toISOString(),
     };
-    writeMetricsMirror(projectRoot, mirror);
+    const metricsMode: MetricsMode =
+      resolveConsentSignal({ ...readCollectionFile(projectRoot), metrics: mirror }).identity ===
+      "identified"
+        ? "attributed"
+        : "anonymous";
+    writeMetricsMirror(projectRoot, mirror, metricsMode);
 
     return {
       code: 0,
-      message: `collection: opted in scopes=[${metricsScopes.join(",")}]`,
+      message: `collection: opted in scopes=[${metricsScopes.join(",")}] metricsMode=${metricsMode}`,
       scopes: metricsScopes,
     };
   } catch (err) {
@@ -260,7 +287,55 @@ export async function collectionOptIn(
 }
 
 /**
- * Grant submission scopes after disclosure acceptance. Does not change metrics consent.
+ * Pack helper: metrics opt-in + store identity + sync server contact → attributed.
+ */
+export async function ensureAttributedOptIn(
+  projectRoot: string,
+  identity: ContactIdentity,
+  opts: OptInOptions,
+): Promise<{
+  readonly code: 0 | 1 | 2;
+  readonly message: string;
+  readonly metricsMode?: MetricsMode;
+  readonly identityMode?: IdentityState;
+  readonly scopes?: readonly string[];
+}> {
+  if (opts.confirm !== true) {
+    return { code: 1, message: "ensureAttributedOptIn requires --confirm" };
+  }
+  const opted = await collectionOptIn(projectRoot, opts);
+  if (opted.code !== 0) {
+    return { code: opted.code, message: opted.message, scopes: opted.scopes };
+  }
+  const updated = await collectionIdentityUpdate(projectRoot, identity, {
+    configDir: opts.configDir,
+    baseUrl: opts.baseUrl,
+    environment: opts.environment,
+    version: opts.version,
+    fetch: opts.fetch,
+    collector: opts.collector,
+  });
+  if (updated.code !== 0) {
+    return {
+      code: updated.code,
+      message: updated.message,
+      metricsMode: resolveConsentSignal(readCollectionFile(projectRoot)).metricsMode,
+      identityMode: updated.mode,
+      scopes: opted.scopes,
+    };
+  }
+  const signal = resolveConsentSignal(readCollectionFile(projectRoot));
+  return {
+    code: 0,
+    message: `collection: attributed metricsMode=${signal.metricsMode} identity=${signal.identityMode}`,
+    metricsMode: signal.metricsMode,
+    identityMode: signal.identityMode,
+    scopes: opted.scopes,
+  };
+}
+
+/**
+ * Grant submission scopes after user confirm (agent-internal). Does not change metrics consent.
  */
 export async function grantSubmissions(
   projectRoot: string,
@@ -359,17 +434,19 @@ export function collectionDecline(
         ...(existing.installId !== undefined ? { installId: existing.installId } : {}),
         ...(existing.token !== undefined ? { token: existing.token } : {}),
         metrics: mirror,
+        metricsMode: "disallowed",
         ...(existing.submissions !== undefined ? { submissions: existing.submissions } : {}),
         ...(existing.identity !== undefined ? { identity: existing.identity } : {}),
       });
     } else {
       writeCollectionFile(projectRoot, {
         metrics: mirror,
+        metricsMode: "disallowed",
         submissions: { granted: false },
         ...(existing.identity !== undefined ? { identity: existing.identity } : {}),
       });
     }
-    return { code: 0, message: "collection: declined (no metrics will be sent)" };
+    return { code: 0, message: "collection: declined metricsMode=disallowed" };
   } catch (err) {
     return {
       code: 2,
@@ -426,13 +503,14 @@ export async function collectionOptOut(
     consentVersion: file.submissions?.consentVersion ?? CONSENT_VERSION,
   };
 
-  // No credentials → just mark revoked locally (and drop identity).
+  // No credentials → just mark revoked locally (and drop identity + rotate).
   if (file.installId === undefined || file.token === undefined) {
     writeCollectionFile(projectRoot, {
       metrics: revokedMirror,
+      metricsMode: "disallowed",
       submissions: revokedSubmissions,
     });
-    return { code: 0, message: "collection: opted out (local only)" };
+    return { code: 0, message: "collection: opted out (local only) metricsMode=disallowed" };
   }
 
   try {
@@ -449,9 +527,16 @@ export async function collectionOptOut(
     if (!result.ok) {
       return { code: 1, message: `collection:opt-out rejected -- ${result.code}` };
     }
-    clearCredentialsKeepConsent(projectRoot, revokedMirror, revokedSubmissions);
+    // Clear installId/token so the next register mints a new install (rotate).
+    clearCredentialsKeepConsent(projectRoot, revokedMirror, revokedSubmissions, "disallowed");
     dropLocalIdentity(projectRoot);
-    return { code: 0, message: "collection: opted out" };
+    // dropLocalIdentity may re-derive metricsMode from remaining mirrors; pin disallowed.
+    writeCollectionFile(projectRoot, {
+      metrics: revokedMirror,
+      metricsMode: "disallowed",
+      submissions: revokedSubmissions,
+    });
+    return { code: 0, message: "collection: opted out metricsMode=disallowed (install rotated)" };
   } catch (err) {
     return {
       code: 2,

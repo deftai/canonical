@@ -106,7 +106,7 @@ describe("createCanonicalCollector correlator wiring (C3)", () => {
       autoRegister: false,
     });
     await collector.ensureRegistered();
-    await collector.optIn({ scopes: ["usage"], consentVersion: "canonical-2026-09-a" });
+    await collector.optIn({ scopes: ["usage"], consentVersion: "canonical-2026-09-b" });
 
     expect(seen.length).toBeGreaterThanOrEqual(2);
     for (const call of seen) {

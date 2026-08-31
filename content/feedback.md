@@ -1,69 +1,72 @@
 # Feedback & Collection
 
-Load when: the user says `/feedback`, asks to send feedback, report a bug, or request a feature; `orient` reports `metrics=not_prompted`; or a feedback submit fails with disclosure required / expired.
+Load when: the user asks to send feedback, report a bug, or request a feature; `orient` reports `metrics=not_prompted` (or not decided / expired); or they ask to opt in, opt out, or change Canonical collection contact.
 
 Legend: `!` MUST · `~` SHOULD · `≉` SHOULD NOT · `⊗` MUST NOT · `?` MAY
 
-Anonymous collection via Deft's collector. Credentials live in `.canonical/collection.json` (gitignored). A separate anonymous correlator (`userKey` field) under `~/.config/canonical/identity.json` is sent as `CollectorConfig.correlator` (never as `deployment.customer`).
+**Consent version:** `canonical-2026-09-b` (pass unchanged to opt-in / identity / feedback verbs).
 
-**Consent version:** `canonical-2026-09-a` (pass unchanged to `collection:opt-in` / disclosure grant).
+Credentials live in `.canonical/collection.json` (gitignored). Correlator (`userKey`) under `~/.config/canonical/identity.json` → SDK `correlator` (never `deployment.customer`). Orient / status are machine-parseable: `metricsMode=… metrics=… submissions=… identity=…` (`metricsMode` ∈ `undecided|disallowed|anonymous|attributed`; `identity` ∈ `anonymous|identified`; identified requires email or mobile).
 
-Orient / status are machine-parseable: `metrics=… submissions=… identity=…` (`identity` ∈ `anonymous|identified`; identified requires email or mobile).
+---
 
-## Two consent tracks
+## User dialogue (say this to the human)
 
-| Track | How granted | Scopes | Default |
-|---|---|---|---|
-| **Metrics** | Explicit repo opt-in (`collection:opt-in --confirm`) | `usage` only | Off until opted in |
-| **Submissions** | Disclosure on first `/feedback` ask | `feedback`, `bug`, `feature` | Off until disclosure accepted |
+⊗ Never read task verb names, flags, or shell recipes aloud. Speak plain English. User-facing language for later changes is always “ask me to …”.
 
-- ⊗ Flipping submissions grant MUST NOT enable metrics, and metrics opt-in MUST NOT silently grant submissions.
-- ⊗ Contact (email/name/mobile) is never placed in event/submission payloads (PRIV-2). Optional contact lives in `.canonical/collection.json` `identity` and is synced only via `collection:identity --update` / opt-in reconfirm (`name` ← `"firstName lastName".trim()`, `email`, `sms` ← mobile).
-- Consent expires after ~1 year; revoke anytime with `task collection:opt-out -- --confirm`.
+### First-session metrics (when `orient` shows not prompted / not decided)
 
-## Scopes
+1. ! Thank them for using Canonical. Say we'd like usage metrics to improve the product. State clearly: **by default we collect nothing, even anonymously.**
+2. ! Offer three choices (numbered menu; **Discuss** and **Back** last where menus apply):
+   1. **Disallow** — no usage metrics
+   2. **Anonymous metrics** — coarse usage counters only; no name, email, or mobile
+   3. **Attributed metrics** — same counters, plus optional Name, Email, and Mobile so we can follow up
+3. ! Durable grants need an explicit yes / confirm (`yes` / `confirmed` / `approve` — Canonical consent contract). ⊗ Register or opt in without that affirmative. ⊗ Re-prompt every session after decline; only re-offer when state is `expired` / `revoked`, or the user asks.
+4. ! If they chose **Attributed**: collect Name, Email, and Mobile each as **optional**; read the values back; get an explicit reconfirm before saving.
+5. ! After the choice is saved:
+   - Explain they can later ask you to file a bug, feature request, or general feedback.
+   - **IFF attributed:** confirm they are OK that the contact on file is associated (via this install — **not** placed in the report body) with those filings.
+   - Tell them they can opt out anytime by asking you to opt out of Canonical collection.
+   - Tell them opt-out stops **future** collection, but past filings may still be associated until they ask to delete personal data.
 
-| Scope | Track | What is sent |
-|---|---|---|
-| `usage` | Metrics | Coarse counters only (`orient_ok`, `kickoff_done`, `scope_complete`, `check_pass`/`check_fail`, `pr_watch_clean`, `pr_finish_merged`) — no source, no chat |
-| `feedback` | Submissions | Free-text message + optional 1–5 rating |
-| `bug` | Submissions | Summary, OS, optional stack/logs (ask before attaching logs) |
-| `feature` | Submissions | Summary + optional details/context |
+### Per-submit feedback (even if metrics are disallowed)
 
-## First-session metrics consent (after `orient`)
+Works whether metrics were disallowed, anonymous, or attributed. No separate durable “submissions disclosure” ceremony in user speech.
 
-- ! When `orient` prints `metrics=not_prompted` (or JSON `metrics: "not_prompted"`), offer this menu **once** before other mutation work. Explicit affirmative required (`yes` / `confirmed` / `approve`) — Canonical consent contract.
-- ! Numbered menu; `Discuss` and `Back` last:
+1. ! Classify with a numbered menu: (1) bug (2) feature request (3) general feedback, then Discuss, Back.
+2. ! Gather the fields for that kind. Ask before attaching logs or stack dumps. ⊗ Put secrets, tokens, or full source dumps in without asking.
+3. ! Confirm the contents back to the user. State clearly whether this filing is **anonymous** or **associated with the contact on file** (association is via install, never contact text inside the report).
+4. ! Only after they confirm, file it. Report success with the submission id — or the real failure. ⊗ Claim it was sent when it was not.
 
-  1. **Opt in to usage metrics (recommended)** — anonymous counters only. Then: `task -x collection:opt-in -- --confirm`
-  2. **Decline metrics** — no usage telemetry. Then: `task -x collection:decline`
-  3. **Discuss**
-  4. **Back**
+### Opt-out / opt-in later
 
-- ⊗ Register or opt in without that affirmative. ⊗ Re-prompt every session after decline; only re-offer metrics when state is `expired`/`revoked`, or the user asks.
-- ~ Optional contact: after metrics opt-in, ask once whether they want a reply channel; if yes, update identity (not event payloads):
+- Opt out: user asks you to opt out of Canonical collection → confirm, then run agent opt-out.
+- Opt in / change mode later: user asks you to turn on Canonical metrics (anonymous or attributed) or to update contact → use the same plain-English choices and confirms as first-session.
+- Clear or change contact only: user asks you to update or clear Canonical contact on file.
 
-  `task -x collection:identity -- --update --first-name=… --last-name=… --email=… --mobile=…`
+---
 
-  Show with `--show`; clear with `--clear` (or `task -x collection:opt-out -- --identity`). Event payloads never include contact (PRIV-2); `--as-anonymous` documents that intent on the submit path.
+## Agent actions (silent — ⊗ never read task lines aloud)
 
-## `/feedback` flow (disclosure-gated submissions)
+Map user choices to verbs. Internal flags are fine; humans never hear them.
 
-1. ! If `submissions=not_granted`, disclose what will be sent **before** any network submit:
-   - Canonical version
-   - `installId`
-   - correlator (anonymous install cluster id)
-   - kind-specific fields (summary/message/details/stack/logs/…)
-   - Explicit: this does **not** enable usage metrics
-2. ! Numbered menu after disclosure; `Discuss` and `Back` last:
+### Choice → verb map
 
-   1. **Agree and submit** — then gather fields and call feedback with `--disclosure-accepted`
-   2. **Disagree** — do not submit; leave metrics untouched
-   3. **Discuss**
-   4. **Back**
+| User choice | Agent action |
+|---|---|
+| Disallow | `task -x collection:decline` |
+| Anonymous metrics | `task -x collection:opt-in -- --confirm` (usage only; consent version `canonical-2026-09-b`) |
+| Attributed metrics | same opt-in, then after field reconfirm: `task -x collection:identity -- --update [--first-name=…] [--last-name=…] [--email=…] [--mobile=…]` |
+| Opt out | `task -x collection:opt-out -- --confirm` — server opt-out, then **rotate install** (clear local credentials / new install on next register). Stops future collection; past association may remain until they ask to delete personal data. |
+| Clear contact only | `task -x collection:opt-out -- --identity` (or `collection:identity -- --clear`) |
+| Show contact | `task -x collection:identity -- --show` |
+| Status | `task -x collection:status` (`--live` when credentials exist) |
 
-3. ! Classify with a numbered menu: (1) bug (2) feature request (3) general feedback, then `Discuss`, `Back`.
-4. ! Gather fields, then call the verb — never invent success:
+- ⊗ Contact (name/email/mobile) is never placed in event or submission payloads (PRIV-2). Identity syncs only via `collection:identity` / opt-in reconfirm (`name` ← `"firstName lastName".trim()`, `email`, `sms` ← mobile).
+- Metrics opt-in does not silently mean every future filing is attributed; attributed association is “contact on file + install”, stated per submit when relevant.
+- Consent expires after ~1 year; re-offer when `expired` / `revoked`, or when the user asks.
+
+### Feedback submit (after user confirms contents)
 
 | Kind | Command |
 |---|---|
@@ -71,9 +74,8 @@ Orient / status are machine-parseable: `metrics=… submissions=… identity=…
 | feature | `task -x feedback -- --kind=feature --summary="…" [--details-file=…] [--context-file=…] [--disclosure-accepted]` |
 | feedback | `task -x feedback -- --kind=feedback --message="…" [--rating=1..5] [--disclosure-accepted] [--as-anonymous]` |
 
-`--disclosure-accepted` is required only on the first submissions grant (or when status shows `submissions=not_granted`). It registers if needed, opts in **submission scopes only** on the server, records `submissions=granted` locally, and submits — metrics stay as they were.
-
-Short single-line values MAY use inline `--summary=` / `--message=`. For multiline or free-text that contains spaces/newlines/quotes (details, context, stack, logs, long summaries), ! write a temp file **outside the worktree** and pass the matching file flag — same rule as [scm.md](./scm.md) `--body-file`:
+- `--disclosure-accepted` and `--as-anonymous` are **agent-internal**. Use them as the verb requires; do not narrate them. Prefer `--as-anonymous` when the user confirmed an anonymous filing (or no contact on file).
+- Short single-line values MAY use inline `--summary=` / `--message=`. Multiline / spaces / quotes → temp file **outside the worktree** + matching `--*-file` (same rule as [scm.md](./scm.md) `--body-file`):
 
 | Field | File flag |
 |---|---|
@@ -84,30 +86,20 @@ Short single-line values MAY use inline `--summary=` / `--message=`. For multili
 | stack | `--stack-file PATH` |
 | logs | `--logs-file PATH` |
 
-Example (feature with multiline details):
-
-```bash
-DETAILS="$(mktemp)"
-printf '%s\n' 'line1' 'line2 with spaces' > "$DETAILS"
-task -x feedback -- --kind=feature --summary="Add dark mode" --details-file="$DETAILS" --disclosure-accepted
-rm -f "$DETAILS"
-```
-
-- ⊗ Probe the live collector with short dummy submits while debugging flags. Use `task -x feedback -- --dry-run --json …` (or `canon feedback --help`) to validate without submitting.
+- ⊗ Probe the live collector with dummy submits while debugging. Use `task -x feedback -- --dry-run --json …` (or `canon feedback --help`) to validate without submitting.
 - Inline + file for the same field → exit 2 conflict.
-- `canon feedback` with a real argv list (no shell join) is also safe for multiline; prefer file flags when calling through `task`.
+- Feedback remains available when metrics were disallowed.
 
-5. ! Report the verb's exit code and submission id on success. On exit 1 (`disclosure required` / rejected), explain and offer disclosure or retry — ⊗ claim the report was sent.
-6. ⊗ Put secrets, tokens, or full source dumps into `--logs` / `--stack` without asking.
+### Scopes (reference)
 
-## Kickoff / session metrics
+| Scope | Track | What is sent |
+|---|---|---|
+| `usage` | Metrics | Coarse counters only (`orient_ok`, `kickoff_done`, `scope_complete`, `check_pass`/`check_fail`, `pr_watch_clean`, `pr_finish_merged`) — no source, no chat |
+| `feedback` | Submissions | Free-text message + optional 1–5 rating |
+| `bug` | Submissions | Summary, OS, optional stack/logs |
+| `feature` | Submissions | Summary + optional details/context |
 
-- ! After a kickoff finishes (PROJECT + scopes + roadmap rendered), if `metrics=active`: `task -x collection:metric -- --metric=kickoff_done --value=1` (optional `--dimensions={"scopes_created":N,"stack_family":"node"}` — `stack_family` enum only: `node|python|go|rust|other`). Soft-fail is fine. Metrics stay soft-skipped when declined even if submissions were granted.
+### Kickoff / session metrics
+
+- ! After kickoff finishes (PROJECT + scopes + roadmap rendered), if `metrics=active`: `task -x collection:metric -- --metric=kickoff_done --value=1` (optional `--dimensions={"scopes_created":N,"stack_family":"node"}` — `stack_family` ∈ `node|python|go|rust|other`). Soft-fail is fine. Metrics stay soft-skipped when declined.
 - ~ On session end / continue-checkpoint when `metrics=active`, agents MAY emit `session_summary` with bucketed dims only (`agent_turns_bucket` ∈ `1-5|6-15|16-40|40+`, integer scope counts). ⊗ Do not scrape chat into dimensions.
-
-## Status & revoke
-
-- `task -x collection:status` — prints `metrics=… submissions=… identity=…`; add `--live` to refresh from the server when credentials exist.
-- `task -x collection:identity -- --show|--clear|--update …` — manage reply-channel identity (0600 local block; server contact via opt-in reconfirm).
-- `task -x collection:opt-out -- --confirm` — revoke server-side and clear local credentials (metrics + submissions + identity).
-- `task -x collection:opt-out -- --identity` — clear local identity + server contact only (leave metrics/submissions).

@@ -20,14 +20,16 @@ describe("orient", () => {
     expect(snapshot.dirty).toBe(false);
     expect(snapshot.consent).toEqual({
       metrics: "not_prompted",
+      metricsMode: "undecided",
       submissions: "not_granted",
       identity: "anonymous",
+      identityMode: "anonymous",
     });
     expect(snapshot.consentLine).toBe(
-      "metrics=not_prompted submissions=not_granted identity=anonymous",
+      "metricsMode=undecided metrics=not_prompted submissions=not_granted identity=anonymous",
     );
     expect(snapshot.message).toContain(
-      "metrics=not_prompted submissions=not_granted identity=anonymous",
+      "metricsMode=undecided metrics=not_prompted submissions=not_granted identity=anonymous",
     );
   });
 

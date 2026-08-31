@@ -36,7 +36,7 @@ describe("orient handler", () => {
     expect(code).toBe(0);
     expect(cap.out.join("")).toContain("ready");
     expect(cap.out.join("")).toContain(
-      "metrics=not_prompted submissions=not_granted identity=anonymous",
+      "metricsMode=undecided metrics=not_prompted submissions=not_granted identity=anonymous",
     );
   });
 
@@ -59,7 +59,7 @@ describe("orient handler", () => {
     expect(code).toBe(0);
   });
 
-  it("--json emits sorted-key JSON including metrics/submissions/identity", async () => {
+  it("--json emits sorted-key JSON including metricsMode/metrics/submissions/identity", async () => {
     const root = tempGitRepo();
     const cap = captureStd();
     const code = await run(["--project-root", root, "--json"]);
@@ -67,16 +67,20 @@ describe("orient handler", () => {
     expect(code).toBe(0);
     const parsed = JSON.parse(cap.out.join("")) as {
       metrics: string;
+      metrics_mode: string;
       submissions: string;
       identity: string;
+      identity_mode: string;
       consent_line: string;
     };
     expect(Object.keys(parsed)).toEqual([...Object.keys(parsed)].sort());
     expect(parsed.metrics).toBe("not_prompted");
+    expect(parsed.metrics_mode).toBe("undecided");
     expect(parsed.submissions).toBe("not_granted");
     expect(parsed.identity).toBe("anonymous");
+    expect(parsed.identity_mode).toBe("anonymous");
     expect(parsed.consent_line).toBe(
-      "metrics=not_prompted submissions=not_granted identity=anonymous",
+      "metricsMode=undecided metrics=not_prompted submissions=not_granted identity=anonymous",
     );
   });
 
