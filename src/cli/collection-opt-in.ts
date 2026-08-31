@@ -1,10 +1,25 @@
-/** `canon collection:opt-in` -- register + metrics consent (default: usage only). */
+/** `canon collection:opt-in` -- register + metrics consent (anonymous or attributed one-shot). */
 import { parseArgs, renderJson } from "../args/index.js";
-import { CONSENT_VERSION, collectionOptIn, DEFAULT_SCOPES } from "../collection/index.js";
+import {
+  CONSENT_VERSION,
+  type ContactIdentity,
+  collectionOptIn,
+  DEFAULT_SCOPES,
+  ensureAttributedOptIn,
+} from "../collection/index.js";
 
 export async function run(argv: string[]): Promise<number> {
   const parsed = parseArgs(argv, {
-    valueFlags: ["project-root", "scopes", "consent-version", "email", "name"],
+    valueFlags: [
+      "project-root",
+      "scopes",
+      "consent-version",
+      "email",
+      "name",
+      "first-name",
+      "last-name",
+      "mobile",
+    ],
     boolFlags: ["json", "confirm"],
     maxPositional: 0,
   });
@@ -23,20 +38,29 @@ export async function run(argv: string[]): Promise<number> {
           .filter((s) => s.length > 0)
       : [...DEFAULT_SCOPES];
 
-  const contact: { email?: string; name?: string } = {};
-  if (parsed.values.email !== undefined) {
-    contact.email = parsed.values.email;
-  }
-  if (parsed.values.name !== undefined) {
-    contact.name = parsed.values.name;
-  }
+  const firstName = parsed.values["first-name"] ?? parsed.values.name;
+  const identity: ContactIdentity = {
+    ...(firstName !== undefined ? { firstName } : {}),
+    ...(parsed.values["last-name"] !== undefined ? { lastName: parsed.values["last-name"] } : {}),
+    ...(parsed.values.email !== undefined ? { email: parsed.values.email } : {}),
+    ...(parsed.values.mobile !== undefined ? { mobile: parsed.values.mobile } : {}),
+  };
 
-  const result = await collectionOptIn(projectRoot, {
-    confirm: parsed.flags.confirm === true,
-    scopes,
-    consentVersion: parsed.values["consent-version"] ?? CONSENT_VERSION,
-    ...(Object.keys(contact).length > 0 ? { contact } : {}),
-  });
+  const hasIdentityFields = Object.keys(identity).length > 0;
+  const consentVersion = parsed.values["consent-version"] ?? CONSENT_VERSION;
+  const confirm = parsed.flags.confirm === true;
+
+  const result = hasIdentityFields
+    ? await ensureAttributedOptIn(projectRoot, identity, {
+        confirm,
+        scopes,
+        consentVersion,
+      })
+    : await collectionOptIn(projectRoot, {
+        confirm,
+        scopes,
+        consentVersion,
+      });
 
   if (parsed.flags.json === true) {
     process.stdout.write(
@@ -44,6 +68,7 @@ export async function run(argv: string[]): Promise<number> {
         code: result.code,
         message: result.message,
         scopes: result.scopes ?? null,
+        metricsMode: "metricsMode" in result ? (result.metricsMode ?? null) : null,
       })}\n`,
     );
   } else if (result.code === 0) {
