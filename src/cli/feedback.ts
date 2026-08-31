@@ -37,7 +37,7 @@ File flags (preferred for multiline / free-text through task):
 
 Other:
   --project-root PATH   --json   --dry-run (validate, do not submit)
-  --disclosure-accepted  after user agrees to submissions disclosure
+  --disclosure-accepted  agent-internal: user confirmed this submit (grants submission scopes)
   --as-anonymous         document intent; payloads never include contact (PRIV-2)
   --help
 

@@ -59,7 +59,7 @@ export interface OrientSnapshot extends GateResult {
   readonly tools: readonly ToolProbe[];
   /** Local collection consent signal for agents (offline; no network). */
   readonly consent: ConsentSignal;
-  /** Machine-parseable `metrics=… submissions=… identity=…`. */
+  /** Machine-parseable `metricsMode=… metrics=… submissions=… identity=…`. */
   readonly consentLine: string;
 }
 

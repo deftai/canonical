@@ -10,6 +10,7 @@ export {
   collectionOptIn,
   collectionOptOut,
   collectionStatus,
+  ensureAttributedOptIn,
   formatConsentSignal,
   grantSubmissions,
   type OptInOptions,
@@ -50,6 +51,7 @@ export { defaultConfigDir, ensureUserKey, type IdentityOptions, identityPath } f
 export { softEmitUsage } from "./soft-emit.js";
 export {
   collectionFilePath,
+  deriveMetricsMode,
   hasScopeConsent,
   hasSubmissionsGrant,
   hasUsageConsent,
@@ -57,10 +59,12 @@ export {
   migrateCollectionFile,
   projectCredentialStorage,
   readCollectionFile,
+  resolveMetricsMode,
   writeCollectionFile,
   writeConsentMirror,
   writeIdentityMirror,
   writeMetricsMirror,
+  writeMetricsMode,
   writeSubmissionsMirror,
 } from "./storage.js";
 export {
@@ -77,7 +81,9 @@ export {
   DEFAULT_COLLECTION_ENV,
   DEFAULT_SCOPES,
   type IdentityState,
+  isMetricsMode,
   METRICS_SCOPES,
+  type MetricsMode,
   type MetricsState,
   SUBMISSION_SCOPES,
   type SubmissionsMirror,
