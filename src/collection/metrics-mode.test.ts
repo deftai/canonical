@@ -11,7 +11,12 @@ import {
 } from "./consent.js";
 import { collectionIdentityUpdate } from "./contact-identity.js";
 import { submitFeedback } from "./feedback.js";
-import { formatConsentSignal, readCollectionFile, writeCollectionFile } from "./storage.js";
+import {
+  formatConsentSignal,
+  readCollectionFile,
+  resolveMetricsMode,
+  writeCollectionFile,
+} from "./storage.js";
 import { CONSENT_VERSION, METRICS_SCOPES, type MetricsMode, SUBMISSION_SCOPES } from "./types.js";
 
 afterAll(() => cleanupTempDirs());
@@ -312,5 +317,23 @@ describe("P3 opt-out rotates install", () => {
     const secondId = readCollectionFile(root).installId;
     expect(secondId).toBe("22222222-2222-4222-8222-222222222222");
     expect(secondId).not.toBe(firstId);
+  });
+
+  it("expired consent does not keep persisted anonymous/attributed metricsMode", () => {
+    const root = tempDir("canon-mode-expired-");
+    writeCollectionFile(root, {
+      metricsMode: "anonymous",
+      metrics: {
+        decision: "active",
+        scopes: ["usage"],
+        consentVersion: CONSENT_VERSION,
+        decidedAt: "2020-01-01T00:00:00.000Z",
+        expiresAt: Date.now() - 60_000,
+      },
+    });
+    const file = readCollectionFile(root);
+    expect(resolveMetricsMode(file)).toBe("undecided");
+    expect(resolveConsentSignal(file).metrics).toBe("expired");
+    expect(resolveConsentSignal(file).metricsMode).toBe("undecided");
   });
 });

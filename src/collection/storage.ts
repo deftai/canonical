@@ -394,6 +394,10 @@ export function resolveMetricsMode(file: CollectionFile, nowMs: number = Date.no
   if (derived === "anonymous" || derived === "attributed") {
     return derived;
   }
+  // Expired / never-prompted: do not keep a stale persisted anonymous|attributed mode.
+  if (derived === "undecided") {
+    return "undecided";
+  }
   return persisted;
 }
 
