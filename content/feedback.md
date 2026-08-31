@@ -21,13 +21,24 @@ Credentials live in `.canonical/collection.json` (gitignored). Correlator (`user
    1. **Disallow** — no usage metrics
    2. **Anonymous metrics** — coarse usage counters only; no name, email, or mobile
    3. **Attributed metrics** — same counters, plus optional Name, Email, and Mobile so we can follow up
-3. ! Durable grants need an explicit yes / confirm (`yes` / `confirmed` / `approve` — Canonical consent contract). ⊗ Register or opt in without that affirmative. ⊗ Re-prompt every session after decline; only re-offer when state is `expired` / `revoked`, or the user asks.
-4. ! If they chose **Attributed**: collect Name, Email, and Mobile each as **optional**; read the values back; get an explicit reconfirm before saving.
-5. ! After the choice is saved:
-   - Explain they can later ask you to file a bug, feature request, or general feedback.
-   - **IFF attributed:** confirm they are OK that the contact on file is associated (via this install — **not** placed in the report body) with those filings.
-   - Tell them they can opt out anytime by asking you to opt out of Canonical collection.
-   - Tell them opt-out stops **future** collection, but past filings may still be associated until they ask to delete personal data.
+3. ! Branch by choice — **do not** insert an extra approve/deny step before collecting attributed contact:
+
+   **Disallow or Anonymous**
+   - ! Get one durable affirmative (`yes` / `confirmed` / `approve`) for that choice. Prefer the Recommended option to be **Approve**.
+   - ! Then save (agent actions below). ⊗ Register or opt in without that affirmative.
+
+   **Attributed** (order is load-bearing)
+   1. ! As soon as they pick Attributed, **collect contact next** — do **not** ask them to approve “Attributed” alone first.
+   2. ! Ask for **Name**, **Email**, and **Mobile**, each optional (they may skip any field). Prefer free-text / “provide the value” as the primary path — ⊗ do not make them dig through a menu whose default is “skip” or “disapprove” before they can type.
+   3. ! Read back the mode (**Attributed**) plus whatever fields they gave (note skips). Get **one** durable affirmative for the whole package (`yes` / `confirmed` / `approve`). Prefer Recommended = **Approve / save**.
+   4. ! Only then save (single attributed opt-in verb with contact flags — see Agent actions). If they skipped **all** contact fields, save as **Anonymous metrics** instead and say so briefly.
+
+4. ⊗ Re-prompt every session after decline; only re-offer when state is `expired` / `revoked`, or the user asks.
+5. ! After the choice is saved, tell them (plain English, not another approve gate):
+   - They can later ask you to file a bug, feature request, or general feedback.
+   - **IFF attributed:** contact on file will be associated (via this install — **not** placed in the report body) with those filings.
+   - They can opt out anytime by asking you to opt out of Canonical collection.
+   - Opt-out stops **future** collection; past filings may still be associated until they ask to delete personal data.
 
 ### Per-submit feedback (even if metrics are disallowed)
 
@@ -56,13 +67,14 @@ Map user choices to verbs. Internal flags are fine; humans never hear them.
 |---|---|
 | Disallow | `task -x collection:decline` |
 | Anonymous metrics | `task -x collection:opt-in -- --confirm` (usage only; consent version `canonical-2026-09-b`) |
-| Attributed metrics | same opt-in, then after field reconfirm: `task -x collection:identity -- --update [--first-name=…] [--last-name=…] [--email=…] [--mobile=…]` |
+| Attributed metrics | **One shot after the single package approve:** `task -x collection:opt-in -- --confirm [--first-name=…] [--last-name=…] [--email=…] [--mobile=…]` (sets attributed + stores/syncs contact). Prefer this over a separate identity update. Fallback: `collection:identity -- --update …` only if opt-in already succeeded without contact. |
 | Opt out | `task -x collection:opt-out -- --confirm` — server opt-out, then **rotate install** (clear local credentials / new install on next register). Stops future collection; past association may remain until they ask to delete personal data. |
 | Clear contact only | `task -x collection:opt-out -- --identity` (or `collection:identity -- --clear`) |
 | Show contact | `task -x collection:identity -- --show` |
 | Status | `task -x collection:status` (`--live` when credentials exist) |
 
-- ⊗ Contact (name/email/mobile) is never placed in event or submission payloads (PRIV-2). Identity syncs only via `collection:identity` / opt-in reconfirm (`name` ← `"firstName lastName".trim()`, `email`, `sms` ← mobile).
+- ! If `collection:identity` / contact flags are missing from the installed CLI, say so honestly and still complete anonymous metrics if that part succeeded — then tell them to update Canon. Prefer the one-shot `collection:opt-in` with contact flags so attributed does not depend on a second verb.
+- ⊗ Contact (name/email/mobile) is never placed in event or submission payloads (PRIV-2). Identity syncs via attributed `collection:opt-in` / `collection:identity` reconfirm (`name` ← `"firstName lastName".trim()`, `email`, `sms` ← mobile).
 - Metrics opt-in does not silently mean every future filing is attributed; attributed association is “contact on file + install”, stated per submit when relevant.
 - Consent expires after ~1 year; re-offer when `expired` / `revoked`, or when the user asks.
 

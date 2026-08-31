@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Fixed
+- Attributed metrics consent: collect Name/Email/Mobile immediately after choosing
+  Attributed, then a **single** approve (default Approve). One-shot
+  `collection:opt-in --confirm` with `--first-name/--last-name/--email/--mobile`
+  so contact save does not depend on a separate `collection:identity` verb
+  (global/older CLI installs were missing that verb).
 - Pack consent UX: plain-English Disallow / Anonymous / Attributed dialogue in
   `feedback.md` (user speech vs silent agent actions); no task recipes to
   humans; per-submit feedback confirm (even when metrics disallowed); consent
