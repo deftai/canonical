@@ -95,6 +95,7 @@ describe("createCanonicalCollector correlator wiring (C3)", () => {
           state: "active",
           scopes: ["usage"],
           expires_at: Date.now() + 86_400_000,
+          contact_verified: false,
         });
       }
       return jsonResponse(404, { error: "not_found" });

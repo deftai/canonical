@@ -15,9 +15,15 @@ function stubCollector(submitImpl: Collector["submit"]): Collector {
       state: "active",
       scopes: [...SUBMISSION_SCOPES],
       expiresAt: 1,
+      contactVerified: false,
     }),
     optOut: async () => ({ ok: true, state: "revoked" }),
-    status: async () => ({ ok: true, state: "active", scopes: [...SUBMISSION_SCOPES] }),
+    status: async () => ({
+      ok: true,
+      state: "active",
+      scopes: [...SUBMISSION_SCOPES],
+      contactVerified: false,
+    }),
     submit: submitImpl,
   };
 }

@@ -10,9 +10,20 @@ afterAll(() => cleanupTempDirs());
 function stubCollector(submit: Collector["submit"]): Collector {
   return {
     ensureRegistered: async () => ({ ok: true, installId: "x", state: "active" }),
-    optIn: async () => ({ ok: true, state: "active", scopes: ["usage"], expiresAt: 1 }),
+    optIn: async () => ({
+      ok: true,
+      state: "active",
+      scopes: ["usage"],
+      expiresAt: 1,
+      contactVerified: false,
+    }),
     optOut: async () => ({ ok: true, state: "revoked" }),
-    status: async () => ({ ok: true, state: "active", scopes: ["usage"] }),
+    status: async () => ({
+      ok: true,
+      state: "active",
+      scopes: ["usage"],
+      contactVerified: false,
+    }),
     submit,
   };
 }

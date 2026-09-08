@@ -369,7 +369,9 @@ function operationSpecs() {
         {
             route: { method: "POST", path: "/v1/registrations/{id}/optout" },
             operationId: "optOutRegistration",
-            summary: "Opt an installation out of data collection, revoking its token.",
+            summary: "Opt an installation out of data collection (state becomes revoked). " +
+                "Consent is revoked immediately; contact on the attribution row is retained (REG-9). " +
+                "The install token still authenticates status; clients should clear local credentials and register a new install for future activity.",
             successStatus: 200,
             successSchema: OPTOUT_RESPONSE_SCHEMA,
             requestSchema: OPTOUT_REQUEST_SCHEMA,

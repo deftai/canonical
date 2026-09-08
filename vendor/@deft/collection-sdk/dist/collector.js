@@ -18,6 +18,12 @@ function buildDeploymentId(deployment) {
 // ---------------------------------------------------------------------------------------
 // Small typed-read helpers for pulling expected fields out of an unknown, parsed JSON body.
 // ---------------------------------------------------------------------------------------
+function readBoolean(body, key) {
+    if (body === null || typeof body !== "object")
+        return undefined;
+    const value = body[key];
+    return typeof value === "boolean" ? value : undefined;
+}
 function readString(body, key) {
     if (body === null || typeof body !== "object")
         return undefined;
@@ -242,9 +248,11 @@ export function createCollector(config) {
             const state = readString(raw.body, "state");
             const scopes = readStringArray(raw.body, "scopes");
             const expiresAt = readNumber(raw.body, "expires_at");
-            if (!state || !scopes || expiresAt === undefined)
+            const contactVerified = readBoolean(raw.body, "contact_verified");
+            if (!state || !scopes || expiresAt === undefined || contactVerified === undefined) {
                 return INVALID_RESPONSE;
-            return { ok: true, state, scopes, expiresAt };
+            }
+            return { ok: true, state, scopes, expiresAt, contactVerified };
         }
         catch {
             return TRANSPORT_ERROR;
@@ -289,12 +297,14 @@ export function createCollector(config) {
                 return INVALID_RESPONSE;
             const expiresAt = readNumber(raw.body, "expires_at");
             const consentVersion = readString(raw.body, "consent_version");
+            const contactVerified = readBoolean(raw.body, "contact_verified");
             return {
                 ok: true,
                 state,
                 scopes,
                 ...(expiresAt !== undefined ? { expiresAt } : {}),
                 ...(consentVersion !== undefined ? { consentVersion } : {}),
+                ...(contactVerified !== undefined ? { contactVerified } : {}),
             };
         }
         catch {

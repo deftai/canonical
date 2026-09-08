@@ -42,6 +42,7 @@ function mockCollectorFetch(): typeof fetch {
         state: "active",
         scopes,
         expires_at: Date.now() + 86_400_000,
+        contact_verified: false,
       });
     }
     if (method === "POST" && url.includes("/optout")) {
@@ -53,6 +54,7 @@ function mockCollectorFetch(): typeof fetch {
         scopes: ["usage"],
         expires_at: Date.now() + 86_400_000,
         consent_version: CONSENT_VERSION,
+        contact_verified: false,
       });
     }
     return jsonResponse(404, { error: "not_found" });

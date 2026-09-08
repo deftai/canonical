@@ -37,9 +37,15 @@ function stubCollector(projectRoot: string, overrides: Partial<Collector> = {}):
       state: "active",
       scopes: args.scopes,
       expiresAt: Date.now() + 86_400_000,
+      contactVerified: false,
     }),
     optOut: async () => ({ ok: true, state: "revoked" }),
-    status: async () => ({ ok: true, state: "active", scopes: ["usage"] }),
+    status: async () => ({
+      ok: true,
+      state: "active",
+      scopes: ["usage"],
+      contactVerified: false,
+    }),
     submit: async () => ({ ok: true, id: "sub-1" }),
     ...overrides,
   };
@@ -85,6 +91,7 @@ describe("P1 metricsMode tri-state", () => {
           state: "active",
           scopes: args.scopes,
           expiresAt: Date.now() + 86_400_000,
+          contactVerified: false,
         };
       },
     });
@@ -119,6 +126,7 @@ describe("P1 metricsMode tri-state", () => {
           state: "active",
           scopes: args.scopes.includes("usage") ? args.scopes : ["usage", ...args.scopes],
           expiresAt: Date.now() + 86_400_000,
+          contactVerified: false,
         };
       },
     });
@@ -173,6 +181,7 @@ describe("P2 feedback without durable disclosure ceremony", () => {
           state: "active",
           scopes: args.scopes,
           expiresAt: Date.now() + 86_400_000,
+          contactVerified: false,
         };
       },
       submit: async (scope, payload) => {

@@ -53,6 +53,7 @@ function mockFetchForScopes(optInScopes: readonly string[]): typeof fetch {
         state: "active",
         scopes: requested,
         expires_at: Date.now() + 86_400_000,
+        contact_verified: false,
       });
     }
     if (method === "POST" && url.includes("/v1/submissions/")) {
@@ -70,9 +71,15 @@ function stubCollector(overrides: Partial<Collector> = {}): Collector {
       state: "active",
       scopes: args.scopes,
       expiresAt: Date.now() + 86_400_000,
+      contactVerified: false,
     }),
     optOut: async () => ({ ok: true, state: "revoked" }),
-    status: async () => ({ ok: true, state: "active", scopes: ["usage"] }),
+    status: async () => ({
+      ok: true,
+      state: "active",
+      scopes: ["usage"],
+      contactVerified: false,
+    }),
     submit: async () => ({ ok: true, id: "sub-1" }),
     ...overrides,
   };
@@ -141,6 +148,7 @@ describe("C4 consent split", () => {
           state: "active",
           scopes: args.scopes,
           expiresAt: Date.now() + 86_400_000,
+          contactVerified: false,
         };
       },
       submit: async (scope, payload) => {
@@ -260,13 +268,20 @@ describe("C4 consent split", () => {
       live: true,
       collector: {
         ensureRegistered: async () => ({ ok: true, installId: "x", state: "active" }),
-        optIn: async () => ({ ok: true, state: "active", scopes: ["usage"], expiresAt: 1 }),
+        optIn: async () => ({
+          ok: true,
+          state: "active",
+          scopes: ["usage"],
+          expiresAt: 1,
+          contactVerified: false,
+        }),
         optOut: async () => ({ ok: true, state: "revoked" }),
         status: async () => ({
           ok: true,
           state: "active",
           scopes: ["usage"],
           consentVersion: CONSENT_VERSION,
+          contactVerified: false,
         }),
         submit: async () => ({ ok: true, id: "n" }),
       },
@@ -302,9 +317,15 @@ describe("C4 consent split", () => {
           state: "active",
           scopes: ["feedback"],
           expiresAt: Date.now() + 86_400_000,
+          contactVerified: false,
         }),
         optOut: async () => ({ ok: true, state: "revoked" }),
-        status: async () => ({ ok: true, state: "active", scopes: ["feedback"] }),
+        status: async () => ({
+          ok: true,
+          state: "active",
+          scopes: ["feedback"],
+          contactVerified: false,
+        }),
         submit: async () => ({ ok: true, id: "n" }),
       },
     });

@@ -62,6 +62,8 @@ export interface OptInSuccess {
     state: string;
     scopes: string[];
     expiresAt: number;
+    /** Wire `contact_verified` — always false in v1 (no double opt-in yet). Not contact PII. */
+    contactVerified: boolean;
 }
 export type OptInResult = OptInSuccess | FailureResult;
 export interface OptOutSuccess {
@@ -75,6 +77,8 @@ export interface StatusSuccess {
     scopes: string[];
     expiresAt?: number;
     consentVersion?: string;
+    /** Wire `contact_verified` — not contact PII (REG-10 still never echoes contact). */
+    contactVerified?: boolean;
 }
 export type StatusResult = StatusSuccess | FailureResult;
 export interface SubmitSuccess {
