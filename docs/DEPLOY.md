@@ -12,7 +12,7 @@ globally by end users (`npm i -g @deftai/canonical`). "Deploy" here means
 Runs on every push to `main` and every pull request:
 
 1. `pnpm install --frozen-lockfile` (Node from `.nvmrc`, pnpm via corepack)
-2. `pnpm run build` (tsc)
+2. `pnpm run build` (tsc — **staging** bake by default)
 3. `pnpm run lint` (biome)
 4. `pnpm run test` (vitest with coverage — coverage is reported, not enforced)
 
@@ -27,90 +27,140 @@ Alongside the repo workflow, two GitHub-side checks run on this repository
 ## Channels (build-time bake + npm dist-tags)
 
 Canonical ships **channel-hardcoded** artifacts. The collector host is chosen
-at build time via `CANONICAL_BUILD_CHANNEL`:
+at build time via `CANONICAL_BUILD_CHANNEL` (set by the publish workflow from
+the git tag shape):
 
-| Channel | Bake | Collector | Typical npm dist-tag | Version shape |
+| Git tag | Bake | Collector | npm dist-tag | Install |
 |---|---|---|---|---|
-| staging | `staging` (default) | `https://api.deft-staging.co/collector` | `staging` | `{next}-staging.N` prerelease |
-| production | `production` | `https://api.deft.co/collector` | `prod` first | `X.Y.Z` |
-| GA | same production tarball | `api.deft.co` | `latest` **and** `stable` | same `X.Y.Z` after promote |
+| `vX.Y.Z-staging.N` | staging | `api.deft-staging.co` | `staging` | `npm i -g @deftai/canonical@staging` |
+| `vX.Y.Z` | production | `api.deft.co` | `prod` | `npm i -g @deftai/canonical@prod` |
+| *(promote)* | *(same prod tarball)* | `api.deft.co` | `latest` **and** `stable` | `npm i -g @deftai/canonical` |
 
 Rules:
 
+- Tag name **is** the version and the channel signal. Staging must include
+  `-staging.N`. Plain `vX.Y.Z` is production-only.
 - Staging tarballs are **never** retagged to `latest`/`stable` (wrong host).
-- Production candidates publish with `--tag prod`. After smoke, promote with
-  `npm dist-tag add @deftai/canonical@X.Y.Z latest` and the same for `stable`.
+- Production candidates publish to `--tag prod` only. After smoke, **promote**
+  moves `latest` + `stable` to that version (no rebuild).
 - `latest` and `stable` are synonyms by policy (always set together).
-- Runtime env vars do **not** switch the collector host in published builds.
-  Local: `pnpm run build` / `build:staging` / `build:production`.
+- Runtime env vars do **not** switch the collector host.
+- `canon --version` prints `canon <version> (<channel>)`.
 
-`canon --version` prints `canon <version> (<channel>)`.
+### How versions increase
+
+| Channel | Version shape | Who bumps | Example sequence |
+|---|---|---|---|
+| Staging | `{nextPatch}-staging.N` | You (git tag). Helper: `pnpm run next-staging-version` | After GA `0.3.0` → `0.3.1-staging.1`, `.2`, … |
+| Prod candidate | plain `X.Y.Z` | Release commit bumps `package.json` + CHANGELOG, then tag `vX.Y.Z` | `0.3.1` |
+| GA | same `X.Y.Z` | Promote only (dist-tags) | `latest`/`stable` → `0.3.1` |
+
+Staging prereleases are of the **next** patch after current GA (`latest` on
+npm, else `package.json`). They sort below the eventual release
+(`0.3.1-staging.5` < `0.3.1`) and never become the default install.
 
 ## Publish (`.github/workflows/npm-publish.yml`)
 
-Triggered by pushing a tag matching `v*`, or manually via `workflow_dispatch`
-with an existing tag (for re-publishing after a failed run — no tag surgery).
+### Automatic (git tag push)
 
-Pipeline today: checkout the tag → install → build → `test:fast` → align
-`package.json` version with the tag (`npm version --no-git-tag-version`) →
-`npm publish --access public` (currently lands on `latest`; migrating to
-`--tag prod` + explicit promote — see channel table above).
+```bash
+# Staging (unreleased / daily) — bake staging, publish @staging
+pnpm run next-staging-version    # e.g. prints 0.3.1-staging.1
+git tag v0.3.1-staging.1
+git push origin v0.3.1-staging.1
 
-Key properties:
+# Production candidate — bake production, publish @prod (NOT latest yet)
+# (after CHANGELOG + package.json bump on main)
+git tag v0.3.1
+git push origin v0.3.1
+```
 
-- **npm Trusted Publishing (OIDC)** — no `NPM_TOKEN` secret anywhere. The
-  workflow has `id-token: write`; the npm CLI exchanges the GitHub OIDC token
-  for publish auth. Provenance attestation is automatic.
-- **GitHub-hosted runner required** — the registry rejects provenance bundles
-  signed on self-hosted runners.
-- **Idempotent re-runs, with a caveat** — on any `npm publish` failure the
-  workflow falls back to `npm view` and succeeds if the version already exists
-  on the registry (the fallback is not E409-specific). Re-publishing an
-  existing tag is therefore safe, but a green re-run for an already-published
-  version proves only that the version exists — not that this attempt uploaded
-  anything. When diagnosing a publish failure, read the Publish step log, not
-  just the run status.
-- One-time registry setup (already done): npmjs.com → package Settings →
-  Trusted Publisher: GitHub Actions, org `deftai`, repo `canonical`, workflow
-  `npm-publish.yml`.
+Pipeline per tag: checkout tag → resolve channel from version →
+`CANONICAL_BUILD_CHANNEL=…` build → `test:fast` → verify bake →
+`npm publish --access public --tag staging|prod`.
+
+### Promote to GA (`latest` + `stable`)
+
+After you smoke `@prod`:
+
+```bash
+# Local (after npm login with dist-tag permission):
+pnpm run promote -- 0.3.1
+
+# Or GitHub Actions (requires repo secret NPM_TOKEN — OIDC covers publish only):
+gh workflow run "npm publish" -f action=promote -f version=0.3.1
+```
+
+Promote does **not** rebuild. It only moves dist-tags.
+
+### Manual re-publish
+
+```bash
+gh workflow run "npm publish" -f action=publish -f tag=v0.3.1-staging.1
+```
+
+### Auth notes
+
+- **Publish** uses npm Trusted Publishing (OIDC) — no `NPM_TOKEN` for
+  `npm publish`. Setup (already done): npmjs.com → package Settings →
+  Trusted Publisher → workflow `npm-publish.yml`.
+- **Promote** (`npm dist-tag add`) is **not** covered by OIDC. Use
+  `pnpm run promote` locally, or set repo secret `NPM_TOKEN` (Automation
+  token with dist-tag permission) for the promote workflow job.
+- GitHub-hosted runner required for provenance on publish.
+- Idempotent re-publish: if the version already exists, the publish step
+  continues (and best-effort ensures the channel dist-tag).
 
 ## Release runbook
 
-Versioning is manual and changelog-driven (see `content/scm.md` for the rules
-the pack itself states):
+### A. Staging push (anytime unreleased work is on `main`)
 
-1. Ensure `CHANGELOG.md` `[Unreleased]` covers everything since the last tag.
-2. Release commit: rename `[Unreleased]` to `[X.Y.Z] - <date>` (keep an empty
-   `[Unreleased]` above it) and bump `version` in `package.json` to match.
-   Land it on `main` (release PR, or direct push by a maintainer).
-3. Tag **only after** the release commit is on `main`:
+1. Land commits on `main` (CI green).
+2. `pnpm run next-staging-version` → e.g. `0.3.1-staging.1`
+3. `git tag v0.3.1-staging.1 && git push origin v0.3.1-staging.1`
+4. Watch the workflow; install with `npm i -g @deftai/canonical@staging`
+5. Confirm `canon --version` shows `(staging)` and talks to staging collector.
+
+No CHANGELOG version section required for staging tags (they stay under
+`[Unreleased]` until a real release).
+
+### B. Production candidate + GA
+
+1. Ensure `CHANGELOG.md` `[Unreleased]` covers everything since the last GA.
+2. Release commit: rename `[Unreleased]` → `[X.Y.Z] - <date>`, bump
+   `package.json` `version` to `X.Y.Z`. Land on `main`.
+3. Tag **only after** that commit is on `main`:
 
    ```bash
    git tag vX.Y.Z && git push origin main && git push origin vX.Y.Z
    ```
 
-4. The tag push triggers the publish workflow. Target end-state: publish as
-   `@prod` with a production bake, then after smoke:
+4. Workflow publishes `@prod` (production bake). Smoke:
 
    ```bash
-   npm dist-tag add @deftai/canonical@X.Y.Z latest
-   npm dist-tag add @deftai/canonical@X.Y.Z stable
+   npm i -g @deftai/canonical@prod
+   canon --version   # expect (production)
+   ```
+
+5. Promote when happy:
+
+   ```bash
+   pnpm run promote -- X.Y.Z
    npm view @deftai/canonical dist-tags
    ```
 
-Never tag without a matching changelog entry, and never add a versioned
-changelog entry without tagging. No GitHub Releases are created for tags
-(convention so far: the tag + CHANGELOG.md are the release record).
+Never tag a plain `vX.Y.Z` without a matching changelog entry, and never add
+a versioned changelog entry without tagging. No GitHub Releases are created
+for tags (tag + CHANGELOG.md are the release record).
 
-### Local staging smoke pack
+### Local packs (no npm)
 
 ```bash
-pnpm run build:staging   # or plain pnpm run build
+pnpm run build:staging      # or build:production
 npm pack
 npm i -g ./deftai-canonical-*.tgz
-canon --version          # expect "(staging)"
+canon --version
 ```
-
 
 ## Gotchas
 
@@ -127,3 +177,5 @@ canon --version          # expect "(staging)"
 - **Local package smoke test** — `npm pack` then `npm i -g ./deftai-canonical-*.tgz`;
   confirm the tarball contents with `npm pack --dry-run` (should contain
   `dist/`, `content/`, `tasks/`, `.githooks/`, `Taskfile.yml` and nothing else).
+- **Do not** push `vX.Y.Z-beta…` or other prerelease forms — only `-staging.N`
+  or plain `X.Y.Z` are accepted by the publish workflow.

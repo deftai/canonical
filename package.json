@@ -50,7 +50,9 @@
     "lint": "biome check .",
     "format": "biome format --write .",
     "vendor:collection-sdk": "node scripts/vendor-collection-sdk.mjs",
-    "write-build-info": "node scripts/write-build-info.mjs"
+    "write-build-info": "node scripts/write-build-info.mjs",
+    "next-staging-version": "node scripts/next-staging-version.mjs",
+    "promote": "node scripts/promote-release.mjs"
   },
   "dependencies": {
     "@deft/collection-sdk": "file:./vendor/@deft/collection-sdk",

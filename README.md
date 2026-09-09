@@ -75,8 +75,20 @@ Confirm channel with `canon --version` (prints `canon <ver> (staging|production)
 
 ## Release
 
-Update `CHANGELOG.md`, merge, then tag: `git tag v<X.Y.Z> && git push origin v<X.Y.Z>` —
-the publish workflow builds and publishes to npm with provenance.
+See [docs/DEPLOY.md](docs/DEPLOY.md) for the full channel flow. Short version:
+
+```sh
+# Staging (unreleased) → npm @staging, staging collector
+pnpm run next-staging-version          # e.g. 0.3.1-staging.1
+git tag v0.3.1-staging.1 && git push origin v0.3.1-staging.1
+
+# Production candidate → npm @prod, production collector
+# (after CHANGELOG + package.json bump on main)
+git tag v0.3.1 && git push origin v0.3.1
+
+# After smoke: promote that prod build to latest + stable (no rebuild)
+pnpm run promote -- 0.3.1
+```
 
 ## License
 

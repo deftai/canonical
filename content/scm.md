@@ -33,7 +33,8 @@ Legend: `!` MUST · `~` SHOULD · `≉` SHOULD NOT · `⊗` MUST NOT · `?` MAY
 ## Changelog & Release
 
 - ! Every PR updates `CHANGELOG.md` `[Unreleased]` with a user-focused line and issue reference `(#N)`. ? Skip only for test-only/CI-only changes.
-- ! Release order is fixed: rename `[Unreleased]` → `[X.Y.Z] - date`, land it via a release PR, tag ONLY after the merge, push the tag. ⊗ Tag without a changelog entry; ⊗ add a versioned entry without tagging.
+- ! Production release order is fixed: rename `[Unreleased]` → `[X.Y.Z] - date`, land it via a release PR, tag `vX.Y.Z` ONLY after the merge, push the tag (publishes npm `@prod`). Promote to `latest`/`stable` after smoke. ⊗ Tag plain `vX.Y.Z` without a changelog entry; ⊗ add a versioned entry without tagging.
+- ? Staging npm publishes use tags `vX.Y.Z-staging.N` (no CHANGELOG section rename); they stay under `[Unreleased]` until a production release.
 
 ## Deployment & Secrets
 

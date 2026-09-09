@@ -9,6 +9,10 @@
   `canon --version` prints the channel; `collection:status` includes
   `channel=…`. Local default bake is staging (`pnpm run build` /
   `pnpm run build:staging`; use `build:production` for prod-baked packs).
+- npm publish is channelled by git tag: `vX.Y.Z-staging.N` → `--tag staging`
+  (staging bake); plain `vX.Y.Z` → `--tag prod` (production bake). GA is a
+  separate promote of dist-tags `latest` + `stable` (`pnpm run promote`).
+  Helpers: `pnpm run next-staging-version`, `pnpm run promote`.
 
 ### Fixed
 - Attributed metrics consent: collect Name/Email/Mobile immediately after choosing

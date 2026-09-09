@@ -1,44 +1,65 @@
 name: npm publish
 
-# Publishes @deftai/canonical on release tags. Adapted from deftai/directive's
-# proven workflow, radically simplified by the single-package model: no version
-# alignment loop, no workspace-protocol rewrite -- one `npm publish`.
+# Channelled publish for @deftai/canonical:
+#   git tag vX.Y.Z-staging.N  → bake staging → npm publish --tag staging
+#   git tag vX.Y.Z            → bake production → npm publish --tag prod
+#   workflow_dispatch promote  → dist-tag latest + stable (same prod tarball)
+#
+# Staging tarballs are never moved to latest/stable (wrong collector host).
 
 on:
   push:
     tags:
       - "v*"
-  # Manual re-publish of an existing tag without tag surgery: dispatch with the
-  # tag to (re)publish when a tag-triggered run failed, e.g. v0.1.0.
   workflow_dispatch:
     inputs:
-      tag:
-        description: "Existing release tag to (re)publish, e.g. v0.1.0"
+      action:
+        description: "publish = rebuild+publish a git tag; promote = move prod version to latest+stable"
         required: true
+        type: choice
+        options:
+          - publish
+          - promote
+        default: publish
+      tag:
+        description: "Git tag for publish (e.g. v0.3.1-staging.1 or v0.3.1). Required when action=publish."
+        required: false
+        type: string
+      version:
+        description: "npm version for promote (e.g. 0.3.1, no leading v). Required when action=promote."
+        required: false
         type: string
 
 permissions:
   # id-token: write powers npm TRUSTED PUBLISHING (docs.npmjs.com/trusted-publishers):
   # the npm CLI exchanges the GitHub OIDC token for publish auth -- no NPM_TOKEN
-  # secret anywhere. Provenance attestation is automatic under trusted publishing.
-  # One-time setup: publish the very first version manually, then on npmjs.com ->
-  # package Settings -> Trusted Publisher: GitHub Actions, org "deftai", repo
-  # "canonical", workflow filename "npm-publish.yml", no environment.
+  # for publish. Promote uses optional NPM_TOKEN (dist-tag is not covered by OIDC).
+  # One-time setup: npmjs.com -> package Settings -> Trusted Publisher: GitHub Actions,
+  # org "deftai", repo "canonical", workflow filename "npm-publish.yml".
   id-token: write
   contents: read
 
 jobs:
   publish:
-    name: Publish @deftai/canonical to npm
-    # GitHub-hosted runner is REQUIRED for npm --provenance: the registry
-    # rejects provenance bundles signed on self-hosted runners.
+    name: Publish channelled build
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.action == 'publish')
     runs-on: ubuntu-latest
     env:
       REF_NAME: ${{ inputs.tag || github.ref_name }}
     steps:
+      - name: Require tag input on dispatch
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${{ inputs.tag }}" ]]; then
+            echo "action=publish requires inputs.tag (e.g. v0.3.1-staging.1)"
+            exit 2
+          fi
+
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
-          ref: ${{ inputs.tag || github.ref_name }}
+          ref: ${{ env.REF_NAME }}
           submodules: true # third_party/xBRIEF: conformance oracle for tests
 
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
@@ -50,34 +71,128 @@ jobs:
       - name: Enable corepack (pnpm)
         run: corepack enable
 
+      - name: Resolve channel from version
+        id: channel
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${REF_NAME#v}"
+          if [[ ! "$REF_NAME" =~ ^v ]]; then
+            echo "Git ref must be a v* tag (got ${REF_NAME})"
+            exit 2
+          fi
+          # staging: X.Y.Z-staging.N
+          if [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+-staging\.[0-9]+$ ]]; then
+            echo "channel=staging" >> "$GITHUB_OUTPUT"
+            echo "dist_tag=staging" >> "$GITHUB_OUTPUT"
+            echo "build_channel=staging" >> "$GITHUB_OUTPUT"
+          # production candidate: plain X.Y.Z only (no other prereleases)
+          elif [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "channel=production" >> "$GITHUB_OUTPUT"
+            echo "dist_tag=prod" >> "$GITHUB_OUTPUT"
+            echo "build_channel=production" >> "$GITHUB_OUTPUT"
+          else
+            echo "Unsupported version '${VERSION}'."
+            echo "Use vX.Y.Z-staging.N for staging or vX.Y.Z for production (@prod)."
+            exit 2
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Resolved ${REF_NAME} → version=${VERSION}"
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build
+      - name: Bake channel + build
+        env:
+          CANONICAL_BUILD_CHANNEL: ${{ steps.channel.outputs.build_channel }}
         run: pnpm run build
 
       - name: Test
         run: pnpm run test:fast
 
-      - name: Align package version with release tag
+      - name: Align package.json version with tag
         shell: bash
         run: |
           set -euo pipefail
-          VERSION="${REF_NAME#v}"
-          echo "Publishing @deftai/canonical@${VERSION}"
+          VERSION="${{ steps.channel.outputs.version }}"
+          echo "Publishing @deftai/canonical@${VERSION} --tag ${{ steps.channel.outputs.dist_tag }} (bake=${{ steps.channel.outputs.build_channel }})"
           npm version "${VERSION}" --no-git-tag-version --allow-same-version
 
+      - name: Verify baked channel matches tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXPECT="${{ steps.channel.outputs.build_channel }}"
+          GOT=$(node -e "import('./dist/build-info.js').then(m => process.stdout.write(m.BUILD_CHANNEL))")
+          URL=$(node -e "import('./dist/build-info.js').then(m => process.stdout.write(m.COLLECTION_BASE_URL))")
+          echo "baked channel=${GOT} url=${URL}"
+          if [[ "$GOT" != "$EXPECT" ]]; then
+            echo "Bake mismatch: expected ${EXPECT}, got ${GOT}"
+            exit 2
+          fi
+
       # Auth: trusted publishing (OIDC) -- no token env. Requires npm >= 11.5.1
-      # (bundled with the Node from .nvmrc) and a GitHub-hosted runner.
-      # Idempotent re-publish: a workflow_dispatch rerun must not fail on E409
-      # when the version already published.
+      # Idempotent re-publish: workflow_dispatch rerun must not fail when version exists.
       - name: Publish
         shell: bash
         run: |
           set -euo pipefail
           PKG=$(node -p "require('./package.json').name")
           VER=$(node -p "require('./package.json').version")
-          npm publish --access public || {
+          TAG="${{ steps.channel.outputs.dist_tag }}"
+          npm publish --access public --tag "${TAG}" || {
             npm view "${PKG}@${VER}" version >/dev/null
-            echo "Already published ${PKG}@${VER}, continuing"
+            echo "Already published ${PKG}@${VER}; ensuring dist-tag ${TAG}"
+            # Best-effort retag if version exists (may need NPM_TOKEN; ignore failure)
+            npm dist-tag add "${PKG}@${VER}" "${TAG}" || true
           }
+          echo "Published ${PKG}@${VER} with dist-tag ${TAG}"
+          npm view "${PKG}" dist-tags || true
+
+  promote:
+    name: Promote prod → latest + stable
+    if: github.event_name == 'workflow_dispatch' && inputs.action == 'promote'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          package-manager-cache: false
+          node-version-file: .nvmrc
+          registry-url: https://registry.npmjs.org
+
+      - name: Promote dist-tags
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          VER="${{ inputs.version }}"
+          VER="${VER#v}"
+          if [[ -z "$VER" ]]; then
+            echo "action=promote requires inputs.version (e.g. 0.3.1)"
+            exit 2
+          fi
+          if [[ ! "$VER" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Promote only applies to plain X.Y.Z production versions (got ${VER})"
+            exit 2
+          fi
+          PKG="@deftai/canonical"
+          if ! npm view "${PKG}@${VER}" version >/dev/null 2>&1; then
+            echo "${PKG}@${VER} is not on the registry. Publish a v${VER} tag first (@prod)."
+            exit 2
+          fi
+          if [[ -z "${NODE_AUTH_TOKEN:-}" ]]; then
+            echo "NPM_TOKEN secret is required for automated promote (OIDC covers publish only)."
+            echo "Local fallback (after npm login):"
+            echo "  npm dist-tag add ${PKG}@${VER} latest"
+            echo "  npm dist-tag add ${PKG}@${VER} stable"
+            echo "Or: pnpm run promote -- ${VER}"
+            exit 2
+          fi
+          npm dist-tag add "${PKG}@${VER}" prod
+          npm dist-tag add "${PKG}@${VER}" latest
+          npm dist-tag add "${PKG}@${VER}" stable
+          echo "Promoted ${PKG}@${VER} → prod, latest, stable"
+          npm view "${PKG}" dist-tags
