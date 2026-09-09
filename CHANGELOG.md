@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Changed
+- Build-time release channels: `CANONICAL_BUILD_CHANNEL=staging|production`
+  bakes the collector host into the binary (`api.deft-staging.co` vs
+  `api.deft.co`). Published builds are not customer-switchable via env vars.
+  `canon --version` prints the channel; `collection:status` includes
+  `channel=…`. Local default bake is staging (`pnpm run build` /
+  `pnpm run build:staging`; use `build:production` for prod-baked packs).
+
 ### Fixed
 - Attributed metrics consent: collect Name/Email/Mobile immediately after choosing
   Attributed, then a **single** approve (default Approve). One-shot
@@ -27,8 +35,8 @@
   Legacy all-scopes active files migrate without re-prompt. New verbs:
   `collection:status|opt-in|decline|opt-out|metric`, `feedback`. Soft usage
   metrics from `orient` / `check` / `scope:complete` / `pr:watch` /
-  `pr:finish` (never change host exit codes). Default collector URL is
-  staging; override with `CANONICAL_COLLECTION_URL`.
+  `pr:finish` (never change host exit codes). Collector host is bake-time
+  (staging by default for local/dev builds).
 
 ## [0.3.0] - 2026-08-07
 

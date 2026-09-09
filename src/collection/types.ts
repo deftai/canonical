@@ -116,5 +116,8 @@ export interface ConsentSignal {
   readonly identityMode: IdentityState;
 }
 
-export const DEFAULT_COLLECTION_BASE_URL = "https://api.deft-staging.co/collector";
-export const DEFAULT_COLLECTION_ENV = "staging";
+/** @deprecated Prefer COLLECTION_* from build-info (bake-time). */
+export {
+  COLLECTION_BASE_URL as DEFAULT_COLLECTION_BASE_URL,
+  COLLECTION_ENV as DEFAULT_COLLECTION_ENV,
+} from "../build-info.js";

@@ -58,6 +58,7 @@ describe("dispatch", () => {
     const c = capture();
     expect(await dispatch(["--version"], c.io)).toBe(0);
     expect(c.out()).toMatch(/canon \d/);
+    expect(c.out()).toMatch(/\((staging|production)\)/);
   });
 
   it("unknown verb exits 2", async () => {

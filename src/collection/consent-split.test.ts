@@ -244,7 +244,7 @@ describe("C4 consent split", () => {
     const root = tempDir("canon-c4-status-");
     const result = await collectionStatus(root);
     expect(result.message).toMatch(
-      /metricsMode=undecided metrics=not_prompted submissions=not_granted identity=anonymous/,
+      /metricsMode=undecided metrics=not_prompted submissions=not_granted identity=anonymous channel=(staging|production)/,
     );
     expect(result.status.metrics).toBe("not_prompted");
     expect(result.status.metricsMode).toBe("undecided");

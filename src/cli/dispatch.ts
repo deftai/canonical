@@ -13,6 +13,7 @@
  */
 
 import { createRequire } from "node:module";
+import { BUILD_CHANNEL } from "../build-info.js";
 
 export const CLI_MODULE_VERBS = [
   "check",
@@ -122,11 +123,11 @@ function loadHandler(canonical: string): Promise<CommandHandler> {
 
 function versionBanner(): string {
   // Read the real version from this package's manifest -- dist/cli/ and
-  // src/cli/ both sit two levels below the package root.
+  // src/cli/ both sit two levels below the package root. Channel is bake-time.
   try {
     const require = createRequire(import.meta.url);
     const pkg = require("../../package.json") as { version?: string };
-    return `canon ${pkg.version ?? "unknown"}\n`;
+    return `canon ${pkg.version ?? "unknown"} (${BUILD_CHANNEL})\n`;
   } catch {
     return "canon unknown\n";
   }

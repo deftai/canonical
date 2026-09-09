@@ -1,5 +1,6 @@
 /** `canon collection:status` -- local consent decision (+ optional live SDK status). */
 import { parseArgs, renderJson } from "../args/index.js";
+import { BUILD_CHANNEL } from "../build-info.js";
 import { collectionStatus } from "../collection/index.js";
 
 export async function run(argv: string[]): Promise<number> {
@@ -19,6 +20,7 @@ export async function run(argv: string[]): Promise<number> {
   if (parsed.flags.json === true) {
     process.stdout.write(
       `${renderJson({
+        channel: BUILD_CHANNEL,
         code: result.code,
         consent_version: result.status.consentVersion ?? null,
         expires_at: result.status.expiresAt ?? null,

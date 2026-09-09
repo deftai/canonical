@@ -10,13 +10,19 @@ Optional anonymous opt-in feedback/usage collection uses the vendored
 ## Install
 
 ```sh
-npm i -g @deftai/canonical
+npm i -g @deftai/canonical            # GA (latest / stable, when promoted)
+# npm i -g @deftai/canonical@staging  # daily / unreleased (staging collector)
+# npm i -g @deftai/canonical@prod     # production-baked candidate (before GA)
 ```
 
 Requirements: Node ≥ 20, git. For the `task <verb>` surface, install
 [go-task](https://taskfile.dev) ≥ 3.44 separately (`brew install go-task` /
 `scoop install task` / see taskfile.dev) — it is not an npm dependency. Every
 verb also works directly as `canon <verb>` without go-task.
+
+Collector endpoints are **baked at build time** (staging vs production). A
+staging install always talks to `api.deft-staging.co`; a production bake always
+talks to `api.deft.co`. There is no customer runtime switch.
 
 ## Use in a project
 
@@ -57,12 +63,15 @@ exact exit code (plain `task` wraps failures as 201).
 
 ```sh
 pnpm install
-pnpm run build     # tsc
-pnpm run lint      # biome
-pnpm run test      # vitest + coverage report
+pnpm run build              # tsc (bakes staging collector by default)
+pnpm run build:staging      # explicit staging bake
+pnpm run build:production   # bake api.deft.co into this artifact
+pnpm run lint               # biome
+pnpm run test               # vitest + coverage report
 ```
 
 Local install for testing: `npm pack` then `npm i -g ./deftai-canonical-*.tgz`.
+Confirm channel with `canon --version` (prints `canon <ver> (staging|production)`).
 
 ## Release
 

@@ -24,14 +24,37 @@ Alongside the repo workflow, two GitHub-side checks run on this repository
   on `main`, so PRs wait for it. Direct pushes to `main` by an admin bypass
   it (GitHub logs the bypass on the push).
 
+## Channels (build-time bake + npm dist-tags)
+
+Canonical ships **channel-hardcoded** artifacts. The collector host is chosen
+at build time via `CANONICAL_BUILD_CHANNEL`:
+
+| Channel | Bake | Collector | Typical npm dist-tag | Version shape |
+|---|---|---|---|---|
+| staging | `staging` (default) | `https://api.deft-staging.co/collector` | `staging` | `{next}-staging.N` prerelease |
+| production | `production` | `https://api.deft.co/collector` | `prod` first | `X.Y.Z` |
+| GA | same production tarball | `api.deft.co` | `latest` **and** `stable` | same `X.Y.Z` after promote |
+
+Rules:
+
+- Staging tarballs are **never** retagged to `latest`/`stable` (wrong host).
+- Production candidates publish with `--tag prod`. After smoke, promote with
+  `npm dist-tag add @deftai/canonical@X.Y.Z latest` and the same for `stable`.
+- `latest` and `stable` are synonyms by policy (always set together).
+- Runtime env vars do **not** switch the collector host in published builds.
+  Local: `pnpm run build` / `build:staging` / `build:production`.
+
+`canon --version` prints `canon <version> (<channel>)`.
+
 ## Publish (`.github/workflows/npm-publish.yml`)
 
 Triggered by pushing a tag matching `v*`, or manually via `workflow_dispatch`
 with an existing tag (for re-publishing after a failed run — no tag surgery).
 
-Pipeline: checkout the tag → install → build → `test:fast` → align
+Pipeline today: checkout the tag → install → build → `test:fast` → align
 `package.json` version with the tag (`npm version --no-git-tag-version`) →
-`npm publish --access public`.
+`npm publish --access public` (currently lands on `latest`; migrating to
+`--tag prod` + explicit promote — see channel table above).
 
 Key properties:
 
@@ -66,16 +89,28 @@ the pack itself states):
    git tag vX.Y.Z && git push origin main && git push origin vX.Y.Z
    ```
 
-4. The tag push triggers the publish workflow. Verify:
+4. The tag push triggers the publish workflow. Target end-state: publish as
+   `@prod` with a production bake, then after smoke:
 
    ```bash
-   gh run watch --exit-status $(gh run list --workflow "npm publish" --limit 1 --json databaseId -q '.[0].databaseId')
-   npm view @deftai/canonical version
+   npm dist-tag add @deftai/canonical@X.Y.Z latest
+   npm dist-tag add @deftai/canonical@X.Y.Z stable
+   npm view @deftai/canonical dist-tags
    ```
 
 Never tag without a matching changelog entry, and never add a versioned
 changelog entry without tagging. No GitHub Releases are created for tags
 (convention so far: the tag + CHANGELOG.md are the release record).
+
+### Local staging smoke pack
+
+```bash
+pnpm run build:staging   # or plain pnpm run build
+npm pack
+npm i -g ./deftai-canonical-*.tgz
+canon --version          # expect "(staging)"
+```
+
 
 ## Gotchas
 

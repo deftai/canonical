@@ -40,13 +40,17 @@
     "access": "public"
   },
   "scripts": {
+    "prebuild": "node scripts/write-build-info.mjs",
     "build": "tsc -p tsconfig.json",
+    "build:staging": "CANONICAL_BUILD_CHANNEL=staging pnpm run build",
+    "build:production": "CANONICAL_BUILD_CHANNEL=production pnpm run build",
     "clean": "rm -rf dist",
     "test": "vitest run --coverage",
     "test:fast": "vitest run",
     "lint": "biome check .",
     "format": "biome format --write .",
-    "vendor:collection-sdk": "node scripts/vendor-collection-sdk.mjs"
+    "vendor:collection-sdk": "node scripts/vendor-collection-sdk.mjs",
+    "write-build-info": "node scripts/write-build-info.mjs"
   },
   "dependencies": {
     "@deft/collection-sdk": "file:./vendor/@deft/collection-sdk",

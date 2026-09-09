@@ -1,4 +1,5 @@
 import type { Collector } from "@deft/collection-sdk";
+import { BUILD_CHANNEL } from "../build-info.js";
 import { type CreateCanonicalCollectorOptions, createCanonicalCollector } from "./client.js";
 import {
   clearIdentityAndServerContact,
@@ -174,7 +175,9 @@ export async function collectionStatus(
   return {
     code,
     status,
-    message: `metricsMode=${signal.metricsMode} metrics=${signal.metrics} submissions=${signal.submissions} identity=${signal.identity}`,
+    message:
+      `metricsMode=${signal.metricsMode} metrics=${signal.metrics} ` +
+      `submissions=${signal.submissions} identity=${signal.identity} channel=${BUILD_CHANNEL}`,
   };
 }
 

@@ -100,7 +100,7 @@ The `-x` flag makes go-task propagate the verb's exact exit code; without it eve
 
 ## Collection & Feedback
 
-Anonymous collection via `@deft/collection-sdk`. Credentials: `.canonical/collection.json` (gitignored). Correlator: `~/.config/canonical/identity.json` `userKey` → SDK `correlator` (never `deployment.customer`). Default endpoint: staging (`CANONICAL_COLLECTION_URL` / `CANONICAL_COLLECTION_ENV` override). Metrics soft-fail — host verb exit codes unchanged.
+Anonymous collection via `@deft/collection-sdk`. Credentials: `.canonical/collection.json` (gitignored). Correlator: `~/.config/canonical/identity.json` `userKey` → SDK `correlator` (never `deployment.customer`). Collector host is bake-time (`CANONICAL_BUILD_CHANNEL=staging|production` → `api.deft-staging.co` / `api.deft.co`); not overridden by env at runtime. Metrics soft-fail — host verb exit codes unchanged.
 
 Two tracks: **metrics** (usage; plain-English Disallow / Anonymous / Attributed → `collection:decline` / `collection:opt-in` / opt-in + `collection:identity`) and **submissions** (feedback/bug/feature; per-submit user confirm in dialogue — agent may still pass internal disclosure flags). Orient/status print `metricsMode=… metrics=… submissions=… identity=…` (`metricsMode` ∈ `undecided|disallowed|anonymous|attributed`; `identity` ∈ `anonymous|identified`). Consent version: `canonical-2026-09-b`. Contact identity is local + opt-in reconfirm only — ⊗ never in event payloads (PRIV-2). Opt-out rotates install credentials after server opt-out.
 
