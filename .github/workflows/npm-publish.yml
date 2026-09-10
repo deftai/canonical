@@ -102,13 +102,19 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Bake channel + build
+      # Test against the default staging bake. A production bake before tests breaks
+      # build-info.test.ts (it asserts committed/prebuild defaults are staging, and
+      # Vitest imports the already-baked generated module).
+      - name: Build (staging) + test
+        run: |
+          set -euo pipefail
+          pnpm run build
+          pnpm run test:fast
+
+      - name: Bake release channel + rebuild
         env:
           CANONICAL_BUILD_CHANNEL: ${{ steps.channel.outputs.build_channel }}
         run: pnpm run build
-
-      - name: Test
-        run: pnpm run test:fast
 
       - name: Align package.json version with tag
         shell: bash
@@ -130,7 +136,6 @@ jobs:
             echo "Bake mismatch: expected ${EXPECT}, got ${GOT}"
             exit 2
           fi
-
       # Auth: trusted publishing (OIDC) -- no token env. Requires npm >= 11.5.1
       # Idempotent re-publish: workflow_dispatch rerun must not fail when version exists.
       - name: Publish
