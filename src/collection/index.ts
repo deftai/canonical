@@ -1,6 +1,6 @@
 export {
-  type CreateCanonicalCollectorOptions,
   buildChannel,
+  type CreateCanonicalCollectorOptions,
   createCanonicalCollector,
   resolveCollectionBaseUrl,
   resolveCollectionEnv,

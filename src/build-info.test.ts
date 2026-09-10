@@ -2,11 +2,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
-import {
-  BUILD_CHANNEL,
-  COLLECTION_BASE_URL,
-  COLLECTION_ENV,
-} from "./build-info.js";
+import { BUILD_CHANNEL, COLLECTION_BASE_URL, COLLECTION_ENV } from "./build-info.js";
 import {
   buildChannel,
   resolveCollectionBaseUrl,
