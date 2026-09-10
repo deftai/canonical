@@ -1,5 +1,10 @@
 import { parseArgs, renderJson } from "../args/index.js";
-import { softEmitUsage } from "../collection/index.js";
+import {
+  markInventoryEmitted,
+  shouldEmitInventory,
+  softEmitUsage,
+  xbriefInventoryDimensions,
+} from "../collection/index.js";
 import { orient } from "../orient/index.js";
 
 /** `canon orient` -- contract: content/canonical-tasks.md. */
@@ -42,6 +47,15 @@ export async function run(argv: string[]): Promise<number> {
 
   if (snapshot.code === 0) {
     await softEmitUsage(projectRoot, "orient_ok");
+    if (shouldEmitInventory(projectRoot)) {
+      await softEmitUsage(
+        projectRoot,
+        "xbrief_inventory",
+        1,
+        xbriefInventoryDimensions(projectRoot),
+      );
+      markInventoryEmitted(projectRoot);
+    }
   }
   return snapshot.code;
 }

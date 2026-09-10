@@ -106,7 +106,7 @@ Map user choices to verbs. Internal flags are fine; humans never hear them.
 
 | Scope | Track | What is sent |
 |---|---|---|
-| `usage` | Metrics | Coarse counters only (`orient_ok`, `kickoff_done`, `scope_complete`, `check_pass`/`check_fail`, `pr_watch_clean`, `pr_finish_merged`) — no source, no chat |
+| `usage` | Metrics | Structured counters + optional `--dimensions` JSON (≤2KiB): lifecycle verbs (`xbrief_scope_created`, `xbrief_triage`, `xbrief_scope_start`, `scope_complete`, `xbrief_scope_stop`), quality gate (`check_pass`/`check_fail` + coverage pct when tooling produced it), session shape (`session_summary`, `xbrief_inventory`), plus agent-emitted `kickoff_done` — no source, no chat |
 | `feedback` | Submissions | Free-text message + optional 1–5 rating |
 | `bug` | Submissions | Summary, OS, optional stack/logs |
 | `feature` | Submissions | Summary + optional details/context |
@@ -114,4 +114,5 @@ Map user choices to verbs. Internal flags are fine; humans never hear them.
 ### Kickoff / session metrics
 
 - ! After kickoff finishes (PROJECT + scopes + roadmap rendered), if `metrics=active`: `task -x collection:metric -- --metric=kickoff_done --value=1` (optional `--dimensions={"scopes_created":N,"stack_family":"node"}` — `stack_family` ∈ `node|python|go|rust|other`). Soft-fail is fine. Metrics stay soft-skipped when declined.
-- ~ On session end / continue-checkpoint when `metrics=active`, agents MAY emit `session_summary` with bucketed dims only (`agent_turns_bucket` ∈ `1-5|6-15|16-40|40+`, integer scope counts). ⊗ Do not scrape chat into dimensions.
+- ! **Agent turn bump rule:** once per user turn that performs mutation after orient, if `metrics=active`: `task -x collection:metric -- --metric=agent_turn --value=1` (increments durable counter in `.canonical/collection-session.json`; no network payload). ⊗ Do not count read-only turns (orient/status/help).
+- ~ On session end / continue-checkpoint when `metrics=active`, emit `session_summary` via `collection:metric` (auto-fills bucketed dims from session file when `--dimensions` omitted): `agent_turns_bucket` ∈ `1-5|6-15|16-40|40+`, integer scope/check/consent counts, optional `duration_bucket`. Clears session file on successful emit. ⊗ Do not scrape chat into dimensions.

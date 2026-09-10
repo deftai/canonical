@@ -133,7 +133,19 @@ Two tracks: **metrics** (usage; plain-English Disallow / Anonymous / Attributed 
 **Exit:** `0` submitted (or dry-run ok) · `1` disclosure required / rejected · `2` bad args.
 **Multiline:** free-text with newlines/spaces/quotes MUST use `--*-file` (temp file outside the worktree; same pattern as scm.md `--body-file`), not inline strings through `task`.
 
-Automatic usage metrics (when `metrics=active`): `orient` → `orient_ok`; `check` → `check_pass`/`check_fail` (fail may include `failed_stage`); `scope:complete` → `scope_complete` (may include `disposition`, `had_delivery_pr`); `pr:watch` CLEAN → `pr_watch_clean`; `pr:finish` merged → `pr_finish_merged`. Agents emit `kickoff_done` via `collection:metric` after kickoff (optional `--dimensions` e.g. `scopes_created`, `stack_family` enum). Soft-skip continues when metrics declined even if submissions were granted. ⊗ Never put titles, paths, chat, or secrets in dimensions.
+Automatic usage metrics (when `metrics=active`):
+- `orient` → `orient_ok`; also `xbrief_inventory` (≤1/24h) with integer folder/status counts
+- `scope:new` → `xbrief_scope_created` (`kind`, `has_acceptance_count`, `dependency_count`)
+- `triage` → `xbrief_triage` (`decision`, `from_status`, `to_status`)
+- `scope:start` → `xbrief_scope_start` (`kind`, `acceptance_pending_count`)
+- `scope:complete` → `scope_complete` (`kind`, `disposition`, acceptance counts, `dependency_count`, `had_delivery_pr`, `lifetime_hours` bucket)
+- `scope:stop` → `xbrief_scope_stop` (`action`)
+- `check` → `check_pass`/`check_fail` (+ `failed_stage` on fail; coverage pct dims when summary exists on disk)
+- `pr:watch` CLEAN → `pr_watch_clean`; `pr:finish` merged → `pr_finish_merged`
+- Agents emit `kickoff_done` via `collection:metric` after kickoff (optional `--dimensions` e.g. `scopes_created`, `stack_family` enum `node|python|go|rust|other`)
+- Agents emit `session_summary` via `collection:metric` at session end (auto-fills from `.canonical/collection-session.json` when `--dimensions` omitted; clears session on emit)
+
+Session counters live in gitignored `.canonical/collection-session.json`. Soft-skip continues when metrics declined even if submissions were granted. ⊗ Never put titles, paths, chat, or secrets in dimensions.
 
 ## Out of Scope (do not build as agent-facing verbs)
 

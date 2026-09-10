@@ -1,6 +1,8 @@
 /** `canon triage` -- content/canonical-tasks.md #triage. */
 import { parseArgs, renderJson } from "../args/index.js";
+import { softEmitUsage, triageDimensions } from "../collection/index.js";
 import { isTriageVerb, triageDecide } from "../triage/index.js";
+import { findScope, readScope } from "../xbrief/brief-io.js";
 
 export function run(argv: string[]): number {
   const parsed = parseArgs(argv, {
@@ -26,6 +28,14 @@ export function run(argv: string[]): number {
   }
 
   const projectRoot = parsed.values["project-root"] ?? ".";
+  const found = findScope(projectRoot, scopeArg);
+  let fromStatus = "proposed";
+  if (found !== null && !("ambiguous" in found)) {
+    const read = readScope(found.path);
+    if (read.ok) {
+      fromStatus = read.scope.plan.status;
+    }
+  }
   const result = triageDecide(projectRoot, {
     verb: verbArg,
     scope: scopeArg,
@@ -52,5 +62,11 @@ export function run(argv: string[]): number {
   } else {
     process.stdout.write(`${result.verb}: ${result.scope} -> ${result.status}\n`);
   }
+  void softEmitUsage(
+    projectRoot,
+    "xbrief_triage",
+    1,
+    triageDimensions(result.verb, fromStatus, result.status),
+  );
   return 0;
 }

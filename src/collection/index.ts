@@ -49,6 +49,36 @@ export {
   submitFeedback,
 } from "./feedback.js";
 export { defaultConfigDir, ensureUserKey, type IdentityOptions, identityPath } from "./identity.js";
+export {
+  type AgentTurnsBucket,
+  bucketAgentTurns,
+  bucketDurationHours,
+  bucketLifetimeHours,
+  type DurationBucket,
+  type LifetimeHoursBucket,
+  scopeCompleteDimensions,
+  scopeCreatedDimensions,
+  scopeStartDimensions,
+  scopeStopDimensions,
+  triageDimensions,
+  xbriefInventoryDimensions,
+} from "./metric-dimensions.js";
+export {
+  buildSessionSummaryDimensions,
+  bumpAgentTurn,
+  type CollectionSession,
+  clearSession,
+  ensureSession,
+  markInventoryEmitted,
+  readSession,
+  recordCheckRun,
+  recordConsentPrompt,
+  recordScopeCancelled,
+  recordScopeCompleted,
+  recordScopeCreated,
+  SESSION_FILE_REL,
+  shouldEmitInventory,
+} from "./session-state.js";
 export { softEmitUsage } from "./soft-emit.js";
 export {
   collectionFilePath,

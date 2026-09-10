@@ -1,5 +1,6 @@
 import { existsSync, statSync } from "node:fs";
 import { parseArgs, renderJson } from "../args/index.js";
+import { recordScopeCreated, scopeCreatedDimensions, softEmitUsage } from "../collection/index.js";
 import {
   buildScopeSkeleton,
   findScopeFilenameCollision,
@@ -65,6 +66,8 @@ export function run(argv: string[]): number {
 
   const skeleton = buildScopeSkeleton(title, now);
   writeScope(projectRoot, relPath, skeleton);
+  recordScopeCreated(projectRoot);
+  void softEmitUsage(projectRoot, "xbrief_scope_created", 1, scopeCreatedDimensions(skeleton));
 
   return emit(
     json,
