@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.3.1] - 2026-09-10
 
 ### Changed
 - Build-time release channels: `CANONICAL_BUILD_CHANNEL=staging|production`
