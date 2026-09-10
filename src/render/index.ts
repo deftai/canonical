@@ -2,7 +2,12 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { atomicWriteText } from "../fs/contained-write.js";
 import type { GateExitCode, LifecycleFolder, ScopeDoc } from "../types/index.js";
-import { LIFECYCLE_FOLDERS, SPEC_BRIEF_NAME, scopeDependencies } from "../types/index.js";
+import {
+  LIFECYCLE_FOLDERS,
+  SPEC_BRIEF_NAME,
+  scopeDependencies,
+  scopeKind,
+} from "../types/index.js";
 import { listScopes, readScope } from "../xbrief/brief-io.js";
 
 /**
@@ -99,16 +104,82 @@ function dependenciesCell(scope: ScopeDoc): string {
   return deps.length > 0 ? mdCell(deps.join(", ")) : "-";
 }
 
+interface ScopedRow {
+  readonly scope: ScopeDoc;
+  readonly row: string;
+}
+
+function milestoneTarget(scope: ScopeDoc): string {
+  const target = scope.plan["x-canonical/target"];
+  return typeof target === "string" ? target : "";
+}
+
+function releaseVersion(scope: ScopeDoc): string {
+  const version = scope.plan["x-canonical/version"];
+  return typeof version === "string" ? version : "";
+}
+
+function compareSemverDesc(a: string, b: string): number {
+  const strip = (v: string) => v.replace(/^v/, "").split("-")[0]?.split(".").map(Number) ?? [];
+  const av = strip(a);
+  const bv = strip(b);
+  for (let i = 0; i < 3; i += 1) {
+    const diff = (bv[i] ?? 0) - (av[i] ?? 0);
+    if (diff !== 0) {
+      return diff;
+    }
+  }
+  return b.localeCompare(a);
+}
+
+function buildKindSection(
+  title: string,
+  headers: readonly string[],
+  entries: readonly ScopedRow[],
+  sort: (a: ScopedRow, b: ScopedRow) => number,
+): string[] {
+  if (entries.length === 0) {
+    return [];
+  }
+  const lines: string[] = [
+    "",
+    `## ${title}`,
+    "",
+    `| ${headers.join(" | ")} |`,
+    `| ${headers.map(() => "---").join(" | ")} |`,
+  ];
+  for (const entry of [...entries].sort(sort)) {
+    lines.push(entry.row);
+  }
+  return lines;
+}
+
 function buildRoadmapContent(projectRoot: string): string {
   const rowsByFolder = new Map<LifecycleFolder, string[]>(LIFECYCLE_FOLDERS.map((f) => [f, []]));
+  const milestones: ScopedRow[] = [];
+  const releases: ScopedRow[] = [];
+
   for (const ref of listScopes(projectRoot)) {
     const read = readScope(ref.path);
     if (!read.ok) {
       continue;
     }
     const scope = read.scope;
+    const kind = scopeKind(scope);
     const row = `| ${mdCell(scope.plan.title)} | ${scope.plan.status} | ${firstIssueOriginLink(scope)} | ${dependenciesCell(scope)} |`;
     rowsByFolder.get(ref.folder)?.push(row);
+
+    if (kind === "milestone") {
+      milestones.push({
+        scope,
+        row: `| ${mdCell(scope.plan.title)} | ${mdCell(milestoneTarget(scope))} | ${scope.plan.status} | ${dependenciesCell(scope)} |`,
+      });
+    } else if (kind === "release") {
+      releases.push({
+        scope,
+        row: `| ${mdCell(scope.plan.title)} | ${mdCell(releaseVersion(scope))} | ${scope.plan.status} | ${dependenciesCell(scope)} |`,
+      });
+    }
   }
 
   const lines: string[] = [
@@ -119,6 +190,12 @@ function buildRoadmapContent(projectRoot: string): string {
     }),
     "",
     "# Roadmap",
+    ...buildKindSection(
+      "Milestones",
+      ["Title", "Target", "Status", "Dependencies"],
+      milestones,
+      (a, b) => milestoneTarget(a.scope).localeCompare(milestoneTarget(b.scope)),
+    ),
   ];
   for (const folder of LIFECYCLE_FOLDERS) {
     lines.push("", `## ${ROADMAP_SECTION_TITLES[folder]}`, "");
@@ -128,6 +205,14 @@ function buildRoadmapContent(projectRoot: string): string {
       lines.push(row);
     }
   }
+  lines.push(
+    ...buildKindSection(
+      "Releases",
+      ["Title", "Version", "Status", "Dependencies"],
+      releases,
+      (a, b) => compareSemverDesc(releaseVersion(a.scope), releaseVersion(b.scope)),
+    ),
+  );
   lines.push("");
   return lines.join("\n");
 }

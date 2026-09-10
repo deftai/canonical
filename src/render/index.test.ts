@@ -80,6 +80,43 @@ describe("renderRoadmap: golden output", () => {
     expect(written).toContain("| First story | blocked | - | - |");
   });
 
+  it("surfaces Milestones and Releases sections for kind-specific scopes", () => {
+    const root = emptyProject();
+    writeScopeFixture(root, "proposed", "2026-03-01-launch.xbrief.json", {
+      title: "Product launch",
+      "x-canonical/kind": "milestone",
+      "x-canonical/target": "2026-06-15T00:00:00.000Z",
+      items: [],
+    });
+    writeScopeFixture(root, "completed", "2026-01-10-v020.xbrief.json", {
+      title: "v0.2.0",
+      status: "completed",
+      "x-canonical/kind": "release",
+      "x-canonical/version": "0.2.0",
+      items: [],
+    });
+    writeScopeFixture(root, "completed", "2026-01-20-v030.xbrief.json", {
+      title: "v0.3.0",
+      status: "completed",
+      "x-canonical/kind": "release",
+      "x-canonical/version": "0.3.0",
+      items: [],
+    });
+
+    const result = renderRoadmap(root);
+    expect(result.ok).toBe(true);
+
+    const written = readFileSync(join(root, "ROADMAP.md"), "utf8");
+    expect(written).toContain("## Milestones");
+    expect(written).toContain("| Product launch | 2026-06-15T00:00:00.000Z | proposed | - |");
+    expect(written).toContain("## Releases");
+    // newest version first
+    const v030Idx = written.indexOf("| v0.3.0 | 0.3.0 |");
+    const v020Idx = written.indexOf("| v0.2.0 | 0.2.0 |");
+    expect(v030Idx).toBeGreaterThan(-1);
+    expect(v020Idx).toBeGreaterThan(v030Idx);
+  });
+
   it("escapes pipes and newlines in data-derived cells so rows cannot break the table", () => {
     const root = emptyProject();
     writeScopeFixture(root, "proposed", "2026-01-04-tricky.xbrief.json", {

@@ -2,7 +2,7 @@ import { GhConfigError, type GhSeams, ghClient, resolveRepo } from "../gh/rest.j
 import { defaultBranch, type GitRunner, isAncestorOf, isGitRepo } from "../git/index.js";
 import { resolvePolicy } from "../policy/index.js";
 import type { DeliveryDisposition, ScopeDoc } from "../types/index.js";
-import { DELIVERY_DISPOSITIONS, scopeKind, withPlan } from "../types/index.js";
+import { DELIVERY_DISPOSITIONS, isImplementableKind, scopeKind, withPlan } from "../types/index.js";
 import { appendAudit } from "../xbrief/audit.js";
 import { findScope, readScope, transitionScope } from "../xbrief/brief-io.js";
 
@@ -114,7 +114,7 @@ export async function scopeComplete(
     return { ok: false, code: 2, message: readResult.message };
   }
   const scope = readResult.scope;
-  const codeBearing = scopeKind(scope) === "story";
+  const codeBearing = isImplementableKind(scopeKind(scope));
 
   // Lifecycle gate: complete is active -> completed (content/state.md). A
   // terminal or not-yet-started scope cannot be completed.

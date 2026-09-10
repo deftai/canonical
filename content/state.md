@@ -37,7 +37,9 @@ xbrief/
                  "status": "pending|completed" } ],
     "references": [ { "uri": "…", "type": "x-xbrief/github-issue|x-xbrief/github-pr|x-xbrief/plan|x-canonical/user-request",
                       "title": "…", "x-canonical/trust": "verified|internal|external" } ],
-    "x-canonical/kind": "story|epic|chore",
+    "x-canonical/kind": "story|epic|chore|milestone|release",
+    "x-canonical/target": "ISO-8601 with Z/offset (required on milestone)",
+    "x-canonical/version": "semver (required on release, e.g. 0.3.0)",
     "x-canonical/dependencies": [ "<other-scope-filename>" ]
   }
 }
@@ -63,7 +65,7 @@ proposed --triage accept--> pending --scope:start--> active --scope:complete--> 
 ```
 
 - ! Transitions only via task verbs: `triage` (decide on candidates), `scope:start` (→ running, transactional), `scope:complete` (terminal success), `scope:stop` (cancel/fail/block/unblock/demote). Batch-accept is fine; start + implement one story at a time per agent.
-- ! `x-canonical/kind: epic` groups; `kind: story` executes. Only stories with ≥1 acceptance item are implementable.
+- ! `x-canonical/kind: epic` groups stories for execution; `kind: story` executes. `milestone` is a dated coordination marker (requires `x-canonical/target`, not implementable). `release` records a shipped version cut (requires `x-canonical/version`, complements CHANGELOG/tag in scm.md). Only stories with ≥1 acceptance item are implementable.
 - ! Completing code-bearing work requires delivery evidence in the scope's plan — folder move alone is not "shipped":
 
 ```json
