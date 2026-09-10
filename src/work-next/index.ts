@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import type { ScopeDoc, ScopeStatus } from "../types/index.js";
 import { PLAN_BRIEF_NAME, scopeDependencies } from "../types/index.js";
 import { listScopes, readScope, xbriefRoot } from "../xbrief/brief-io.js";
@@ -54,6 +54,46 @@ export function workNext(projectRoot: string): WorkNextResult {
   return rankPending(projectRoot);
 }
 
+type SequenceEntryRead =
+  | { readonly ok: true; readonly relPath: string; readonly scope: ScopeDoc }
+  | { readonly ok: false; readonly message: string };
+
+/**
+ * Sequence entries store lifecycle-relative paths. After `scope:defer` the file
+ * may have moved (e.g. pending/ -> deferred/) while the plan sequence still
+ * references the old path -- resolve by filename when the stored path is missing.
+ */
+function readSequenceEntry(projectRoot: string, relPath: string): SequenceEntryRead {
+  const abs = join(projectRoot, relPath);
+  if (existsSync(abs)) {
+    const scopeRead = readScope(abs);
+    if (!scopeRead.ok) {
+      return { ok: false, message: scopeRead.message };
+    }
+    return { ok: true, relPath, scope: scopeRead.scope };
+  }
+  const filename = basename(relPath);
+  const matches = listScopes(projectRoot).filter((s) => s.filename === filename);
+  if (matches.length === 0) {
+    return { ok: false, message: `cannot read ${abs}: ENOENT: no such file or directory` };
+  }
+  if (matches.length > 1) {
+    return {
+      ok: false,
+      message: `${relPath}: ambiguous scope filename '${filename}' across lifecycle folders`,
+    };
+  }
+  const ref = matches[0];
+  if (ref === undefined) {
+    return { ok: false, message: `cannot read ${abs}: ENOENT: no such file or directory` };
+  }
+  const scopeRead = readScope(ref.path);
+  if (!scopeRead.ok) {
+    return { ok: false, message: scopeRead.message };
+  }
+  return { ok: true, relPath: ref.relPath, scope: scopeRead.scope };
+}
+
 function resolveSequence(projectRoot: string, planFile: string, sequence: unknown): WorkNextResult {
   if (!Array.isArray(sequence) || !sequence.every((v) => typeof v === "string")) {
     return {
@@ -62,13 +102,12 @@ function resolveSequence(projectRoot: string, planFile: string, sequence: unknow
     };
   }
   for (const relPath of sequence as readonly string[]) {
-    const abs = join(projectRoot, relPath);
-    const scopeRead = readScope(abs);
-    if (!scopeRead.ok) {
-      return { kind: "error", message: scopeRead.message };
+    const entry = readSequenceEntry(projectRoot, relPath);
+    if (!entry.ok) {
+      return { kind: "error", message: entry.message };
     }
-    if (!NON_PICKABLE_STATUSES.includes(scopeRead.scope.plan.status)) {
-      return { kind: "found", item: toItem(relPath, scopeRead.scope) };
+    if (!NON_PICKABLE_STATUSES.includes(entry.scope.plan.status)) {
+      return { kind: "found", item: toItem(entry.relPath, entry.scope) };
     }
   }
   return { kind: "empty" };

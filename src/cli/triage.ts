@@ -26,6 +26,10 @@ export async function run(argv: string[]): Promise<number> {
     process.stderr.write("canon: triage: missing scope argument\n");
     return 2;
   }
+  if (parsed.flags.defer === true && verbArg !== "accept") {
+    process.stderr.write("canon: triage: --defer is only valid with accept\n");
+    return 2;
+  }
 
   const projectRoot = parsed.values["project-root"] ?? ".";
   const found = findScope(projectRoot, scopeArg);

@@ -77,6 +77,30 @@ describe("workNext", () => {
     }
   });
 
+  it("resolves stale sequence paths after scope:defer moves a scope to deferred/", () => {
+    const root = tempGitRepo();
+    const stalePendingRel = "xbrief/pending/2026-01-01-parked.xbrief.json";
+    writeScopeFixture(root, "deferred", "2026-01-01-parked.xbrief.json", {
+      title: "Parked",
+      status: "approved",
+      created: "2026-01-01T00:00:00.000Z",
+      updated: "2026-01-01T00:00:00.000Z",
+    });
+    const nextRel = writeScopeFixture(root, "pending", "2026-01-02-next.xbrief.json", {
+      title: "Do this next",
+      status: "pending",
+      created: "2026-01-02T00:00:00.000Z",
+      updated: "2026-01-02T00:00:00.000Z",
+    });
+    writePlan(root, { "x-canonical/sequence": [stalePendingRel, nextRel] });
+
+    const result = workNext(root);
+    expect(result.kind).toBe("found");
+    if (result.kind === "found") {
+      expect(result.item.relPath).toBe(nextRel);
+    }
+  });
+
   it("returns empty when every sequence entry is already terminal (does not fall back to pending/)", () => {
     const root = tempGitRepo();
     const doneRel = writeScopeFixture(root, "completed", "2026-01-01-done.xbrief.json", {

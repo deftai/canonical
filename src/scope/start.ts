@@ -1,7 +1,7 @@
 import { currentBranch, defaultBranch, type GitRunner, isDirty, isGitRepo } from "../git/index.js";
 import { resolvePolicy } from "../policy/index.js";
 import { appendAudit } from "../xbrief/audit.js";
-import { findScope, readScope, transitionScope } from "../xbrief/brief-io.js";
+import { findScope, listScopes, readScope, transitionScope } from "../xbrief/brief-io.js";
 
 /**
  * `scope:start` verb (content/canonical-tasks.md #scope:start, content/state.md Lifecycle).
@@ -16,6 +16,8 @@ export interface ScopeStartOptions {
   /** Verify only: must already be active/running with a clean tree. */
   readonly check?: boolean;
   readonly allowDirty?: boolean;
+  /** Reactivating from deferred/approved: override the WIP cap. */
+  readonly force?: boolean;
   readonly now?: Date;
   /** Injectable git seam for tests. */
   readonly runner?: GitRunner;
@@ -97,6 +99,26 @@ export function scopeStart(projectRoot: string, opts: ScopeStartOptions): ScopeS
         code: 1,
         message: `on default branch '${def}' and policy.allowDirectCommitsToDefault is false`,
       };
+    }
+  }
+
+  if (status === "approved") {
+    const wip = listScopes(projectRoot).filter(
+      (s) => s.folder === "pending" || s.folder === "active",
+    ).length;
+    if (wip >= policy.wipCap) {
+      if (opts.force !== true) {
+        return {
+          ok: false,
+          code: 1,
+          message: `WIP cap reached: ${wip}/${policy.wipCap} scopes in pending+active -- use --force to override`,
+        };
+      }
+      appendAudit(
+        projectRoot,
+        { kind: "wip-cap-override", scope: ref.relPath, wip, wipCap: policy.wipCap },
+        now,
+      );
     }
   }
 
