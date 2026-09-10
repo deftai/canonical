@@ -98,6 +98,12 @@ describe("emitted documents pass the real 0.8 JSON Schema", () => {
     expect(coreFindings(doc)).toEqual([]);
   });
 
+  it("deferred scope with approved status passes schema and profile checks", () => {
+    const doc = scopeFixture({ status: "approved" });
+    expectSchemaValid(doc);
+    expect(coreFindings(doc)).toEqual([]);
+  });
+
   it("init PROJECT skeleton", () => {
     const doc = buildProjectSkeleton("my-project");
     expectSchemaValid(doc);

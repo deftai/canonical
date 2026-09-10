@@ -68,11 +68,11 @@ export function scopeStart(projectRoot: string, opts: ScopeStartOptions): ScopeS
   }
 
   const status = scope.plan.status;
-  if (status !== "proposed" && status !== "pending") {
+  if (status !== "proposed" && status !== "pending" && status !== "approved") {
     return {
       ok: false,
       code: 1,
-      message: `cannot start scope with status '${status}' (must be proposed or pending)`,
+      message: `cannot start scope with status '${status}' (must be proposed, pending, or approved)`,
     };
   }
 
@@ -101,11 +101,12 @@ export function scopeStart(projectRoot: string, opts: ScopeStartOptions): ScopeS
   }
 
   let current = scope;
-  if (status === "proposed") {
+  if (status === "proposed" || status === "approved") {
+    const fromLabel = status === "proposed" ? "proposed" : "approved";
     ref = transitionScope(projectRoot, ref, current, "pending", now);
     appendAudit(
       projectRoot,
-      { kind: "scope-start", transition: "proposed->pending", scope: ref.relPath },
+      { kind: "scope-start", transition: `${fromLabel}->pending`, scope: ref.relPath },
       now,
     );
     const reread = readScope(ref.path);

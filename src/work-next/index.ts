@@ -17,6 +17,8 @@ import { listScopes, readScope, xbriefRoot } from "../xbrief/brief-io.js";
  */
 
 const TERMINAL_STATUSES: readonly ScopeStatus[] = ["completed", "failed", "cancelled"];
+/** Parked scopes are intentionally out of the active queue. */
+const NON_PICKABLE_STATUSES: readonly ScopeStatus[] = [...TERMINAL_STATUSES, "approved"];
 
 export interface WorkNextItem {
   readonly relPath: string;
@@ -65,7 +67,7 @@ function resolveSequence(projectRoot: string, planFile: string, sequence: unknow
     if (!scopeRead.ok) {
       return { kind: "error", message: scopeRead.message };
     }
-    if (!TERMINAL_STATUSES.includes(scopeRead.scope.plan.status)) {
+    if (!NON_PICKABLE_STATUSES.includes(scopeRead.scope.plan.status)) {
       return { kind: "found", item: toItem(relPath, scopeRead.scope) };
     }
   }

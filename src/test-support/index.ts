@@ -60,9 +60,9 @@ export function tempGitRepo(opts: TempRepoOptions = {}): string {
   return root;
 }
 
-/** Create xbrief/ with the five lifecycle dirs and a minimal PROJECT.xbrief.json. */
+/** Create xbrief/ with the six lifecycle dirs and a minimal PROJECT.xbrief.json. */
 export function scaffoldXbrief(root: string): void {
-  for (const folder of ["proposed", "pending", "active", "completed", "cancelled"]) {
+  for (const folder of ["proposed", "deferred", "pending", "active", "completed", "cancelled"]) {
     mkdirSync(join(root, "xbrief", folder), { recursive: true });
     writeFileSync(join(root, "xbrief", folder, ".gitkeep"), "");
   }

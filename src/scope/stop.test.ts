@@ -131,6 +131,28 @@ describe("scopeStop", () => {
     expect(result).toMatchObject({ ok: true, status: "pending" });
   });
 
+  it("defer from pending moves to deferred/approved", () => {
+    const root = tempGitRepo();
+    writeScopeFixture(root, "pending", "2026-01-01-foo.xbrief.json", status({ status: "pending" }));
+
+    const result = scopeStop(root, { scope: "2026-01-01-foo.xbrief.json", mode: "defer" });
+
+    expect(result).toMatchObject({ ok: true, status: "approved" });
+    const written = JSON.parse(
+      readFileSync(join(root, "xbrief", "deferred", "2026-01-01-foo.xbrief.json"), "utf8"),
+    );
+    expect(written.plan.status).toBe("approved");
+  });
+
+  it("defer from approved is illegal", () => {
+    const root = tempGitRepo();
+    writeScopeFixture(root, "deferred", "2026-01-01-foo.xbrief.json", status({ status: "approved" }));
+
+    const result = scopeStop(root, { scope: "2026-01-01-foo.xbrief.json", mode: "defer" });
+
+    expect(result).toMatchObject({ ok: false, code: 1 });
+  });
+
   it("demote from proposed is illegal", () => {
     const root = tempGitRepo();
     writeScopeFixture(

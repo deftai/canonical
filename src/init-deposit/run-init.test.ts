@@ -70,7 +70,7 @@ describe("runInit", () => {
     expect(gitignore).toContain("xbrief/*.lock");
 
     // xbrief/ scaffold
-    for (const folder of ["proposed", "pending", "active", "completed", "cancelled"]) {
+    for (const folder of ["proposed", "deferred", "pending", "active", "completed", "cancelled"]) {
       expect(existsSync(join(root, "xbrief", folder, ".gitkeep"))).toBe(true);
     }
     const project = JSON.parse(readFileSync(join(root, "xbrief", "PROJECT.xbrief.json"), "utf8"));

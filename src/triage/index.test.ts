@@ -45,6 +45,23 @@ describe("triageDecide", () => {
     );
   });
 
+  it("accept --defer promotes proposed -> deferred/approved without WIP-cap check", () => {
+    const root = tempGitRepo();
+    writeWipCapPolicy(root, 0);
+    writeScopeFixture(root, "proposed", "2026-01-01-foo.xbrief.json");
+
+    const result = triageDecide(root, {
+      verb: "accept",
+      scope: "2026-01-01-foo.xbrief.json",
+      defer: true,
+    });
+
+    expect(result).toMatchObject({ ok: true, status: "approved" });
+    expect(
+      readFileSync(join(root, "xbrief", "deferred", "2026-01-01-foo.xbrief.json"), "utf8"),
+    ).toContain('"status": "approved"');
+  });
+
   it("accept over the WIP cap without --force is a violation (exit 1)", () => {
     const root = tempGitRepo();
     writeWipCapPolicy(root, 1);

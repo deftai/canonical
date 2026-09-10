@@ -54,6 +54,29 @@ describe("workNext", () => {
     }
   });
 
+  it("skips deferred/approved scopes in the sequence and picks the next pickable entry", () => {
+    const root = tempGitRepo();
+    const parkedRel = writeScopeFixture(root, "deferred", "2026-01-01-parked.xbrief.json", {
+      title: "Parked",
+      status: "approved",
+      created: "2026-01-01T00:00:00.000Z",
+      updated: "2026-01-01T00:00:00.000Z",
+    });
+    const nextRel = writeScopeFixture(root, "pending", "2026-01-02-next.xbrief.json", {
+      title: "Do this next",
+      status: "pending",
+      created: "2026-01-02T00:00:00.000Z",
+      updated: "2026-01-02T00:00:00.000Z",
+    });
+    writePlan(root, { "x-canonical/sequence": [parkedRel, nextRel] });
+
+    const result = workNext(root);
+    expect(result.kind).toBe("found");
+    if (result.kind === "found") {
+      expect(result.item.relPath).toBe(nextRel);
+    }
+  });
+
   it("returns empty when every sequence entry is already terminal (does not fall back to pending/)", () => {
     const root = tempGitRepo();
     const doneRel = writeScopeFixture(root, "completed", "2026-01-01-done.xbrief.json", {

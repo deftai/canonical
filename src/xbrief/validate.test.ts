@@ -148,15 +148,16 @@ describe("validateState", () => {
   it("accepts every legal folder/status pairing", () => {
     const root = tempGitRepo();
     writeScopeFixture(root, "proposed", "2026-01-01-a.xbrief.json", statusPlan("proposed"));
-    writeScopeFixture(root, "pending", "2026-01-01-b.xbrief.json", statusPlan("pending"));
-    writeScopeFixture(root, "active", "2026-01-01-c.xbrief.json", statusPlan("running"));
-    writeScopeFixture(root, "active", "2026-01-01-d.xbrief.json", statusPlan("blocked"));
-    writeScopeFixture(root, "completed", "2026-01-01-e.xbrief.json", statusPlan("completed"));
-    writeScopeFixture(root, "completed", "2026-01-01-f.xbrief.json", statusPlan("failed"));
-    writeScopeFixture(root, "cancelled", "2026-01-01-g.xbrief.json", statusPlan("cancelled"));
+    writeScopeFixture(root, "deferred", "2026-01-01-b.xbrief.json", statusPlan("approved"));
+    writeScopeFixture(root, "pending", "2026-01-01-c.xbrief.json", statusPlan("pending"));
+    writeScopeFixture(root, "active", "2026-01-01-d.xbrief.json", statusPlan("running"));
+    writeScopeFixture(root, "active", "2026-01-01-e.xbrief.json", statusPlan("blocked"));
+    writeScopeFixture(root, "completed", "2026-01-01-f.xbrief.json", statusPlan("completed"));
+    writeScopeFixture(root, "completed", "2026-01-01-g.xbrief.json", statusPlan("failed"));
+    writeScopeFixture(root, "cancelled", "2026-01-01-h.xbrief.json", statusPlan("cancelled"));
     const report = validateState(root);
     expect(report.ok).toBe(true);
-    expect(report.scanned).toBe(8);
+    expect(report.scanned).toBe(9);
   });
 
   it("flags a missing/non-string title", () => {

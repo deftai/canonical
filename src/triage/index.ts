@@ -32,6 +32,8 @@ export interface TriageOptions {
   readonly note?: string;
   /** accept: override the WIP cap. */
   readonly force?: boolean;
+  /** accept: promote to deferred/ (status approved) instead of pending/. */
+  readonly defer?: boolean;
   /**
    * duplicate: URI of the winning scope/origin this candidate duplicates.
    * Recorded as a `{type: "x-xbrief/plan", "x-canonical/trust": "internal"}` reference.
@@ -50,12 +52,13 @@ export type TriageResult =
     }
   | { readonly ok: false; readonly code: 1 | 2; readonly message: string };
 
-const RESULT_STATUS: Readonly<Record<TriageVerb, "pending" | "cancelled" | "proposed">> = {
-  accept: "pending",
-  reject: "cancelled",
-  defer: "proposed",
-  duplicate: "cancelled",
-};
+const RESULT_STATUS: Readonly<Record<TriageVerb, "pending" | "approved" | "cancelled" | "proposed">> =
+  {
+    accept: "pending",
+    reject: "cancelled",
+    defer: "proposed",
+    duplicate: "cancelled",
+  };
 
 function appendNote(existing: string | undefined, note: string): string {
   return existing !== undefined && existing !== "" ? `${existing}\n${note}` : note;
@@ -94,29 +97,32 @@ export function triageDecide(projectRoot: string, opts: TriageOptions): TriageRe
 
   switch (opts.verb) {
     case "accept": {
-      const policy = resolvePolicy(projectRoot);
-      if ("error" in policy) {
-        return { ok: false, code: 2, message: policy.error };
-      }
-      const wip = listScopes(projectRoot).filter(
-        (s) => s.folder === "pending" || s.folder === "active",
-      ).length;
-      if (wip >= policy.wipCap) {
-        if (opts.force !== true) {
-          return {
-            ok: false,
-            code: 1,
-            message: `WIP cap reached: ${wip}/${policy.wipCap} scopes in pending+active -- use --force to override`,
-          };
+      const targetStatus = opts.defer === true ? "approved" : "pending";
+      if (targetStatus === "pending") {
+        const policy = resolvePolicy(projectRoot);
+        if ("error" in policy) {
+          return { ok: false, code: 2, message: policy.error };
         }
-        wipCapOverride = true;
-        appendAudit(
-          projectRoot,
-          { kind: "wip-cap-override", scope: ref.relPath, wip, wipCap: policy.wipCap },
-          now,
-        );
+        const wip = listScopes(projectRoot).filter(
+          (s) => s.folder === "pending" || s.folder === "active",
+        ).length;
+        if (wip >= policy.wipCap) {
+          if (opts.force !== true) {
+            return {
+              ok: false,
+              code: 1,
+              message: `WIP cap reached: ${wip}/${policy.wipCap} scopes in pending+active -- use --force to override`,
+            };
+          }
+          wipCapOverride = true;
+          appendAudit(
+            projectRoot,
+            { kind: "wip-cap-override", scope: ref.relPath, wip, wipCap: policy.wipCap },
+            now,
+          );
+        }
       }
-      transitionScope(projectRoot, ref, scope, "pending", now);
+      transitionScope(projectRoot, ref, scope, targetStatus, now);
       break;
     }
     case "reject": {
@@ -165,11 +171,14 @@ export function triageDecide(projectRoot: string, opts: TriageOptions): TriageRe
     now,
   );
 
+  const resultStatus =
+    opts.verb === "accept" && opts.defer === true ? "approved" : RESULT_STATUS[opts.verb];
+
   return {
     ok: true,
     verb: opts.verb,
     scope: ref.relPath,
-    status: RESULT_STATUS[opts.verb],
+    status: resultStatus,
     ...(wipCapOverride ? { wipCapOverride: true } : {}),
   };
 }

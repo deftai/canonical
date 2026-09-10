@@ -35,6 +35,24 @@ describe("scopeStart", () => {
     expect(audit).toContain("pending->running");
   });
 
+  it("reactivates from deferred/approved via pending/ to active/running", () => {
+    const root = tempGitRepo();
+    git(root, "checkout", "-q", "-b", "feature/foo");
+    writeScopeFixture(root, "deferred", "2026-01-01-foo.xbrief.json", {
+      status: "approved",
+      created: "2026-01-01T00:00:00.000Z",
+      updated: "2026-01-01T00:00:00.000Z",
+    });
+    commitAll(root);
+
+    const result = scopeStart(root, { scope: "2026-01-01-foo.xbrief.json" });
+
+    expect(result).toMatchObject({ ok: true, status: "running" });
+    const audit = readFileSync(join(root, "xbrief", "audit.jsonl"), "utf8");
+    expect(audit).toContain("approved->pending");
+    expect(audit).toContain("pending->running");
+  });
+
   it("starts directly from pending/ without a promotion step", () => {
     const root = tempGitRepo();
     git(root, "checkout", "-q", "-b", "feature/foo");
