@@ -1,54 +1,61 @@
 {
-  "xBRIEFInfo": {
-    "version": "0.8"
-  },
   "plan": {
-    "title": "Plain-English consent UX and attribution-aware feedback",
-    "status": "active",
     "created": "2026-08-31T00:00:00.000Z",
-    "updated": "2026-08-31T12:00:00.000Z",
     "items": [
       {
         "id": "ac1",
-        "status": "pending",
+        "status": "completed",
         "title": "feedback.md / canonical.md: user dialogue vs agent actions; no task recipes to humans"
       },
       {
         "id": "ac2",
-        "status": "pending",
+        "status": "completed",
         "title": "Tri-state metricsMode: disallowed | anonymous | attributed with optional name/email/mobile + reconfirm"
       },
       {
         "id": "ac3",
-        "status": "pending",
+        "status": "completed",
         "title": "Per-submit feedback confirm (anon vs associated); remove durable submissions disclosure ceremony from AI script"
       },
       {
         "id": "ac4",
-        "status": "pending",
+        "status": "completed",
         "title": "Opt-out clears local identity, calls server retain-PII opt-out, rotates install credentials"
       },
       {
         "id": "ac5",
-        "status": "pending",
-        "title": "Orient/status expose clear mode; consent version bump; tests cover R1\u2013R10 gaps"
+        "status": "completed",
+        "title": "Orient/status expose clear mode; consent version bump; tests cover R1–R10 gaps"
       }
     ],
     "narratives": {
+      "Acceptance": "Pack scripts match R1–R10; metricsMode persisted; feedback works when disallowed; attributed confirms association language; opt-out rotates installId; no contact in event payloads; tests green; CHANGELOG Unreleased updated; staging smoke satisfied.",
       "Description": "Rewrite first-session consent as a plain-English AI conversation (Disallow / Anonymous / Attributed), persist attribution for join via install_id, allow anonymous feedback even when metrics are disallowed with per-submit confirmation only, and rotate install id on opt-out without scrubbing historical server attribution.",
-      "Acceptance": "Pack scripts match R1\u2013R10; metricsMode persisted; feedback works when disallowed; attributed confirms association language; opt-out rotates installId; no contact in event payloads; task check green; CHANGELOG Unreleased updated."
+      "Origin": "GitHub issue #10 (split passive metrics consent from submissions, optional identity). UX superseded by plain-English Disallow/Anonymous/Attributed + per-submit feedback; shipped on main via PRs #11, #13, #14."
     },
     "references": [
       {
-        "uri": "https://github.com/deftai/canonical/issues/10",
-        "type": "x-xbrief/github-issue",
         "title": "Split consent (superseded UX)",
+        "type": "x-xbrief/github-issue",
+        "uri": "https://github.com/deftai/canonical/issues/10",
         "x-canonical/trust": "external"
       }
     ],
-    "x-canonical/kind": "story",
+    "status": "completed",
+    "title": "Plain-English consent UX and attribution-aware feedback",
+    "updated": "2026-09-10T15:10:44.467Z",
+    "x-canonical/delivery": {
+      "branch": "main",
+      "disposition": "delivered",
+      "pr": "https://github.com/deftai/canonical/pull/14",
+      "sha": "2f5cb02"
+    },
     "x-canonical/dependsOn": [
       "endpoint:consent-opt-out-retain-attribution-row"
-    ]
+    ],
+    "x-canonical/kind": "story"
+  },
+  "xBRIEFInfo": {
+    "version": "0.8"
   }
 }
