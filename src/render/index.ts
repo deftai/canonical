@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { atomicWriteText } from "../fs/contained-write.js";
+import { compareSemverDesc } from "../semver/index.js";
 import type { GateExitCode, LifecycleFolder, ScopeDoc } from "../types/index.js";
 import {
   LIFECYCLE_FOLDERS,
@@ -119,17 +120,19 @@ function releaseVersion(scope: ScopeDoc): string {
   return typeof version === "string" ? version : "";
 }
 
-function compareSemverDesc(a: string, b: string): number {
-  const strip = (v: string) => v.replace(/^v/, "").split("-")[0]?.split(".").map(Number) ?? [];
-  const av = strip(a);
-  const bv = strip(b);
-  for (let i = 0; i < 3; i += 1) {
-    const diff = (bv[i] ?? 0) - (av[i] ?? 0);
-    if (diff !== 0) {
-      return diff;
-    }
+function compareMilestoneTargetAsc(a: string, b: string): number {
+  const ta = Date.parse(a);
+  const tb = Date.parse(b);
+  if (Number.isNaN(ta) && Number.isNaN(tb)) {
+    return a.localeCompare(b);
   }
-  return b.localeCompare(a);
+  if (Number.isNaN(ta)) {
+    return 1;
+  }
+  if (Number.isNaN(tb)) {
+    return -1;
+  }
+  return ta - tb;
 }
 
 function buildKindSection(
@@ -194,7 +197,7 @@ function buildRoadmapContent(projectRoot: string): string {
       "Milestones",
       ["Title", "Target", "Status", "Dependencies"],
       milestones,
-      (a, b) => milestoneTarget(a.scope).localeCompare(milestoneTarget(b.scope)),
+      (a, b) => compareMilestoneTargetAsc(milestoneTarget(a.scope), milestoneTarget(b.scope)),
     ),
   ];
   for (const folder of LIFECYCLE_FOLDERS) {

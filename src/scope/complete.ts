@@ -1,6 +1,7 @@
 import { GhConfigError, type GhSeams, ghClient, resolveRepo } from "../gh/rest.js";
 import { defaultBranch, type GitRunner, isAncestorOf, isGitRepo } from "../git/index.js";
 import { resolvePolicy } from "../policy/index.js";
+import { isValidCanonicalSemver } from "../semver/index.js";
 import type { DeliveryDisposition, ScopeDoc } from "../types/index.js";
 import { DELIVERY_DISPOSITIONS, isImplementableKind, scopeKind, withPlan } from "../types/index.js";
 import { appendAudit } from "../xbrief/audit.js";
@@ -40,6 +41,13 @@ export type ScopeCompleteResult =
   | { readonly ok: false; readonly code: 1 | 2; readonly message: string };
 
 const ISSUE_NUMBER_RE = /\/issues\/(\d+)(?:[/?#]|$)/;
+
+/** xBRIEF dateTime: ISO-8601 with an explicit Z or numeric offset (spec $defs/dateTime). */
+const DATE_TIME_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
+
+function isDateTime(value: unknown): value is string {
+  return typeof value === "string" && DATE_TIME_RE.test(value) && !Number.isNaN(Date.parse(value));
+}
 
 async function tryCloseIssue(
   projectRoot: string,
@@ -114,7 +122,31 @@ export async function scopeComplete(
     return { ok: false, code: 2, message: readResult.message };
   }
   const scope = readResult.scope;
-  const codeBearing = isImplementableKind(scopeKind(scope));
+  const kind = scopeKind(scope);
+  const codeBearing = isImplementableKind(kind);
+
+  if (kind === "milestone") {
+    const target = scope.plan["x-canonical/target"];
+    if (!isDateTime(target)) {
+      return {
+        ok: false,
+        code: 1,
+        message:
+          'cannot complete milestone scope: plan["x-canonical/target"] is required (ISO-8601 with Z/offset)',
+      };
+    }
+  }
+  if (kind === "release") {
+    const version = scope.plan["x-canonical/version"];
+    if (typeof version !== "string" || !isValidCanonicalSemver(version)) {
+      return {
+        ok: false,
+        code: 1,
+        message:
+          'cannot complete release scope: plan["x-canonical/version"] is required (semver matching the git tag in scm.md)',
+      };
+    }
+  }
 
   // Lifecycle gate: complete is active -> completed (content/state.md). A
   // terminal or not-yet-started scope cannot be completed.

@@ -226,6 +226,33 @@ describe("validateState", () => {
     expect(findingCodes(report)).toContain("bad-version");
   });
 
+  it("accepts semver prerelease and build metadata on release version", () => {
+    const root = tempGitRepo();
+    writeScopeFixture(root, "proposed", "2026-01-15-rc.xbrief.json", {
+      "x-canonical/kind": "release",
+      "x-canonical/version": "1.0.0-alpha-1",
+      items: [],
+    });
+    writeScopeFixture(root, "proposed", "2026-01-16-build.xbrief.json", {
+      "x-canonical/kind": "release",
+      "x-canonical/version": "1.0.0+build.1",
+      items: [],
+    });
+    const report = validateState(root);
+    expect(report.ok).toBe(true);
+  });
+
+  it("rejects release versions with leading-zero numeric parts", () => {
+    const root = tempGitRepo();
+    writeScopeFixture(root, "proposed", "2026-01-15-leading-zero.xbrief.json", {
+      "x-canonical/kind": "release",
+      "x-canonical/version": "01.02.03",
+      items: [],
+    });
+    const report = validateState(root);
+    expect(findingCodes(report)).toContain("bad-version");
+  });
+
   it("flags a missing plan object", () => {
     const root = tempGitRepo();
     writeScopeFixture(

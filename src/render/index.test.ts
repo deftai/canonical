@@ -80,6 +80,54 @@ describe("renderRoadmap: golden output", () => {
     expect(written).toContain("| First story | blocked | - | - |");
   });
 
+  it("sorts milestones by instant, not lexicographic string order", () => {
+    const root = emptyProject();
+    writeScopeFixture(root, "proposed", "2026-03-01-later.xbrief.json", {
+      title: "Later milestone",
+      "x-canonical/kind": "milestone",
+      "x-canonical/target": "2026-06-02T09:00:00.000-05:00",
+      items: [],
+    });
+    writeScopeFixture(root, "proposed", "2026-03-02-earlier.xbrief.json", {
+      title: "Earlier milestone",
+      "x-canonical/kind": "milestone",
+      "x-canonical/target": "2026-06-01T00:00:00.000Z",
+      items: [],
+    });
+
+    renderRoadmap(root);
+    const written = readFileSync(join(root, "ROADMAP.md"), "utf8");
+    const earlierIdx = written.indexOf("| Earlier milestone |");
+    const laterIdx = written.indexOf("| Later milestone |");
+    expect(earlierIdx).toBeGreaterThan(-1);
+    expect(laterIdx).toBeGreaterThan(earlierIdx);
+  });
+
+  it("sorts releases with release versions above matching prereleases", () => {
+    const root = emptyProject();
+    writeScopeFixture(root, "completed", "2026-01-10-v100rc.xbrief.json", {
+      title: "v1.0.0-rc.1",
+      status: "completed",
+      "x-canonical/kind": "release",
+      "x-canonical/version": "1.0.0-rc.1",
+      items: [],
+    });
+    writeScopeFixture(root, "completed", "2026-01-20-v100.xbrief.json", {
+      title: "v1.0.0",
+      status: "completed",
+      "x-canonical/kind": "release",
+      "x-canonical/version": "1.0.0",
+      items: [],
+    });
+
+    renderRoadmap(root);
+    const written = readFileSync(join(root, "ROADMAP.md"), "utf8");
+    const releaseIdx = written.indexOf("| v1.0.0 | 1.0.0 |");
+    const rcIdx = written.indexOf("| v1.0.0-rc.1 | 1.0.0-rc.1 |");
+    expect(releaseIdx).toBeGreaterThan(-1);
+    expect(rcIdx).toBeGreaterThan(releaseIdx);
+  });
+
   it("surfaces Milestones and Releases sections for kind-specific scopes", () => {
     const root = emptyProject();
     writeScopeFixture(root, "proposed", "2026-03-01-launch.xbrief.json", {

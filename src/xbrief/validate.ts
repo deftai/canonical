@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { isValidCanonicalSemver } from "../semver/index.js";
 import type {
   LifecycleFolder,
   ScopeDoc,
@@ -336,9 +337,6 @@ function validateCoreReferences(
   });
 }
 
-/** Semver for release scopes (optional `v` prefix; aligns with scm.md tag `vX.Y.Z`). */
-const SEMVER_RE = /^v?\d+\.\d+\.\d+(-[a-zA-Z0-9.]+)?$/;
-
 /** Kind-specific profile rules (milestone target date, release version). */
 function validateKindFields(
   file: string,
@@ -357,7 +355,7 @@ function validateKindFields(
 
   const version = plan["x-canonical/version"];
   if (version !== undefined) {
-    if (typeof version !== "string" || !SEMVER_RE.test(version)) {
+    if (typeof version !== "string" || !isValidCanonicalSemver(version)) {
       findings.push({
         file,
         code: "bad-version",
