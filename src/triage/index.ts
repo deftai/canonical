@@ -52,13 +52,14 @@ export type TriageResult =
     }
   | { readonly ok: false; readonly code: 1 | 2; readonly message: string };
 
-const RESULT_STATUS: Readonly<Record<TriageVerb, "pending" | "approved" | "cancelled" | "proposed">> =
-  {
-    accept: "pending",
-    reject: "cancelled",
-    defer: "proposed",
-    duplicate: "cancelled",
-  };
+const RESULT_STATUS: Readonly<
+  Record<TriageVerb, "pending" | "approved" | "cancelled" | "proposed">
+> = {
+  accept: "pending",
+  reject: "cancelled",
+  defer: "proposed",
+  duplicate: "cancelled",
+};
 
 function appendNote(existing: string | undefined, note: string): string {
   return existing !== undefined && existing !== "" ? `${existing}\n${note}` : note;

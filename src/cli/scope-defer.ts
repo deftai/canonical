@@ -20,7 +20,11 @@ export function run(argv: string[]): number {
   }
 
   const projectRoot = parsed.values["project-root"] ?? ".";
-  const result = scopeStop(projectRoot, { scope: scopeArg, mode: "defer", note: parsed.values.note });
+  const result = scopeStop(projectRoot, {
+    scope: scopeArg,
+    mode: "defer",
+    note: parsed.values.note,
+  });
 
   if (!result.ok) {
     process.stderr.write(`canon: scope-defer: ${result.message}\n`);

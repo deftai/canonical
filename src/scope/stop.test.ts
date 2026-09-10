@@ -146,7 +146,12 @@ describe("scopeStop", () => {
 
   it("defer from approved is illegal", () => {
     const root = tempGitRepo();
-    writeScopeFixture(root, "deferred", "2026-01-01-foo.xbrief.json", status({ status: "approved" }));
+    writeScopeFixture(
+      root,
+      "deferred",
+      "2026-01-01-foo.xbrief.json",
+      status({ status: "approved" }),
+    );
 
     const result = scopeStop(root, { scope: "2026-01-01-foo.xbrief.json", mode: "defer" });
 
