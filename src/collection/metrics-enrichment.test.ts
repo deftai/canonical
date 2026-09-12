@@ -96,15 +96,19 @@ describe("metrics enrichment golden payloads (#9)", () => {
   });
 
   it("check_pass includes coverage dimensions when summary exists", async () => {
-    const { mkdirSync, writeFileSync } = await import("node:fs");
+    const { mkdirSync, utimesSync, writeFileSync } = await import("node:fs");
     const { join } = await import("node:path");
     const { run: runCheck } = await import("../cli/check.js");
     const root = optInRoot();
     mkdirSync(join(root, "coverage"), { recursive: true });
+    const coveragePath = join(root, "coverage", "coverage-summary.json");
     writeFileSync(
-      join(root, "coverage", "coverage-summary.json"),
+      coveragePath,
       `${JSON.stringify({ total: { lines: { pct: 88 }, branches: { pct: 80 } } })}\n`,
     );
+    // Artifact must look like it was produced during this check (mtime >= check start).
+    const fresh = (Date.now() + 60_000) / 1000;
+    utimesSync(coveragePath, fresh, fresh);
     writeFileSync(
       join(root, "xbrief", "PROJECT.xbrief.json"),
       `${JSON.stringify({

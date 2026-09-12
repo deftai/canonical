@@ -48,13 +48,15 @@ export async function run(argv: string[]): Promise<number> {
   if (snapshot.code === 0) {
     await softEmitUsage(projectRoot, "orient_ok");
     if (shouldEmitInventory(projectRoot)) {
-      await softEmitUsage(
+      const emitted = await softEmitUsage(
         projectRoot,
         "xbrief_inventory",
         1,
         xbriefInventoryDimensions(projectRoot),
       );
-      markInventoryEmitted(projectRoot);
+      if (emitted) {
+        markInventoryEmitted(projectRoot);
+      }
     }
   }
   return snapshot.code;
