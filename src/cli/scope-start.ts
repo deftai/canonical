@@ -4,7 +4,7 @@ import { scopeStartDimensions, softEmitUsage } from "../collection/index.js";
 import { scopeStart } from "../scope/index.js";
 import { findScope, readScope } from "../xbrief/brief-io.js";
 
-export function run(argv: string[]): number {
+export async function run(argv: string[]): Promise<number> {
   const parsed = parseArgs(argv, {
     valueFlags: ["project-root"],
     boolFlags: ["json", "check", "allow-dirty"],
@@ -52,7 +52,7 @@ export function run(argv: string[]): number {
     );
   }
   if (result.checked !== true && scopeBefore?.ok === true) {
-    void softEmitUsage(
+    await softEmitUsage(
       projectRoot,
       "xbrief_scope_start",
       1,

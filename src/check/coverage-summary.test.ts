@@ -34,4 +34,14 @@ describe("coverage-summary (#9)", () => {
     expect(readCoverageSummary(root)).toBeUndefined();
     expect(coverageCheckDimensions(root)).toBeUndefined();
   });
+
+  it("omits coverage artifacts older than notBeforeMs", () => {
+    const root = tempDir("canon-cov-stale-");
+    mkdirSync(join(root, "coverage"), { recursive: true });
+    const file = join(root, "coverage/coverage-summary.json");
+    writeFileSync(file, JSON.stringify({ total: { lines: { pct: 88 }, branches: { pct: 70 } } }));
+    const past = Date.now() + 60_000;
+    expect(readCoverageSummary(root, { notBeforeMs: past })).toBeUndefined();
+    expect(coverageCheckDimensions(root, { notBeforeMs: past })).toBeUndefined();
+  });
 });

@@ -24,26 +24,26 @@ function commitAll(root: string): void {
   git(root, "commit", "-q", "-m", "fixture");
 }
 
-describe("canon scope:start", () => {
-  it("too many positional args is an arg error (exit 2)", () => {
+describe("canon scope:start", async () => {
+  it("too many positional args is an arg error (exit 2)", async () => {
     const root = tempGitRepo();
-    const code = run(["a.json", "b.json", "--project-root", root]);
+    const code = await run(["a.json", "b.json", "--project-root", root]);
     expect(code).toBe(2);
   });
 
-  it("missing scope argument is an arg error (exit 2)", () => {
+  it("missing scope argument is an arg error (exit 2)", async () => {
     const root = tempGitRepo();
-    const code = run(["--project-root", root]);
+    const code = await run(["--project-root", root]);
     expect(code).toBe(2);
   });
 
-  it("happy path returns 0 and --json emits sorted snake_case", () => {
+  it("happy path returns 0 and --json emits sorted snake_case", async () => {
     const root = tempGitRepo();
     git(root, "checkout", "-q", "-b", "feature/foo");
     writeScopeFixture(root, "proposed", "2026-01-01-foo.json");
     commitAll(root);
 
-    const code = run(["2026-01-01-foo.json", "--project-root", root, "--json"]);
+    const code = await run(["2026-01-01-foo.json", "--project-root", root, "--json"]);
 
     expect(code).toBe(0);
     const printed = (outSpy.mock.calls[0]?.[0] as string) ?? "";
@@ -52,7 +52,7 @@ describe("canon scope:start", () => {
     expect(Object.keys(parsed)).toEqual([...Object.keys(parsed)].sort());
   });
 
-  it("gate failure (default branch) returns 1", () => {
+  it("gate failure (default branch) returns 1", async () => {
     const root = tempGitRepo();
     writeScopeFixture(root, "pending", "2026-01-01-foo.json", {
       plan: {
@@ -63,7 +63,7 @@ describe("canon scope:start", () => {
     });
     commitAll(root);
 
-    const code = run(["2026-01-01-foo.json", "--project-root", root]);
+    const code = await run(["2026-01-01-foo.json", "--project-root", root]);
 
     expect(code).toBe(1);
   });

@@ -4,7 +4,7 @@ import { softEmitUsage, triageDimensions } from "../collection/index.js";
 import { isTriageVerb, triageDecide } from "../triage/index.js";
 import { findScope, readScope } from "../xbrief/brief-io.js";
 
-export function run(argv: string[]): number {
+export async function run(argv: string[]): Promise<number> {
   const parsed = parseArgs(argv, {
     valueFlags: ["project-root", "note"],
     boolFlags: ["json", "force"],
@@ -62,7 +62,7 @@ export function run(argv: string[]): number {
   } else {
     process.stdout.write(`${result.verb}: ${result.scope} -> ${result.status}\n`);
   }
-  void softEmitUsage(
+  await softEmitUsage(
     projectRoot,
     "xbrief_triage",
     1,

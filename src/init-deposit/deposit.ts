@@ -136,6 +136,7 @@ const GITIGNORE_BASELINE = [
   ".canonical/cache/",
   ".canonical/collection.json",
   ".canonical/collection-session.json",
+  ".canonical/collection-inventory.json",
   "xbrief/*.lock",
 ] as const;
 

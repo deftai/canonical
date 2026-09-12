@@ -4,19 +4,31 @@ import {
   buildSessionSummaryDimensions,
   bumpAgentTurn,
   clearSession,
+  markInventoryEmitted,
   readSession,
   recordCheckRun,
   recordScopeCompleted,
   recordScopeCreated,
   shouldEmitInventory,
-  writeSession,
 } from "./session-state.js";
+import { writeMetricsMirror } from "./storage.js";
 
 afterAll(() => cleanupTempDirs());
 
+function grantUsage(root: string): void {
+  writeMetricsMirror(root, {
+    decision: "active",
+    scopes: ["usage"],
+    consentVersion: "canonical-2026-09-b",
+    decidedAt: "2026-08-01T00:00:00.000Z",
+    expiresAt: Date.now() + 86_400_000,
+  });
+}
+
 describe("session-state (#9)", () => {
-  it("persists and builds session_summary dimensions", () => {
+  it("persists and builds session_summary dimensions when usage consented", () => {
     const root = tempDir("canon-session-");
+    grantUsage(root);
     bumpAgentTurn(root);
     bumpAgentTurn(root);
     recordScopeCreated(root);
@@ -33,29 +45,31 @@ describe("session-state (#9)", () => {
     });
   });
 
-  it("clearSession removes persisted counters", () => {
-    const root = tempDir("canon-session-clear-");
-    bumpAgentTurn(root);
-    expect(readSession(root)).toBeDefined();
-    clearSession(root);
+  it("does not persist counters before usage consent", () => {
+    const root = tempDir("canon-session-noconsent-");
+    expect(bumpAgentTurn(root)).toBeUndefined();
+    expect(recordScopeCreated(root)).toBeUndefined();
     expect(readSession(root)).toBeUndefined();
     expect(buildSessionSummaryDimensions(root)).toBeUndefined();
   });
 
-  it("shouldEmitInventory respects 24h throttle", () => {
+  it("clearSession removes persisted counters but keeps inventory throttle", () => {
+    const root = tempDir("canon-session-clear-");
+    grantUsage(root);
+    bumpAgentTurn(root);
+    const now = Date.now();
+    markInventoryEmitted(root, new Date(now));
+    expect(readSession(root)).toBeDefined();
+    clearSession(root);
+    expect(readSession(root)).toBeUndefined();
+    expect(buildSessionSummaryDimensions(root)).toBeUndefined();
+    expect(shouldEmitInventory(root, new Date(now + 60_000))).toBe(false);
+  });
+
+  it("shouldEmitInventory respects 24h throttle via inventory file", () => {
     const root = tempDir("canon-session-inv-");
     const now = Date.now();
-    writeSession(root, {
-      sessionId: "s",
-      startedAt: new Date(now).toISOString(),
-      agentTurns: 0,
-      scopesCreated: 0,
-      scopesCompleted: 0,
-      scopesCancelled: 0,
-      consentPrompts: 0,
-      checksRun: 0,
-      lastInventoryEmittedAt: now - 60_000,
-    });
+    markInventoryEmitted(root, new Date(now - 60_000));
     expect(shouldEmitInventory(root, new Date(now))).toBe(false);
     expect(shouldEmitInventory(root, new Date(now + 25 * 60 * 60 * 1000))).toBe(true);
   });

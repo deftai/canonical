@@ -17,6 +17,7 @@ export async function run(argv: string[]): Promise<number> {
   }
 
   const projectRoot = parsed.values["project-root"] ?? process.cwd();
+  const checkStartedMs = Date.now();
   const result = await runCheck(projectRoot, { dispatchFn: dispatch });
 
   if (parsed.flags.json === true) {
@@ -36,7 +37,7 @@ export async function run(argv: string[]): Promise<number> {
 
   if (result.code === 0 || result.code === 1) {
     recordCheckRun(projectRoot);
-    const coverage = coverageCheckDimensions(projectRoot);
+    const coverage = coverageCheckDimensions(projectRoot, { notBeforeMs: checkStartedMs });
     if (result.code === 0) {
       await softEmitUsage(projectRoot, "check_pass", 1, coverage);
     } else {

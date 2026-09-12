@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import type { UsageDimensions } from "../collection/emit.js";
 
@@ -57,13 +57,23 @@ function readVitestLinesThreshold(projectRoot: string): number | undefined {
 }
 
 /** Read coverage summary from disk after a successful test stage; never fabricates. */
-export function readCoverageSummary(projectRoot: string): CoverageSummary | undefined {
+export function readCoverageSummary(
+  projectRoot: string,
+  opts: { readonly notBeforeMs?: number } = {},
+): CoverageSummary | undefined {
   for (const rel of CANDIDATE_PATHS) {
     const abs = join(projectRoot, rel);
     if (!existsSync(abs)) {
       continue;
     }
     try {
+      if (opts.notBeforeMs !== undefined) {
+        const mtimeMs = statSync(abs).mtimeMs;
+        // Stale artifact from a prior run — omit rather than attach to this check.
+        if (mtimeMs + 1 < opts.notBeforeMs) {
+          continue;
+        }
+      }
       const parsed: unknown = JSON.parse(readFileSync(abs, "utf8"));
       const summary = parseIstanbulSummary(parsed);
       if (summary !== undefined) {
@@ -78,8 +88,11 @@ export function readCoverageSummary(projectRoot: string): CoverageSummary | unde
 }
 
 /** Usage dimensions for check_pass/check_fail when coverage tooling produced output. */
-export function coverageCheckDimensions(projectRoot: string): UsageDimensions | undefined {
-  const summary = readCoverageSummary(projectRoot);
+export function coverageCheckDimensions(
+  projectRoot: string,
+  opts: { readonly notBeforeMs?: number } = {},
+): UsageDimensions | undefined {
+  const summary = readCoverageSummary(projectRoot, opts);
   if (summary === undefined) {
     return undefined;
   }

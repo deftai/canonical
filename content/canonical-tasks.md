@@ -145,7 +145,7 @@ Automatic usage metrics (when `metrics=active`):
 - Agents emit `kickoff_done` via `collection:metric` after kickoff (optional `--dimensions` e.g. `scopes_created`, `stack_family` enum `node|python|go|rust|other`)
 - Agents emit `session_summary` via `collection:metric` at session end (auto-fills from `.canonical/collection-session.json` when `--dimensions` omitted; clears session on emit)
 
-Session counters live in gitignored `.canonical/collection-session.json`. Soft-skip continues when metrics declined even if submissions were granted. ⊗ Never put titles, paths, chat, or secrets in dimensions.
+Session counters live in gitignored `.canonical/collection-session.json`; inventory throttle timestamp lives in `.canonical/collection-inventory.json` (survives session clear). Soft-skip continues when metrics declined even if submissions were granted. ⊗ Never put titles, paths, chat, or secrets in dimensions.
 
 ## Out of Scope (do not build as agent-facing verbs)
 

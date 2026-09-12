@@ -5,7 +5,7 @@ import { type StopMode, scopeStop } from "../scope/index.js";
 
 const MODE_FLAGS: readonly StopMode[] = ["cancel", "fail", "block", "unblock", "demote"];
 
-export function run(argv: string[]): number {
+export async function run(argv: string[]): Promise<number> {
   const parsed = parseArgs(argv, {
     valueFlags: ["project-root", "note"],
     boolFlags: ["json", "cancel", "fail", "block", "unblock", "demote"],
@@ -55,6 +55,6 @@ export function run(argv: string[]): number {
   if (mode === "cancel") {
     recordScopeCancelled(projectRoot);
   }
-  void softEmitUsage(projectRoot, "xbrief_scope_stop", 1, scopeStopDimensions(mode));
+  await softEmitUsage(projectRoot, "xbrief_scope_stop", 1, scopeStopDimensions(mode));
   return 0;
 }

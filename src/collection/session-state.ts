@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { atomicWriteJson } from "../fs/contained-write.js";
 import type { UsageDimensions } from "./emit.js";
 import { bucketAgentTurns, bucketDurationHours } from "./metric-dimensions.js";
+import { hasUsageConsent, readCollectionFile } from "./storage.js";
 
 /** Gitignored session counters for agent_turns_bucket / session_summary (#9). */
 export const SESSION_FILE_REL = ".canonical/collection-session.json";
@@ -19,7 +20,6 @@ export interface CollectionSession {
   readonly scopesCancelled: number;
   readonly consentPrompts: number;
   readonly checksRun: number;
-  readonly lastInventoryEmittedAt?: number;
 }
 
 function sessionPath(projectRoot: string): string {
@@ -43,9 +43,6 @@ function parseSession(raw: unknown): CollectionSession | undefined {
     scopesCancelled: typeof o.scopesCancelled === "number" ? o.scopesCancelled : 0,
     consentPrompts: typeof o.consentPrompts === "number" ? o.consentPrompts : 0,
     checksRun: typeof o.checksRun === "number" ? o.checksRun : 0,
-    ...(typeof o.lastInventoryEmittedAt === "number"
-      ? { lastInventoryEmittedAt: o.lastInventoryEmittedAt }
-      : {}),
   };
 }
 
@@ -88,7 +85,12 @@ export function ensureSession(projectRoot: string, now: Date = new Date()): Coll
 function mutateSession(
   projectRoot: string,
   mutator: (session: CollectionSession) => CollectionSession,
-): CollectionSession {
+): CollectionSession | undefined {
+  // Do not persist activity while metrics are declined/undecided — otherwise a
+  // later opt-in session_summary would ship pre-consent counters.
+  if (!hasUsageConsent(readCollectionFile(projectRoot))) {
+    return undefined;
+  }
   const session = ensureSession(projectRoot);
   const next = mutator(session);
   writeSession(projectRoot, next);
@@ -96,41 +98,65 @@ function mutateSession(
 }
 
 /** Increment agent turn counter (agents call via documented bump rule). */
-export function bumpAgentTurn(projectRoot: string): CollectionSession {
+export function bumpAgentTurn(projectRoot: string): CollectionSession | undefined {
   return mutateSession(projectRoot, (s) => ({ ...s, agentTurns: s.agentTurns + 1 }));
 }
 
-export function recordScopeCreated(projectRoot: string): CollectionSession {
+export function recordScopeCreated(projectRoot: string): CollectionSession | undefined {
   return mutateSession(projectRoot, (s) => ({ ...s, scopesCreated: s.scopesCreated + 1 }));
 }
 
-export function recordScopeCompleted(projectRoot: string): CollectionSession {
+export function recordScopeCompleted(projectRoot: string): CollectionSession | undefined {
   return mutateSession(projectRoot, (s) => ({ ...s, scopesCompleted: s.scopesCompleted + 1 }));
 }
 
-export function recordScopeCancelled(projectRoot: string): CollectionSession {
+export function recordScopeCancelled(projectRoot: string): CollectionSession | undefined {
   return mutateSession(projectRoot, (s) => ({ ...s, scopesCancelled: s.scopesCancelled + 1 }));
 }
 
-export function recordCheckRun(projectRoot: string): CollectionSession {
+export function recordCheckRun(projectRoot: string): CollectionSession | undefined {
   return mutateSession(projectRoot, (s) => ({ ...s, checksRun: s.checksRun + 1 }));
 }
 
-export function recordConsentPrompt(projectRoot: string): CollectionSession {
+export function recordConsentPrompt(projectRoot: string): CollectionSession | undefined {
   return mutateSession(projectRoot, (s) => ({ ...s, consentPrompts: s.consentPrompts + 1 }));
+}
+
+/** Survives session_summary clears so the 24h inventory throttle stays intact. */
+export const INVENTORY_FILE_REL = ".canonical/collection-inventory.json";
+
+function inventoryPath(projectRoot: string): string {
+  return join(projectRoot, INVENTORY_FILE_REL);
+}
+
+function readInventoryEmittedAt(projectRoot: string): number | undefined {
+  const path = inventoryPath(projectRoot);
+  if (!existsSync(path)) {
+    return undefined;
+  }
+  try {
+    const raw: unknown = JSON.parse(readFileSync(path, "utf8"));
+    if (raw !== null && typeof raw === "object") {
+      const at = (raw as Record<string, unknown>).lastInventoryEmittedAt;
+      return typeof at === "number" ? at : undefined;
+    }
+  } catch {
+    return undefined;
+  }
+  return undefined;
 }
 
 /** True when xbrief_inventory has not been emitted in the last 24h. */
 export function shouldEmitInventory(projectRoot: string, now: Date = new Date()): boolean {
-  const session = readSession(projectRoot);
-  if (session?.lastInventoryEmittedAt === undefined) {
+  const at = readInventoryEmittedAt(projectRoot);
+  if (at === undefined) {
     return true;
   }
-  return now.getTime() - session.lastInventoryEmittedAt >= INVENTORY_INTERVAL_MS;
+  return now.getTime() - at >= INVENTORY_INTERVAL_MS;
 }
 
 export function markInventoryEmitted(projectRoot: string, now: Date = new Date()): void {
-  mutateSession(projectRoot, (s) => ({ ...s, lastInventoryEmittedAt: now.getTime() }));
+  atomicWriteJson(projectRoot, INVENTORY_FILE_REL, { lastInventoryEmittedAt: now.getTime() });
 }
 
 /** Build session_summary dimensions from persisted counters. */
