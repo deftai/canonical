@@ -120,11 +120,15 @@ function releaseVersion(scope: ScopeDoc): string {
   return typeof version === "string" ? version : "";
 }
 
+function compareAscii(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
 function compareMilestoneTargetAsc(a: string, b: string): number {
   const ta = Date.parse(a);
   const tb = Date.parse(b);
   if (Number.isNaN(ta) && Number.isNaN(tb)) {
-    return a.localeCompare(b);
+    return compareAscii(a, b);
   }
   if (Number.isNaN(ta)) {
     return 1;
@@ -132,7 +136,22 @@ function compareMilestoneTargetAsc(a: string, b: string): number {
   if (Number.isNaN(tb)) {
     return -1;
   }
-  return ta - tb;
+  if (ta !== tb) {
+    return ta - tb;
+  }
+  return 0;
+}
+
+function compareScopedRowsStable(
+  a: ScopedRow,
+  b: ScopedRow,
+  primary: (a: ScopedRow, b: ScopedRow) => number,
+): number {
+  const diff = primary(a, b);
+  if (diff !== 0) {
+    return diff;
+  }
+  return compareAscii(a.scope.plan.title, b.scope.plan.title);
 }
 
 function buildKindSection(
@@ -197,7 +216,10 @@ function buildRoadmapContent(projectRoot: string): string {
       "Milestones",
       ["Title", "Target", "Status", "Dependencies"],
       milestones,
-      (a, b) => compareMilestoneTargetAsc(milestoneTarget(a.scope), milestoneTarget(b.scope)),
+      (a, b) =>
+        compareScopedRowsStable(a, b, (x, y) =>
+          compareMilestoneTargetAsc(milestoneTarget(x.scope), milestoneTarget(y.scope)),
+        ),
     ),
   ];
   for (const folder of LIFECYCLE_FOLDERS) {
@@ -213,7 +235,10 @@ function buildRoadmapContent(projectRoot: string): string {
       "Releases",
       ["Title", "Version", "Status", "Dependencies"],
       releases,
-      (a, b) => compareSemverDesc(releaseVersion(a.scope), releaseVersion(b.scope)),
+      (a, b) =>
+        compareScopedRowsStable(a, b, (x, y) =>
+          compareSemverDesc(releaseVersion(x.scope), releaseVersion(y.scope)),
+        ),
     ),
   );
   lines.push("");

@@ -8,29 +8,30 @@ const SEMVER_CORE =
   /^(?:v)?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/;
 
 interface ParsedSemver {
-  readonly major: number;
-  readonly minor: number;
-  readonly patch: number;
+  readonly major: bigint;
+  readonly minor: bigint;
+  readonly patch: bigint;
   readonly prerelease: readonly string[];
 }
 
-function parsePrereleaseId(id: string): number | string {
-  return /^\d+$/.test(id) ? Number(id) : id;
+function compareNumericId(a: string, b: string): number {
+  const diff = BigInt(a) - BigInt(b);
+  return diff === 0n ? 0 : diff < 0n ? -1 : 1;
 }
 
 function comparePrereleaseId(a: string, b: string): number {
-  const na = parsePrereleaseId(a);
-  const nb = parsePrereleaseId(b);
-  if (typeof na === "number" && typeof nb === "number") {
-    return na - nb;
+  const aNum = /^\d+$/.test(a);
+  const bNum = /^\d+$/.test(b);
+  if (aNum && bNum) {
+    return compareNumericId(a, b);
   }
-  if (typeof na === "number") {
+  if (aNum) {
     return -1;
   }
-  if (typeof nb === "number") {
+  if (bNum) {
     return 1;
   }
-  return na.localeCompare(nb);
+  return a < b ? -1 : a > b ? 1 : 0;
 }
 
 function parseSemver(version: string): ParsedSemver | null {
@@ -38,9 +39,9 @@ function parseSemver(version: string): ParsedSemver | null {
   if (match === null) {
     return null;
   }
-  const major = Number(match[1]);
-  const minor = Number(match[2]);
-  const patch = Number(match[3]);
+  const major = BigInt(match[1] ?? "0");
+  const minor = BigInt(match[2] ?? "0");
+  const patch = BigInt(match[3] ?? "0");
   const prereleaseRaw = match[4];
   const prerelease =
     prereleaseRaw === undefined || prereleaseRaw === "" ? [] : prereleaseRaw.split(".");
@@ -57,7 +58,7 @@ export function compareSemver(a: string, b: string): number {
   const av = parseSemver(a);
   const bv = parseSemver(b);
   if (av === null && bv === null) {
-    return a.localeCompare(b);
+    return a < b ? -1 : a > b ? 1 : 0;
   }
   if (av === null) {
     return 1;
@@ -71,7 +72,7 @@ export function compareSemver(a: string, b: string): number {
     [av.patch, bv.patch],
   ] as const) {
     if (partA !== partB) {
-      return partA - partB;
+      return partA < partB ? -1 : 1;
     }
   }
   if (av.prerelease.length === 0 && bv.prerelease.length === 0) {
