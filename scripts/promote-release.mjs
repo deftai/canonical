@@ -18,7 +18,8 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
 const name = pkg.name;
 
-const raw = process.argv[2] ?? "";
+// pnpm often forwards a literal "--" (`pnpm run promote -- 0.3.1` → argv ["--","0.3.1"]).
+const raw = process.argv.slice(2).find((a) => a !== "--") ?? "";
 const version = raw.replace(/^v/, "");
 if (!/^\d+\.\d+\.\d+$/.test(version)) {
   console.error("Usage: node scripts/promote-release.mjs <X.Y.Z>");
