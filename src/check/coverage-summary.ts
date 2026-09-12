@@ -27,7 +27,7 @@ function parseIstanbulSummary(data: unknown): CoverageSummary | undefined {
   const t = total as Record<string, unknown>;
   const lines = t.lines as { pct?: number } | undefined;
   const branches = t.branches as { pct?: number } | undefined;
-  const result: CoverageSummary = {};
+  const result: { linesPct?: number; branchesPct?: number } = {};
   if (typeof lines?.pct === "number" && Number.isFinite(lines.pct)) {
     result.linesPct = roundPct(lines.pct);
   }
