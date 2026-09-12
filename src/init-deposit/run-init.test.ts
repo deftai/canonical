@@ -65,6 +65,8 @@ describe("runInit", () => {
     expect(gitignore).toContain(".canonical/core/");
     expect(gitignore).toContain(".canonical/cache/");
     expect(gitignore).toContain(".canonical/collection.json");
+    expect(gitignore).toContain(".canonical/collection-session.json");
+    expect(gitignore).toContain(".canonical/collection-inventory.json");
     expect(gitignore).toContain("xbrief/*.lock");
 
     // xbrief/ scaffold

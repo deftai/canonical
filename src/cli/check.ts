@@ -1,7 +1,8 @@
 /** `check` -- content/canonical-tasks.md. Quality gate over resolveCheckCommands/runCheck. */
 import { parseArgs, renderJson } from "../args/index.js";
+import { coverageCheckDimensions } from "../check/coverage-summary.js";
 import { runCheck } from "../check/index.js";
-import { softEmitUsage } from "../collection/index.js";
+import { recordCheckRun, softEmitUsage } from "../collection/index.js";
 import { dispatch } from "./dispatch.js";
 
 export async function run(argv: string[]): Promise<number> {
@@ -16,6 +17,7 @@ export async function run(argv: string[]): Promise<number> {
   }
 
   const projectRoot = parsed.values["project-root"] ?? process.cwd();
+  const checkStartedMs = Date.now();
   const result = await runCheck(projectRoot, { dispatchFn: dispatch });
 
   if (parsed.flags.json === true) {
@@ -33,15 +35,25 @@ export async function run(argv: string[]): Promise<number> {
     process.stderr.write(`${result.message}\n`);
   }
 
-  if (result.code === 0) {
-    await softEmitUsage(projectRoot, "check_pass");
-  } else if (result.code === 1) {
-    await softEmitUsage(
-      projectRoot,
-      "check_fail",
-      1,
-      result.failingStage !== undefined ? { failed_stage: result.failingStage } : undefined,
-    );
+  if (result.code === 0 || result.code === 1) {
+    recordCheckRun(projectRoot);
+    const coverage = coverageCheckDimensions(projectRoot, { notBeforeMs: checkStartedMs });
+    if (result.code === 0) {
+      await softEmitUsage(projectRoot, "check_pass", 1, coverage);
+    } else {
+      const failDims: Record<string, string | number | boolean> = {
+        ...(coverage ?? {}),
+      };
+      if (result.failingStage !== undefined) {
+        failDims.failed_stage = result.failingStage;
+      }
+      await softEmitUsage(
+        projectRoot,
+        "check_fail",
+        1,
+        Object.keys(failDims).length > 0 ? failDims : undefined,
+      );
+    }
   }
   return result.code;
 }

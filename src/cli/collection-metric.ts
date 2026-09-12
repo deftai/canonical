@@ -1,6 +1,9 @@
 /** `canon collection:metric` -- fire-and-forget usage metric (soft-fail). */
 import { parseArgs, renderJson } from "../args/index.js";
 import {
+  buildSessionSummaryDimensions,
+  bumpAgentTurn,
+  clearSession,
   dimensionsJsonByteLength,
   emitUsage,
   USAGE_DIMENSIONS_MAX_JSON_BYTES,
@@ -72,11 +75,26 @@ export async function run(argv: string[]): Promise<number> {
   }
 
   const projectRoot = parsed.values["project-root"] ?? ".";
-  const outcome = await emitUsage(projectRoot, metric.trim(), value, {
+  const metricName = metric.trim();
+  if (metricName === "agent_turn") {
+    bumpAgentTurn(projectRoot);
+    if (parsed.flags.json === true) {
+      process.stdout.write(`${renderJson({ code: 0, recorded: true })}\n`);
+    }
+    return 0;
+  }
+  let dimensions = dims.dimensions;
+  if (metricName === "session_summary" && dimensions === undefined) {
+    dimensions = buildSessionSummaryDimensions(projectRoot);
+  }
+  const outcome = await emitUsage(projectRoot, metricName, value, {
     period: parsed.values.period,
     debug: parsed.flags.debug === true,
-    ...(dims.dimensions !== undefined ? { dimensions: dims.dimensions } : {}),
+    ...(dimensions !== undefined ? { dimensions } : {}),
   });
+  if (metricName === "session_summary" && outcome.emitted) {
+    clearSession(projectRoot);
+  }
 
   if (parsed.flags.json === true) {
     process.stdout.write(`${renderJson({ code: 0, ...outcome })}\n`);

@@ -1,7 +1,12 @@
 /** `canon scope:complete` -- content/canonical-tasks.md #scope:complete. */
 import { parseArgs, renderJson } from "../args/index.js";
-import { softEmitUsage } from "../collection/index.js";
+import {
+  recordScopeCompleted,
+  scopeCompleteDimensions,
+  softEmitUsage,
+} from "../collection/index.js";
 import { scopeComplete } from "../scope/index.js";
+import { findScope, readScope } from "../xbrief/brief-io.js";
 
 export async function run(argv: string[]): Promise<number> {
   const parsed = parseArgs(argv, {
@@ -21,6 +26,8 @@ export async function run(argv: string[]): Promise<number> {
   }
 
   const projectRoot = parsed.values["project-root"] ?? ".";
+  const found = findScope(projectRoot, scopeArg);
+  const scopeBefore = found !== null && !("ambiguous" in found) ? readScope(found.path) : undefined;
   const result = await scopeComplete(projectRoot, {
     scope: scopeArg,
     disposition: parsed.values.disposition,
@@ -45,18 +52,17 @@ export async function run(argv: string[]): Promise<number> {
   } else {
     process.stdout.write(`${result.scope}: completed\n`);
   }
-  const dimensions: Record<string, string | number | boolean> = {};
-  if (parsed.values.disposition !== undefined) {
-    dimensions.disposition = parsed.values.disposition;
+  if (scopeBefore?.ok === true) {
+    recordScopeCompleted(projectRoot);
+    await softEmitUsage(
+      projectRoot,
+      "scope_complete",
+      1,
+      scopeCompleteDimensions(scopeBefore.scope, {
+        disposition: parsed.values.disposition,
+        hadDeliveryPr: parsed.values.pr !== undefined,
+      }),
+    );
   }
-  if (parsed.values.pr !== undefined) {
-    dimensions.had_delivery_pr = true;
-  }
-  await softEmitUsage(
-    projectRoot,
-    "scope_complete",
-    1,
-    Object.keys(dimensions).length > 0 ? dimensions : undefined,
-  );
   return 0;
 }

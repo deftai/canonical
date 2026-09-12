@@ -9,17 +9,22 @@ export async function softEmitUsage(
   metric: string,
   value: number = 1,
   dimensions?: UsageDimensions,
-): Promise<void> {
+): Promise<boolean> {
   try {
-    await Promise.race([
+    const outcome = await Promise.race([
       emitUsage(projectRoot, metric, value, {
         ...(dimensions !== undefined ? { dimensions } : {}),
       }),
-      new Promise<void>((resolve) => {
-        setTimeout(resolve, SOFT_EMIT_TIMEOUT_MS);
+      new Promise<{ emitted: false; reason: "submit_failed" }>((resolve) => {
+        setTimeout(
+          () => resolve({ emitted: false, reason: "submit_failed" }),
+          SOFT_EMIT_TIMEOUT_MS,
+        );
       }),
     ]);
+    return outcome.emitted === true;
   } catch {
     // telemetry must never break the host verb
+    return false;
   }
 }

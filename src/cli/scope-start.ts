@@ -1,8 +1,10 @@
 /** `canon scope:start` -- content/canonical-tasks.md #scope:start. */
 import { parseArgs, renderJson } from "../args/index.js";
+import { scopeStartDimensions, softEmitUsage } from "../collection/index.js";
 import { scopeStart } from "../scope/index.js";
+import { findScope, readScope } from "../xbrief/brief-io.js";
 
-export function run(argv: string[]): number {
+export async function run(argv: string[]): Promise<number> {
   const parsed = parseArgs(argv, {
     valueFlags: ["project-root"],
     boolFlags: ["json", "check", "allow-dirty"],
@@ -20,6 +22,8 @@ export function run(argv: string[]): number {
   }
 
   const projectRoot = parsed.values["project-root"] ?? ".";
+  const found = findScope(projectRoot, scopeArg);
+  const scopeBefore = found !== null && !("ambiguous" in found) ? readScope(found.path) : undefined;
   const result = scopeStart(projectRoot, {
     scope: scopeArg,
     check: parsed.flags.check ?? false,
@@ -45,6 +49,14 @@ export function run(argv: string[]): number {
       result.checked === true
         ? `${result.scope}: running (verified)\n`
         : `${result.scope}: running\n`,
+    );
+  }
+  if (result.checked !== true && scopeBefore?.ok === true) {
+    await softEmitUsage(
+      projectRoot,
+      "xbrief_scope_start",
+      1,
+      scopeStartDimensions(scopeBefore.scope),
     );
   }
   return 0;

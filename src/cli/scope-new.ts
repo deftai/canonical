@@ -1,5 +1,6 @@
 import { existsSync, statSync } from "node:fs";
 import { parseArgs, renderJson } from "../args/index.js";
+import { recordScopeCreated, scopeCreatedDimensions, softEmitUsage } from "../collection/index.js";
 import {
   buildScopeSkeleton,
   findScopeFilenameCollision,
@@ -20,7 +21,7 @@ function emit(json: boolean, code: number, payload: Record<string, unknown>, tex
   return code;
 }
 
-export function run(argv: string[]): number {
+export async function run(argv: string[]): Promise<number> {
   const parsed = parseArgs(argv, {
     valueFlags: ["project-root"],
     boolFlags: ["json"],
@@ -65,6 +66,8 @@ export function run(argv: string[]): number {
 
   const skeleton = buildScopeSkeleton(title, now);
   writeScope(projectRoot, relPath, skeleton);
+  recordScopeCreated(projectRoot);
+  await softEmitUsage(projectRoot, "xbrief_scope_created", 1, scopeCreatedDimensions(skeleton));
 
   return emit(
     json,

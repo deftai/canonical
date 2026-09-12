@@ -1,10 +1,11 @@
 /** `canon scope:stop` -- content/canonical-tasks.md #scope:stop. */
 import { parseArgs, renderJson } from "../args/index.js";
+import { recordScopeCancelled, scopeStopDimensions, softEmitUsage } from "../collection/index.js";
 import { type StopMode, scopeStop } from "../scope/index.js";
 
 const MODE_FLAGS: readonly StopMode[] = ["cancel", "fail", "block", "unblock", "demote"];
 
-export function run(argv: string[]): number {
+export async function run(argv: string[]): Promise<number> {
   const parsed = parseArgs(argv, {
     valueFlags: ["project-root", "note"],
     boolFlags: ["json", "cancel", "fail", "block", "unblock", "demote"],
@@ -51,5 +52,9 @@ export function run(argv: string[]): number {
   } else {
     process.stdout.write(`${result.scope}: ${result.status}\n`);
   }
+  if (mode === "cancel") {
+    recordScopeCancelled(projectRoot);
+  }
+  await softEmitUsage(projectRoot, "xbrief_scope_stop", 1, scopeStopDimensions(mode));
   return 0;
 }

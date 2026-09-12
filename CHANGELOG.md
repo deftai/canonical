@@ -2,6 +2,9 @@
 
 ## [0.3.1] - 2026-09-10
 
+### Added
+- Enriched usage metrics (#9): optional `--dimensions` on lifecycle verbs — `xbrief_scope_created`, `xbrief_triage`, `xbrief_scope_start`, enriched `scope_complete`, `xbrief_scope_stop`, coverage-aware `check_pass`/`check_fail`, throttled `xbrief_inventory`, agent-emitted `session_summary` with auto-fill from `.canonical/collection-session.json`.
+
 ### Changed
 - Build-time release channels: `CANONICAL_BUILD_CHANNEL=staging|production`
   bakes the collector host into the binary (`api.deft-staging.co` vs

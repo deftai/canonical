@@ -23,32 +23,32 @@ function statusPlan(status: string) {
   return { status, created: "2026-01-01T00:00:00.000Z", updated: "2026-01-01T00:00:00.000Z" };
 }
 
-describe("canon scope:stop", () => {
-  it("no mode flag is an arg error (exit 2)", () => {
+describe("canon scope:stop", async () => {
+  it("no mode flag is an arg error (exit 2)", async () => {
     const root = tempGitRepo();
     writeScopeFixture(root, "pending", "2026-01-01-foo.json", { plan: statusPlan("pending") });
-    const code = run(["2026-01-01-foo.json", "--project-root", root]);
+    const code = await run(["2026-01-01-foo.json", "--project-root", root]);
     expect(code).toBe(2);
   });
 
-  it("two mode flags is an arg error (exit 2)", () => {
+  it("two mode flags is an arg error (exit 2)", async () => {
     const root = tempGitRepo();
     writeScopeFixture(root, "pending", "2026-01-01-foo.json", { plan: statusPlan("pending") });
-    const code = run(["2026-01-01-foo.json", "--cancel", "--fail", "--project-root", root]);
+    const code = await run(["2026-01-01-foo.json", "--cancel", "--fail", "--project-root", root]);
     expect(code).toBe(2);
   });
 
-  it("missing scope argument is an arg error (exit 2)", () => {
+  it("missing scope argument is an arg error (exit 2)", async () => {
     const root = tempGitRepo();
-    const code = run(["--cancel", "--project-root", root]);
+    const code = await run(["--cancel", "--project-root", root]);
     expect(code).toBe(2);
   });
 
-  it("happy path (cancel) returns 0 and --json emits sorted snake_case", () => {
+  it("happy path (cancel) returns 0 and --json emits sorted snake_case", async () => {
     const root = tempGitRepo();
     writeScopeFixture(root, "pending", "2026-01-01-foo.json", { plan: statusPlan("pending") });
 
-    const code = run(["2026-01-01-foo.json", "--cancel", "--project-root", root, "--json"]);
+    const code = await run(["2026-01-01-foo.json", "--cancel", "--project-root", root, "--json"]);
 
     expect(code).toBe(0);
     const printed = (outSpy.mock.calls[0]?.[0] as string) ?? "";
@@ -57,11 +57,11 @@ describe("canon scope:stop", () => {
     expect(Object.keys(parsed)).toEqual([...Object.keys(parsed)].sort());
   });
 
-  it("illegal transition (fail from pending) returns 1", () => {
+  it("illegal transition (fail from pending) returns 1", async () => {
     const root = tempGitRepo();
     writeScopeFixture(root, "pending", "2026-01-01-foo.json", { plan: statusPlan("pending") });
 
-    const code = run(["2026-01-01-foo.json", "--fail", "--project-root", root]);
+    const code = await run(["2026-01-01-foo.json", "--fail", "--project-root", root]);
 
     expect(code).toBe(1);
   });
