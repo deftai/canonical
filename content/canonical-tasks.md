@@ -53,7 +53,7 @@ The `-x` flag makes go-task propagate the verb's exact exit code; without it eve
 **Exit:** `0` (prints path) · `1` slug collision (prints existing path) · `2` error.
 
 ### `scope:start`
-**Does:** Make a scope implementable in one transaction: promote from `proposed/` or reactivate from `deferred/` (`approved`) via `pending/` if needed → `active/` + status `running`; fail if git dirty without `--allow-dirty`; fail if on default branch and policy forbids. `-- <path> [--check]` — `--check` verifies the gate (in `active/`, status `running`, clean tree) without transitioning.
+**Does:** Make a scope implementable in one transaction: promote from `proposed/` or reactivate from `deferred/` (`approved`) via `pending/` if needed → `active/` + status `running`; fail if git dirty without `--allow-dirty`; fail if on default branch and policy forbids. `-- <path> [--check] [--force]` — `--check` verifies the gate (in `active/`, status `running`, clean tree) without transitioning; `--force` overrides the WIP cap when reactivating from `deferred/`/`approved` (logs a `wip-cap-override` audit row).
 **Exit:** `0` running · `1` gate fail (say which) · `2` error.
 
 ### `scope:complete`
