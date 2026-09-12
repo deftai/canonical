@@ -73,6 +73,8 @@ describe("canon triage", async () => {
     const code = run(["reject", "2026-01-01-foo.xbrief.json", "--defer", "--project-root", root]);
 
     expect(code).toBe(2);
-    expect(errSpy).toHaveBeenCalledWith(expect.stringContaining("--defer is only valid with accept"));
+    expect(errSpy).toHaveBeenCalledWith(
+      expect.stringContaining("--defer is only valid with accept"),
+    );
   });
 });
