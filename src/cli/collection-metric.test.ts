@@ -55,9 +55,28 @@ describe("collection:metric CLI dimensions (#9)", () => {
   it("agent_turn records a local session counter without requiring network", async () => {
     const { run } = await import("./collection-metric.js");
     const root = tempDir("canon-metric-turn-");
+    writeCollectionFile(root, {
+      installId: "11111111-1111-4111-8111-111111111111",
+      token: "tok",
+      metrics: {
+        decision: "active",
+        scopes: ["usage"],
+        consentVersion: CONSENT_VERSION,
+        decidedAt: "2026-08-01T00:00:00.000Z",
+        expiresAt: Date.now() + 86_400_000,
+      },
+    });
     const code = await run([`--project-root=${root}`, "--metric=agent_turn", "--value=1"]);
     expect(code).toBe(0);
     expect(readSession(root)?.agentTurns).toBe(1);
+  });
+
+  it("agent_turn is a soft no-op when usage is not consented", async () => {
+    const { run } = await import("./collection-metric.js");
+    const root = tempDir("canon-metric-turn-noconsent-");
+    const code = await run([`--project-root=${root}`, "--metric=agent_turn", "--value=1"]);
+    expect(code).toBe(0);
+    expect(readSession(root)).toBeUndefined();
   });
 
   it("session_summary clears session file after emit when consented", async () => {
