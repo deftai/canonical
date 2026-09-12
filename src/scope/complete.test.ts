@@ -35,6 +35,51 @@ function fakeResponse(body: unknown): Response {
 }
 
 describe("scopeComplete", () => {
+  it("rejects milestone completion without x-canonical/target", async () => {
+    const root = tempGitRepo();
+    writeScopeFixture(root, "active", "2026-01-01-milestone.xbrief.json", {
+      status: "running",
+      "x-canonical/kind": "milestone",
+      items: [],
+    });
+
+    const result = await scopeComplete(root, { scope: "2026-01-01-milestone.xbrief.json" });
+
+    expect(result).toMatchObject({ ok: false, code: 1 });
+    expect(result.ok === false && result.message).toContain("x-canonical/target");
+  });
+
+  it("rejects release completion without x-canonical/version", async () => {
+    const root = tempGitRepo();
+    writeScopeFixture(root, "active", "2026-01-01-release.xbrief.json", {
+      status: "running",
+      "x-canonical/kind": "release",
+      items: [],
+    });
+
+    const result = await scopeComplete(root, { scope: "2026-01-01-release.xbrief.json" });
+
+    expect(result).toMatchObject({ ok: false, code: 1 });
+    expect(result.ok === false && result.message).toContain("x-canonical/version");
+  });
+
+  it("completes milestone and release scopes with no disposition required", async () => {
+    for (const kind of ["milestone", "release"] as const) {
+      const root = tempGitRepo();
+      const filename = `2026-01-01-${kind}.xbrief.json`;
+      writeScopeFixture(root, "active", filename, {
+        status: "running",
+        "x-canonical/kind": kind,
+        ...(kind === "milestone"
+          ? { "x-canonical/target": "2026-06-01T00:00:00.000Z", items: [] }
+          : { "x-canonical/version": "0.3.0", items: [] }),
+      });
+      const result = await scopeComplete(root, { scope: filename });
+      expect(result).toMatchObject({ ok: true, status: "completed" });
+      expect(() => readFileSync(join(root, "xbrief", "completed", filename))).not.toThrow();
+    }
+  });
+
   it("completes a non-code-bearing scope (kind: epic) with no disposition required", async () => {
     const root = tempGitRepo();
     writeScopeFixture(

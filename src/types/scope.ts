@@ -9,8 +9,16 @@ import type { ScopeStatus } from "./status.js";
 
 export const XBRIEF_VERSION = "0.8";
 
-export const SCOPE_KINDS = ["story", "epic", "chore"] as const;
+export const SCOPE_KINDS = ["story", "epic", "chore", "milestone", "release"] as const;
 export type ScopeKind = (typeof SCOPE_KINDS)[number];
+
+/** Only stories are implementable (acceptance items, swarm readiness, delivery evidence). */
+export const IMPLEMENTABLE_KINDS = ["story"] as const;
+export type ImplementableKind = (typeof IMPLEMENTABLE_KINDS)[number];
+
+export function isImplementableKind(kind: ScopeKind | undefined): kind is ImplementableKind {
+  return kind === "story";
+}
 
 /** Reference types canonical emits. `x-xbrief/*` values are spec-administered (spec Appendix B). */
 export const REFERENCE_TYPES = [
@@ -97,6 +105,10 @@ export interface ScopePlan {
   readonly narratives?: ScopeNarratives;
   readonly references?: readonly ScopeReference[];
   readonly "x-canonical/kind"?: ScopeKind;
+  /** ISO-8601 target date for coordination markers (`kind: milestone`; optional on `release`). */
+  readonly "x-canonical/target"?: string;
+  /** Semver version for shipped cuts (`kind: release`; complements CHANGELOG/tag in scm.md). */
+  readonly "x-canonical/version"?: string;
   readonly "x-canonical/dependencies"?: readonly string[];
   readonly "x-canonical/swarm"?: SwarmBlock;
   readonly "x-canonical/delivery"?: DeliveryBlock;

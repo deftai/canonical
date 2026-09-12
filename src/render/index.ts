@@ -1,8 +1,14 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { atomicWriteText } from "../fs/contained-write.js";
+import { compareSemverDesc } from "../semver/index.js";
 import type { GateExitCode, LifecycleFolder, ScopeDoc } from "../types/index.js";
-import { LIFECYCLE_FOLDERS, SPEC_BRIEF_NAME, scopeDependencies } from "../types/index.js";
+import {
+  LIFECYCLE_FOLDERS,
+  SPEC_BRIEF_NAME,
+  scopeDependencies,
+  scopeKind,
+} from "../types/index.js";
 import { listScopes, readScope } from "../xbrief/brief-io.js";
 
 /**
@@ -99,16 +105,103 @@ function dependenciesCell(scope: ScopeDoc): string {
   return deps.length > 0 ? mdCell(deps.join(", ")) : "-";
 }
 
+interface ScopedRow {
+  readonly scope: ScopeDoc;
+  readonly row: string;
+}
+
+function milestoneTarget(scope: ScopeDoc): string {
+  const target = scope.plan["x-canonical/target"];
+  return typeof target === "string" ? target : "";
+}
+
+function releaseVersion(scope: ScopeDoc): string {
+  const version = scope.plan["x-canonical/version"];
+  return typeof version === "string" ? version : "";
+}
+
+function compareAscii(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
+function compareMilestoneTargetAsc(a: string, b: string): number {
+  const ta = Date.parse(a);
+  const tb = Date.parse(b);
+  if (Number.isNaN(ta) && Number.isNaN(tb)) {
+    return compareAscii(a, b);
+  }
+  if (Number.isNaN(ta)) {
+    return 1;
+  }
+  if (Number.isNaN(tb)) {
+    return -1;
+  }
+  if (ta !== tb) {
+    return ta - tb;
+  }
+  return 0;
+}
+
+function compareScopedRowsStable(
+  a: ScopedRow,
+  b: ScopedRow,
+  primary: (a: ScopedRow, b: ScopedRow) => number,
+): number {
+  const diff = primary(a, b);
+  if (diff !== 0) {
+    return diff;
+  }
+  return compareAscii(a.scope.plan.title, b.scope.plan.title);
+}
+
+function buildKindSection(
+  title: string,
+  headers: readonly string[],
+  entries: readonly ScopedRow[],
+  sort: (a: ScopedRow, b: ScopedRow) => number,
+): string[] {
+  if (entries.length === 0) {
+    return [];
+  }
+  const lines: string[] = [
+    "",
+    `## ${title}`,
+    "",
+    `| ${headers.join(" | ")} |`,
+    `| ${headers.map(() => "---").join(" | ")} |`,
+  ];
+  for (const entry of [...entries].sort(sort)) {
+    lines.push(entry.row);
+  }
+  return lines;
+}
+
 function buildRoadmapContent(projectRoot: string): string {
   const rowsByFolder = new Map<LifecycleFolder, string[]>(LIFECYCLE_FOLDERS.map((f) => [f, []]));
+  const milestones: ScopedRow[] = [];
+  const releases: ScopedRow[] = [];
+
   for (const ref of listScopes(projectRoot)) {
     const read = readScope(ref.path);
     if (!read.ok) {
       continue;
     }
     const scope = read.scope;
+    const kind = scopeKind(scope);
     const row = `| ${mdCell(scope.plan.title)} | ${scope.plan.status} | ${firstIssueOriginLink(scope)} | ${dependenciesCell(scope)} |`;
     rowsByFolder.get(ref.folder)?.push(row);
+
+    if (kind === "milestone") {
+      milestones.push({
+        scope,
+        row: `| ${mdCell(scope.plan.title)} | ${mdCell(milestoneTarget(scope))} | ${scope.plan.status} | ${dependenciesCell(scope)} |`,
+      });
+    } else if (kind === "release") {
+      releases.push({
+        scope,
+        row: `| ${mdCell(scope.plan.title)} | ${mdCell(releaseVersion(scope))} | ${scope.plan.status} | ${dependenciesCell(scope)} |`,
+      });
+    }
   }
 
   const lines: string[] = [
@@ -119,6 +212,15 @@ function buildRoadmapContent(projectRoot: string): string {
     }),
     "",
     "# Roadmap",
+    ...buildKindSection(
+      "Milestones",
+      ["Title", "Target", "Status", "Dependencies"],
+      milestones,
+      (a, b) =>
+        compareScopedRowsStable(a, b, (x, y) =>
+          compareMilestoneTargetAsc(milestoneTarget(x.scope), milestoneTarget(y.scope)),
+        ),
+    ),
   ];
   for (const folder of LIFECYCLE_FOLDERS) {
     lines.push("", `## ${ROADMAP_SECTION_TITLES[folder]}`, "");
@@ -128,6 +230,17 @@ function buildRoadmapContent(projectRoot: string): string {
       lines.push(row);
     }
   }
+  lines.push(
+    ...buildKindSection(
+      "Releases",
+      ["Title", "Version", "Status", "Dependencies"],
+      releases,
+      (a, b) =>
+        compareScopedRowsStable(a, b, (x, y) =>
+          compareSemverDesc(releaseVersion(x.scope), releaseVersion(y.scope)),
+        ),
+    ),
+  );
   lines.push("");
   return lines.join("\n");
 }

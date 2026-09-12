@@ -61,7 +61,9 @@ All on `plan` unless noted; on reference entries where marked.
 
 | Property | Type | Meaning |
 |---|---|---|
-| `x-canonical/kind` | `"story"\|"epic"\|"chore"` | story executes, epic groups, chore is non-feature work |
+| `x-canonical/kind` | `"story"\|"epic"\|"chore"\|"milestone"\|"release"` | story executes; epic groups stories; chore is non-feature work; milestone is a dated coordination marker (not implementable); release is a shipped version cut (backward-looking, complements scm.md CHANGELOG/tag flow) |
+| `x-canonical/target` | ISO-8601 dateTime | required on `kind: milestone` — the coordination target date; optional on `release` for ship date |
+| `x-canonical/version` | semver string | required on `kind: release` — version matching the git tag (e.g. `0.3.0` or `v0.3.0`) |
 | `x-canonical/dependencies` | `string[]` | scope filenames this scope waits on (cross-document ordering) |
 | `x-canonical/swarm` | `{filesScope: string[], verifyCommands: string[], readiness: "ready"\|"blocked"\|"unset"}` | parallel-dispatch readiness: write fence + verification commands |
 | `x-canonical/delivery` | `{disposition: "delivered"\|"accepted_not_delivered"\|"superseded"\|"experiment_archived", pr?, sha?, branch?}` | delivery evidence required to complete code-bearing work |

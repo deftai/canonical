@@ -65,7 +65,7 @@ The `-x` flag makes go-task propagate the verb's exact exit code; without it eve
 **Exit:** `0` · `1` illegal transition · `2` error.
 
 ### `render`
-**Does:** `roadmap|spec [--check]`. `roadmap`: generate `ROADMAP.md` from lifecycle folders (one section per folder; one row per scope: title, status, origin link, dependencies). `spec`: generate `SPEC.md` from `xbrief/spec.xbrief.json`. Output opens with a 4-line `AUTO-GENERATED` banner (generator, purpose, source of truth, regenerate command). `--check` exits 1 if the committed file differs from regenerated output.
+**Does:** `roadmap|spec [--check]`. `roadmap`: generate `ROADMAP.md` from lifecycle folders (one section per folder; one row per scope: title, status, origin link, dependencies) plus Milestones (`kind: milestone`, ordered by target date) and Releases (`kind: release`, ordered by version) sections. `spec`: generate `SPEC.md` from `xbrief/spec.xbrief.json`. Output opens with a 4-line `AUTO-GENERATED` banner (generator, purpose, source of truth, regenerate command). `--check` exits 1 if the committed file differs from regenerated output.
 
 ### `policy`
 **Does:** `show [--field=…]` prints policy fields (from `PROJECT.xbrief.json` `plan["x-canonical/policy"]`) with values and defaults. `set --field= --value= --confirm` writes one typed field; refuses unknown fields, type mismatches, and absence of `--confirm`; appends `{ts, field, old, new, actor}` to `xbrief/audit.jsonl`.

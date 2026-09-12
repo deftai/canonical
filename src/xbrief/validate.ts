@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { isValidCanonicalSemver } from "../semver/index.js";
 import type {
   LifecycleFolder,
   ScopeDoc,
@@ -336,6 +337,54 @@ function validateCoreReferences(
   });
 }
 
+/** Kind-specific profile rules (milestone target date, release version). */
+function validateKindFields(
+  file: string,
+  kind: string,
+  plan: Record<string, unknown>,
+  findings: ValidationFinding[],
+): void {
+  const target = plan["x-canonical/target"];
+  if (target !== undefined && !isDateTime(target)) {
+    findings.push({
+      file,
+      code: "bad-target",
+      message: `plan["x-canonical/target"] must be ISO-8601 with Z/offset when present, got ${JSON.stringify(target)}`,
+    });
+  }
+
+  const version = plan["x-canonical/version"];
+  if (version !== undefined) {
+    if (typeof version !== "string" || !isValidCanonicalSemver(version)) {
+      findings.push({
+        file,
+        code: "bad-version",
+        message: `plan["x-canonical/version"] must be semver (e.g. "0.3.0" or "v0.3.0"), got ${JSON.stringify(version)}`,
+      });
+    }
+  }
+
+  if (kind === "milestone") {
+    if (!isDateTime(target)) {
+      findings.push({
+        file,
+        code: "missing-milestone-target",
+        message:
+          'plan["x-canonical/kind"]: milestone requires plan["x-canonical/target"] (ISO-8601 with Z/offset)',
+      });
+    }
+  }
+
+  if (kind === "release" && version === undefined) {
+    findings.push({
+      file,
+      code: "missing-release-version",
+      message:
+        'plan["x-canonical/kind"]: release requires plan["x-canonical/version"] (semver matching the git tag in scm.md)',
+    });
+  }
+}
+
 /** Canonical-profile checks for one lifecycle scope document (content/state.md). */
 function validateScopeProfile(
   file: string,
@@ -393,6 +442,8 @@ function validateScopeProfile(
       code: "bad-kind",
       message: `plan["x-canonical/kind"] must be one of ${SCOPE_KINDS.join("|")}, got ${JSON.stringify(kind)}`,
     });
+  } else {
+    validateKindFields(file, kind, plan, findings);
   }
 
   if (Array.isArray(plan.items)) {

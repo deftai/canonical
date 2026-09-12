@@ -166,13 +166,91 @@ describe("validateState", () => {
     expect(findingCodes(report)).toContain("bad-title");
   });
 
-  it("flags a kind outside story|epic|chore", () => {
+  it("flags a kind outside story|epic|chore|milestone|release", () => {
     const root = tempGitRepo();
     writeScopeFixture(root, "proposed", "2026-01-01-bad-kind.xbrief.json", {
       "x-canonical/kind": "task",
     });
     const report = validateState(root);
     expect(findingCodes(report)).toContain("bad-kind");
+  });
+
+  it("accepts milestone and release kinds with required typed fields", () => {
+    const root = tempGitRepo();
+    writeScopeFixture(root, "proposed", "2026-03-01-launch.xbrief.json", {
+      title: "Launch target",
+      "x-canonical/kind": "milestone",
+      "x-canonical/target": "2026-06-01T00:00:00.000Z",
+      items: [],
+    });
+    writeScopeFixture(root, "completed", "2026-01-15-v030.xbrief.json", {
+      title: "v0.3.0",
+      status: "completed",
+      "x-canonical/kind": "release",
+      "x-canonical/version": "0.3.0",
+      items: [],
+      ...statusPlan("completed"),
+    });
+    const report = validateState(root);
+    expect(report.ok).toBe(true);
+  });
+
+  it("flags milestone without x-canonical/target", () => {
+    const root = tempGitRepo();
+    writeScopeFixture(root, "proposed", "2026-03-01-launch.xbrief.json", {
+      "x-canonical/kind": "milestone",
+      items: [],
+    });
+    const report = validateState(root);
+    expect(findingCodes(report)).toContain("missing-milestone-target");
+  });
+
+  it("flags release without x-canonical/version", () => {
+    const root = tempGitRepo();
+    writeScopeFixture(root, "proposed", "2026-01-15-v030.xbrief.json", {
+      "x-canonical/kind": "release",
+      items: [],
+    });
+    const report = validateState(root);
+    expect(findingCodes(report)).toContain("missing-release-version");
+  });
+
+  it("flags invalid x-canonical/version on release", () => {
+    const root = tempGitRepo();
+    writeScopeFixture(root, "proposed", "2026-01-15-bad-ver.xbrief.json", {
+      "x-canonical/kind": "release",
+      "x-canonical/version": "not-a-version",
+      items: [],
+    });
+    const report = validateState(root);
+    expect(findingCodes(report)).toContain("bad-version");
+  });
+
+  it("accepts semver prerelease and build metadata on release version", () => {
+    const root = tempGitRepo();
+    writeScopeFixture(root, "proposed", "2026-01-15-rc.xbrief.json", {
+      "x-canonical/kind": "release",
+      "x-canonical/version": "1.0.0-alpha-1",
+      items: [],
+    });
+    writeScopeFixture(root, "proposed", "2026-01-16-build.xbrief.json", {
+      "x-canonical/kind": "release",
+      "x-canonical/version": "1.0.0+build.1",
+      items: [],
+    });
+    const report = validateState(root);
+    expect(report.ok).toBe(true);
+  });
+
+  it("rejects release versions with leading-zero numeric parts", () => {
+    const root = tempGitRepo();
+    writeScopeFixture(root, "proposed", "2026-01-15-leading-zero.xbrief.json", {
+      "x-canonical/kind": "release",
+      "x-canonical/version": "01.02.03",
+      items: [],
+    });
+    const report = validateState(root);
+    expect(findingCodes(report)).toContain("bad-version");
   });
 
   it("flags a missing plan object", () => {
