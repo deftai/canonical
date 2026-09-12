@@ -130,7 +130,7 @@ tasks:
           ENGINE_VERB: 'scope:complete'
 
   "scope:stop":
-    desc: "Non-happy terminal or pause: cancel, fail, block/unblock, or demote a scope."
+    desc: "Non-happy terminal or pause: cancel, fail, block/unblock, demote, or defer a scope."
     dir: '{{.USER_WORKING_DIR}}'
     deps:
       - task: engine:_ts-build
@@ -138,6 +138,16 @@ tasks:
       - task: engine:invoke
         vars:
           ENGINE_VERB: 'scope:stop'
+
+  "scope:defer":
+    desc: "Park an accepted scope in deferred/ (status approved)."
+    dir: '{{.USER_WORKING_DIR}}'
+    deps:
+      - task: engine:_ts-build
+    cmds:
+      - task: engine:invoke
+        vars:
+          ENGINE_VERB: 'scope:defer'
 
   "render":
     desc: "Generate ROADMAP.md or SPEC.md from lifecycle folders / xbrief/spec.json."

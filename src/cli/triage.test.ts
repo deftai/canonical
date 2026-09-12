@@ -65,4 +65,22 @@ describe("canon triage", async () => {
 
     expect(code).toBe(1);
   });
+
+  it("reject with --defer is an arg error (exit 2)", async () => {
+    const root = tempGitRepo();
+    writeScopeFixture(root, "proposed", "2026-01-01-foo.xbrief.json");
+
+    const code = await run([
+      "reject",
+      "2026-01-01-foo.xbrief.json",
+      "--defer",
+      "--project-root",
+      root,
+    ]);
+
+    expect(code).toBe(2);
+    expect(errSpy).toHaveBeenCalledWith(
+      expect.stringContaining("--defer is only valid with accept"),
+    );
+  });
 });

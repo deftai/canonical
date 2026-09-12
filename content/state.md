@@ -13,7 +13,7 @@ xbrief/
   plan.xbrief.json       # ordered plan + session todos (x-canonical/sequence)
   continue.xbrief.json   # interruption checkpoint (only ephemeral file here)
   audit.jsonl            # append-only event log: policy changes, triage decisions, cap overrides
-  proposed/  pending/  active/  completed/  cancelled/    # scope files
+  proposed/  deferred/  pending/  active/  completed/  cancelled/    # scope files
 ```
 
 - ! Every `*.xbrief.json` file is an **xBRIEF v0.8 document**: root `{ "xBRIEFInfo": { "version": "0.8" }, "plan": { … } }`. Canonical's own fields ride in `x-canonical/*` extension properties; unknown `x-<token>/` properties MUST be preserved verbatim on every read/write. `audit.jsonl` is the one exception — an append-only event log, not a document.
@@ -30,7 +30,7 @@ xbrief/
   "xBRIEFInfo": { "version": "0.8" },
   "plan": {
     "title": "string",
-    "status": "proposed|pending|running|blocked|completed|failed|cancelled",
+    "status": "proposed|approved|pending|running|blocked|completed|failed|cancelled",
     "created": "ISO-8601 with Z/offset", "updated": "ISO-8601 with Z/offset",
     "narratives": { "Description": "…", "Acceptance": "…", "Traces": "…", "Origin": "…" },
     "items": [ { "id": "ac1", "title": "observable acceptance criterion",
@@ -51,6 +51,7 @@ xbrief/
 | status | folder |
 |---|---|
 | `proposed` | `proposed/` |
+| `approved` | `deferred/` (accepted, intentionally parked) |
 | `pending` | `pending/` |
 | `running`, `blocked` | `active/` |
 | `completed`, `failed` | `completed/` (terminal) |
@@ -60,11 +61,15 @@ xbrief/
 
 ```text
 proposed --triage accept--> pending --scope:start--> active --scope:complete--> completed
-              |                                        |
-              +-- triage reject/duplicate --> cancelled +-- scope:stop --> blocked/failed/cancelled/demoted
+     |         |                                        |
+     |         +-- triage accept --defer --> deferred --scope:start--> pending --> active
+     |         +-- triage reject/duplicate --> cancelled
+     +-- triage defer (decision deferred) --> proposed (note only)
+pending/running --scope:defer--> deferred --scope:start--> pending --> active
+              +-- scope:stop --> blocked/failed/cancelled/demoted/deferred
 ```
 
-- ! Transitions only via task verbs: `triage` (decide on candidates), `scope:start` (→ running, transactional), `scope:complete` (terminal success), `scope:stop` (cancel/fail/block/unblock/demote). Batch-accept is fine; start + implement one story at a time per agent.
+- ! Transitions only via task verbs: `triage` (decide on candidates), `scope:start` (→ running, transactional; reactivates from `approved`), `scope:complete` (terminal success), `scope:stop` / `scope:defer` (cancel/fail/block/unblock/demote/park). `triage defer` keeps a candidate in `proposed/` (decision not yet made); `scope:defer` or `triage accept --defer` parks an accepted scope in `deferred/` (status `approved`). Batch-accept is fine; start + implement one story at a time per agent.
 - ! `x-canonical/kind: epic` groups stories for execution; `kind: story` executes. `milestone` is a dated coordination marker (requires `x-canonical/target`, not implementable). `release` records a shipped version cut (requires `x-canonical/version`, complements CHANGELOG/tag in scm.md). Only stories with ≥1 acceptance item are implementable.
 - ! Completing code-bearing work requires delivery evidence in the scope's plan — folder move alone is not "shipped":
 

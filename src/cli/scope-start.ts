@@ -7,7 +7,7 @@ import { findScope, readScope } from "../xbrief/brief-io.js";
 export async function run(argv: string[]): Promise<number> {
   const parsed = parseArgs(argv, {
     valueFlags: ["project-root"],
-    boolFlags: ["json", "check", "allow-dirty"],
+    boolFlags: ["json", "check", "allow-dirty", "force"],
     maxPositional: 1,
   });
   if (parsed.error !== undefined) {
@@ -28,6 +28,7 @@ export async function run(argv: string[]): Promise<number> {
     scope: scopeArg,
     check: parsed.flags.check ?? false,
     allowDirty: parsed.flags["allow-dirty"] ?? false,
+    force: parsed.flags.force ?? false,
   });
 
   if (!result.ok) {

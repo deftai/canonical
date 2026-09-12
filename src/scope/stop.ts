@@ -9,7 +9,7 @@ import { findScope, readScope, transitionScope } from "../xbrief/brief-io.js";
  * against the scope's current status (the source of truth per content/state.md).
  */
 
-export const STOP_MODES = ["cancel", "fail", "block", "unblock", "demote"] as const;
+export const STOP_MODES = ["cancel", "fail", "block", "unblock", "demote", "defer"] as const;
 export type StopMode = (typeof STOP_MODES)[number];
 
 export function isStopMode(value: string): value is StopMode {
@@ -18,6 +18,12 @@ export function isStopMode(value: string): value is StopMode {
 
 const TERMINAL_STATUSES: ReadonlySet<ScopeStatus> = new Set(["completed", "failed", "cancelled"]);
 const ACTIVE_STATUSES: ReadonlySet<ScopeStatus> = new Set(["running", "blocked"]);
+const DEFERRABLE_STATUSES: ReadonlySet<ScopeStatus> = new Set([
+  "proposed",
+  "pending",
+  "running",
+  "blocked",
+]);
 
 /** Legal target status for `mode` given the scope's `current` status, or null if illegal. */
 function targetStatus(mode: StopMode, current: ScopeStatus): ScopeStatus | null {
@@ -32,6 +38,8 @@ function targetStatus(mode: StopMode, current: ScopeStatus): ScopeStatus | null 
       return current === "blocked" ? "running" : null;
     case "demote":
       return ACTIVE_STATUSES.has(current) ? "pending" : null;
+    case "defer":
+      return DEFERRABLE_STATUSES.has(current) ? "approved" : null;
   }
 }
 

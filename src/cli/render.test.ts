@@ -10,7 +10,7 @@ afterAll(() => {
 
 function emptyProject(): string {
   const root = tempDir("cli-render-test-");
-  for (const folder of ["proposed", "pending", "active", "completed", "cancelled"]) {
+  for (const folder of ["proposed", "deferred", "pending", "active", "completed", "cancelled"]) {
     mkdirSync(join(root, "xbrief", folder), { recursive: true });
   }
   return root;

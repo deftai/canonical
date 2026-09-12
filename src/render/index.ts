@@ -84,6 +84,7 @@ function applyRender(
 
 const ROADMAP_SECTION_TITLES: Readonly<Record<LifecycleFolder, string>> = {
   proposed: "Proposed",
+  deferred: "Deferred",
   pending: "Pending",
   active: "Active",
   completed: "Completed",

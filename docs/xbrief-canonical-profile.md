@@ -28,13 +28,15 @@ The spec says nothing about files on disk; these are profile conventions:
 - Documents are files named `*.xbrief.json`, serialized canonically
   (recursively alphabetized keys, 2-space indent, trailing newline).
 - **Scope documents** — one plan per unit of work — live under lifecycle
-  directories `xbrief/{proposed,pending,active,completed,cancelled}/` with
-  filenames `YYYY-MM-DD-<slug>.xbrief.json` (slug `[a-z0-9]+(-[a-z0-9]+)*`,
-  ≤80 chars, `-issue-<N>` suffix for tracker ingests).
+  directories `xbrief/{proposed,deferred,pending,active,completed,cancelled}/`
+  with filenames `YYYY-MM-DD-<slug>.xbrief.json` (slug
+  `[a-z0-9]+(-[a-z0-9]+)*`, ≤80 chars, `-issue-<N>` suffix for tracker
+  ingests).
 - The directory is a **view of `plan.status`**, never the truth:
-  `proposed→proposed/`, `pending→pending/`, `running|blocked→active/`,
-  `completed|failed→completed/`, `cancelled→cancelled/`. On disagreement,
-  trust `plan.status` and fix the folder.
+  `proposed→proposed/`, `approved→deferred/`, `pending→pending/`,
+  `running|blocked→active/`, `completed|failed→completed/`,
+  `cancelled→cancelled/`. On disagreement, trust `plan.status` and fix the
+  folder.
 - Root documents: `PROJECT.xbrief.json` (project identity — a perpetual plan
   carrying policy), `spec.xbrief.json` (requirements), `plan.xbrief.json`
   (delivery ordering), `continue.xbrief.json` (interruption checkpoint).
@@ -42,9 +44,11 @@ The spec says nothing about files on disk; these are profile conventions:
 
 ## Core-field usage
 
-- `plan.status`: canonical uses the seven core values
-  `proposed|pending|running|blocked|completed|failed|cancelled` on scopes
-  (`draft`/`approved` are legal xBRIEF but unused by the lifecycle).
+- `plan.status`: canonical uses eight core values on scopes:
+  `proposed|approved|pending|running|blocked|completed|failed|cancelled`
+  (`draft` is legal xBRIEF but unused). Status `approved` means accepted but
+  intentionally parked; it lives in `deferred/` and is excluded from the
+  pending/active WIP queue.
 - `plan.items`: acceptance criteria — `{id, title, status}` with ids `ac1…acN`
   and status restricted to `pending|completed`.
 - `plan.narratives`: TitleCase string values; canonical's tooling reads

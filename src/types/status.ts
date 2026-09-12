@@ -15,9 +15,10 @@ export type PlanStatus = (typeof PLAN_STATUSES)[number];
 /** Core xBRIEF v0.8 PlanItemStatus enum: PlanStatus plus container-only `auto`. */
 export const PLAN_ITEM_STATUSES = [...PLAN_STATUSES, "auto"] as const;
 
-/** The seven statuses canonical's profile uses on scopes (content/state.md) -- a subset of PLAN_STATUSES. */
+/** The eight statuses canonical's profile uses on scopes (content/state.md) -- a subset of PLAN_STATUSES. */
 export const SCOPE_STATUSES = [
   "proposed",
+  "approved",
   "pending",
   "running",
   "blocked",
@@ -35,6 +36,7 @@ export function isScopeStatus(value: unknown): value is ScopeStatus {
 /** Lifecycle folder names under xbrief/ (content/state.md Layout). */
 export const LIFECYCLE_FOLDERS = [
   "proposed",
+  "deferred",
   "pending",
   "active",
   "completed",
@@ -46,6 +48,7 @@ export type LifecycleFolder = (typeof LIFECYCLE_FOLDERS)[number];
 /** status -> the folder it must live in (content/state.md table). */
 export const STATUS_FOLDER_MAP: Readonly<Record<ScopeStatus, LifecycleFolder>> = {
   proposed: "proposed",
+  approved: "deferred",
   pending: "pending",
   running: "active",
   blocked: "active",
@@ -57,6 +60,7 @@ export const STATUS_FOLDER_MAP: Readonly<Record<ScopeStatus, LifecycleFolder>> =
 /** folder -> statuses legal inside it. */
 export const FOLDER_STATUS_MAP: Readonly<Record<LifecycleFolder, readonly ScopeStatus[]>> = {
   proposed: ["proposed"],
+  deferred: ["approved"],
   pending: ["pending"],
   active: ["running", "blocked"],
   completed: ["completed", "failed"],

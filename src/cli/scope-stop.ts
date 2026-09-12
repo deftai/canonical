@@ -3,12 +3,12 @@ import { parseArgs, renderJson } from "../args/index.js";
 import { recordScopeCancelled, scopeStopDimensions, softEmitUsage } from "../collection/index.js";
 import { type StopMode, scopeStop } from "../scope/index.js";
 
-const MODE_FLAGS: readonly StopMode[] = ["cancel", "fail", "block", "unblock", "demote"];
+const MODE_FLAGS: readonly StopMode[] = ["cancel", "fail", "block", "unblock", "demote", "defer"];
 
 export async function run(argv: string[]): Promise<number> {
   const parsed = parseArgs(argv, {
     valueFlags: ["project-root", "note"],
-    boolFlags: ["json", "cancel", "fail", "block", "unblock", "demote"],
+    boolFlags: ["json", "cancel", "fail", "block", "unblock", "demote", "defer"],
     maxPositional: 1,
   });
   if (parsed.error !== undefined) {
@@ -19,14 +19,14 @@ export async function run(argv: string[]): Promise<number> {
   const activeModes = MODE_FLAGS.filter((m) => parsed.flags[m] === true);
   if (activeModes.length !== 1) {
     process.stderr.write(
-      "canon: scope-stop: specify exactly one of --cancel|--fail|--block|--unblock|--demote\n",
+      "canon: scope-stop: specify exactly one of --cancel|--fail|--block|--unblock|--demote|--defer\n",
     );
     return 2;
   }
   const mode = activeModes[0];
   if (mode === undefined) {
     process.stderr.write(
-      "canon: scope-stop: specify exactly one of --cancel|--fail|--block|--unblock|--demote\n",
+      "canon: scope-stop: specify exactly one of --cancel|--fail|--block|--unblock|--demote|--defer\n",
     );
     return 2;
   }

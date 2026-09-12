@@ -7,7 +7,7 @@ import { findScope, readScope } from "../xbrief/brief-io.js";
 export async function run(argv: string[]): Promise<number> {
   const parsed = parseArgs(argv, {
     valueFlags: ["project-root", "note"],
-    boolFlags: ["json", "force"],
+    boolFlags: ["json", "force", "defer"],
     maxPositional: 3,
   });
   if (parsed.error !== undefined) {
@@ -26,6 +26,10 @@ export async function run(argv: string[]): Promise<number> {
     process.stderr.write("canon: triage: missing scope argument\n");
     return 2;
   }
+  if (parsed.flags.defer === true && verbArg !== "accept") {
+    process.stderr.write("canon: triage: --defer is only valid with accept\n");
+    return 2;
+  }
 
   const projectRoot = parsed.values["project-root"] ?? ".";
   const found = findScope(projectRoot, scopeArg);
@@ -41,6 +45,7 @@ export async function run(argv: string[]): Promise<number> {
     scope: scopeArg,
     note: parsed.values.note,
     force: parsed.flags.force ?? false,
+    defer: parsed.flags.defer ?? false,
     winningUri,
   });
 

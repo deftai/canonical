@@ -35,6 +35,53 @@ describe("scopeStart", () => {
     expect(audit).toContain("pending->running");
   });
 
+  it("reactivates from deferred/approved via pending/ to active/running", () => {
+    const root = tempGitRepo();
+    git(root, "checkout", "-q", "-b", "feature/foo");
+    writeScopeFixture(root, "deferred", "2026-01-01-foo.xbrief.json", {
+      status: "approved",
+      created: "2026-01-01T00:00:00.000Z",
+      updated: "2026-01-01T00:00:00.000Z",
+    });
+    commitAll(root);
+
+    const result = scopeStart(root, { scope: "2026-01-01-foo.xbrief.json" });
+
+    expect(result).toMatchObject({ ok: true, status: "running" });
+    const audit = readFileSync(join(root, "xbrief", "audit.jsonl"), "utf8");
+    expect(audit).toContain("approved->pending");
+    expect(audit).toContain("pending->running");
+  });
+
+  it("reactivation from deferred/approved respects the WIP cap", () => {
+    const root = tempGitRepo();
+    git(root, "checkout", "-q", "-b", "feature/foo");
+    atomicWriteJson(root, "xbrief/PROJECT.xbrief.json", {
+      xBRIEFInfo: { version: "0.8" },
+      plan: { title: "t", status: "running", items: [], "x-canonical/policy": { wipCap: 1 } },
+    });
+    writeScopeFixture(root, "pending", "2026-01-01-at-cap.xbrief.json", {
+      status: "pending",
+      created: "2026-01-01T00:00:00.000Z",
+      updated: "2026-01-01T00:00:00.000Z",
+    });
+    writeScopeFixture(root, "deferred", "2026-01-02-parked.xbrief.json", {
+      status: "approved",
+      created: "2026-01-02T00:00:00.000Z",
+      updated: "2026-01-02T00:00:00.000Z",
+    });
+    commitAll(root);
+
+    const blocked = scopeStart(root, { scope: "2026-01-02-parked.xbrief.json" });
+    expect(blocked).toMatchObject({ ok: false, code: 1 });
+    expect((blocked as { message: string }).message).toMatch(/WIP cap reached/);
+
+    const forced = scopeStart(root, { scope: "2026-01-02-parked.xbrief.json", force: true });
+    expect(forced).toMatchObject({ ok: true, status: "running" });
+    const audit = readFileSync(join(root, "xbrief", "audit.jsonl"), "utf8");
+    expect(audit).toContain("wip-cap-override");
+  });
+
   it("starts directly from pending/ without a promotion step", () => {
     const root = tempGitRepo();
     git(root, "checkout", "-q", "-b", "feature/foo");

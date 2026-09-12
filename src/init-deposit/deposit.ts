@@ -107,7 +107,7 @@ export function writeVersionStamp(
   return rel;
 }
 
-/** Five lifecycle dirs + .gitkeep, and xbrief/PROJECT.xbrief.json skeleton, only where absent. */
+/** Six lifecycle dirs + .gitkeep, and xbrief/PROJECT.xbrief.json skeleton, only where absent. */
 export function ensureXbriefScaffold(projectRoot: string): CopyOutcome {
   const written: string[] = [];
   const skipped: string[] = [];

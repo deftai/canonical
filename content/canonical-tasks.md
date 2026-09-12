@@ -45,7 +45,7 @@ The `-x` flag makes go-task propagate the verb's exact exit code; without it eve
 **Not:** live GitHub; no network.
 
 ### `triage`
-**Does:** Record a decision on a candidate. `accept|reject|defer|duplicate -- <scope-or-origin> [--note=…]`. accept → `pending/` (WIP-cap check; `--force` logs a cap-override row); reject → `cancelled/`; defer → stays `proposed/`, note stamped; duplicate → cancel + reference the winning URI. Appends to `xbrief/audit.jsonl`.
+**Does:** Record a decision on a candidate. `accept|reject|defer|duplicate -- <scope-or-origin> [--note=…]`. accept → `pending/` (WIP-cap check; `--force` logs a cap-override row); accept `--defer` → `deferred/` (status `approved`, no WIP-cap check); reject → `cancelled/`; defer → stays `proposed/`, note stamped (decision deferred, not parked); duplicate → cancel + reference the winning URI. Appends to `xbrief/audit.jsonl`.
 **Exit:** `0` · `1` WIP cap hit on accept · `2` bad args/path.
 
 ### `scope:new`
@@ -53,7 +53,7 @@ The `-x` flag makes go-task propagate the verb's exact exit code; without it eve
 **Exit:** `0` (prints path) · `1` slug collision (prints existing path) · `2` error.
 
 ### `scope:start`
-**Does:** Make a scope implementable in one transaction: promote from `proposed/` if needed → `active/` + status `running`; fail if git dirty without `--allow-dirty`; fail if on default branch and policy forbids. `-- <path> [--check]` — `--check` verifies the gate (in `active/`, status `running`, clean tree) without transitioning.
+**Does:** Make a scope implementable in one transaction: promote from `proposed/` or reactivate from `deferred/` (`approved`) via `pending/` if needed → `active/` + status `running`; fail if git dirty without `--allow-dirty`; fail if on default branch and policy forbids. `-- <path> [--check] [--force]` — `--check` verifies the gate (in `active/`, status `running`, clean tree) without transitioning; `--force` overrides the WIP cap when reactivating from `deferred/`/`approved` (logs a `wip-cap-override` audit row).
 **Exit:** `0` running · `1` gate fail (say which) · `2` error.
 
 ### `scope:complete`
@@ -61,7 +61,11 @@ The `-x` flag makes go-task propagate the verb's exact exit code; without it eve
 **Exit:** `0` · `1` missing delivery evidence · `2` error.
 
 ### `scope:stop`
-**Does:** Non-happy terminal or pause. `-- <path> --cancel|--fail|--block|--unblock|--demote [--note=…]`. cancel → `cancelled/`; fail → `completed/` + `failed`; block/unblock toggle within `active/`; demote → `pending/`. Note recorded in narratives; every transition appends to `xbrief/audit.jsonl`.
+**Does:** Non-happy terminal or pause. `-- <path> --cancel|--fail|--block|--unblock|--demote|--defer [--note=…]`. cancel → `cancelled/`; fail → `completed/` + `failed`; block/unblock toggle within `active/`; demote → `pending/`; defer → `deferred/` (status `approved`). Note recorded in narratives; every transition appends to `xbrief/audit.jsonl`.
+**Exit:** `0` · `1` illegal transition · `2` error.
+
+### `scope:defer`
+**Does:** Park an accepted scope. `-- <path> [--note=…]`. Alias for `scope:stop --defer`. Legal from `proposed/`, `pending/`, or `active/` (running/blocked) → `deferred/` (status `approved`). Does not count toward the WIP cap. Reactivate with `scope:start`.
 **Exit:** `0` · `1` illegal transition · `2` error.
 
 ### `render`
