@@ -79,7 +79,11 @@ export {
   SESSION_FILE_REL,
   shouldEmitInventory,
 } from "./session-state.js";
-export { softEmitUsage } from "./soft-emit.js";
+export {
+  drainSoftEmits,
+  resetPendingSoftEmitsForTests,
+  softEmitUsage,
+} from "./soft-emit.js";
 export {
   collectionFilePath,
   deriveMetricsMode,
