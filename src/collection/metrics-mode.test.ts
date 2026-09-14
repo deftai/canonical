@@ -250,6 +250,7 @@ describe("P2 feedback without durable disclosure ceremony", () => {
     const result = await submitFeedback(root, {
       kind: "bug",
       summary: "crash",
+      disclosureAccepted: true,
       collector: stubCollector(root, {
         submit: async (_scope, p) => {
           payload = p as Record<string, unknown>;

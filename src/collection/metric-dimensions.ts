@@ -126,6 +126,7 @@ export function xbriefInventoryDimensions(projectRoot: string): UsageDimensions 
     active: 0,
     completed: 0,
     cancelled: 0,
+    deferred: 0,
     blocked: 0,
   };
   for (const ref of listScopes(projectRoot)) {

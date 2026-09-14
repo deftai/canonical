@@ -38,4 +38,23 @@ describe("collection:opt-in CLI contact flags (attributed one-shot)", () => {
     const code = await run([`--project-root=${root}`, "--email=ada@example.com"]);
     expect(code).toBe(1);
   });
+
+  it("rejects name-only contact flags without email or mobile (#14)", async () => {
+    const root = tempDir("canon-optin-nameonly-");
+    const err: string[] = [];
+    const spy = vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
+      err.push(String(chunk));
+      return true;
+    });
+    const code = await run([
+      `--project-root=${root}`,
+      "--confirm",
+      "--first-name=Ada",
+      "--last-name=Lovelace",
+    ]);
+    spy.mockRestore();
+    expect(code).toBe(2);
+    expect(err.join("")).toMatch(/email or --mobile/i);
+    expect(readCollectionFile(root).metrics?.decision).not.toBe("active");
+  });
 });

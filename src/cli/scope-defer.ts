@@ -1,8 +1,9 @@
 /** `canon scope:defer` -- park an accepted scope (status approved, folder deferred/). */
 import { parseArgs, renderJson } from "../args/index.js";
+import { scopeStopDimensions, softEmitUsage } from "../collection/index.js";
 import { scopeStop } from "../scope/index.js";
 
-export function run(argv: string[]): number {
+export async function run(argv: string[]): Promise<number> {
   const parsed = parseArgs(argv, {
     valueFlags: ["project-root", "note"],
     boolFlags: ["json"],
@@ -38,5 +39,6 @@ export function run(argv: string[]): number {
   } else {
     process.stdout.write(`${result.scope}: ${result.status}\n`);
   }
+  await softEmitUsage(projectRoot, "xbrief_scope_stop", 1, scopeStopDimensions("defer"));
   return 0;
 }

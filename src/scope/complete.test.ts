@@ -112,6 +112,7 @@ describe("scopeComplete", () => {
     const result = await scopeComplete(root, { scope: "2026-01-01-foo.xbrief.json" });
 
     expect(result).toMatchObject({ ok: false, code: 1 });
+    expect(result.ok === false && result.message).toContain("kind: story");
   });
 
   it("rejects an unknown --disposition value (exit 2)", async () => {

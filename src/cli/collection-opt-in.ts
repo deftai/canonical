@@ -6,6 +6,7 @@ import {
   collectionOptIn,
   DEFAULT_SCOPES,
   ensureAttributedOptIn,
+  identityMode,
 } from "../collection/index.js";
 
 export async function run(argv: string[]): Promise<number> {
@@ -49,6 +50,14 @@ export async function run(argv: string[]): Promise<number> {
   const hasIdentityFields = Object.keys(identity).length > 0;
   const consentVersion = parsed.values["consent-version"] ?? CONSENT_VERSION;
   const confirm = parsed.flags.confirm === true;
+
+  if (hasIdentityFields && identityMode(identity) !== "identified") {
+    process.stderr.write(
+      "canon: collection-opt-in: attributed opt-in requires --email or --mobile; " +
+        "name-only stays anonymous (omit contact flags or add --email/--mobile)\n",
+    );
+    return 2;
+  }
 
   const result = hasIdentityFields
     ? await ensureAttributedOptIn(projectRoot, identity, {

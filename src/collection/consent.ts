@@ -257,6 +257,19 @@ export async function collectionOptIn(
     const now = opts.now ?? new Date();
     const metricsScopes = result.scopes.filter((s) => s === "usage");
     if (metricsScopes.length === 0) {
+      const prior = readCollectionFile(projectRoot);
+      if (prior.metrics?.decision === "active") {
+        writeMetricsMirror(
+          projectRoot,
+          {
+            decision: "revoked",
+            scopes: [],
+            consentVersion,
+            decidedAt: now.toISOString(),
+          },
+          "disallowed",
+        );
+      }
       return {
         code: 1,
         message: "collection:opt-in rejected -- server did not grant usage scope",

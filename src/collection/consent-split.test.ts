@@ -12,7 +12,7 @@ import {
 } from "./consent.js";
 import { emitUsage } from "./emit.js";
 import { submitFeedback } from "./feedback.js";
-import { readCollectionFile } from "./storage.js";
+import { readCollectionFile, writeCollectionFile } from "./storage.js";
 import {
   COLLECTION_FILE_REL,
   CONSENT_VERSION,
@@ -332,6 +332,49 @@ describe("C4 consent split", () => {
     expect(result.code).toBe(1);
     expect(result.message).toContain("usage");
     expect(resolveConsentSignal(readCollectionFile(root)).metrics).not.toBe("active");
+  });
+
+  it("revokes active metrics mirror when re-opt-in omits usage scope (#11)", async () => {
+    const root = tempDir("canon-c4-optin-revoke-");
+    writeCollectionFile(root, {
+      installId: "id",
+      token: "tok",
+      metricsMode: "anonymous",
+      metrics: {
+        decision: "active",
+        scopes: [...METRICS_SCOPES],
+        consentVersion: CONSENT_VERSION,
+        decidedAt: "2026-08-01T00:00:00.000Z",
+        expiresAt: Date.now() + 86_400_000,
+      },
+    });
+
+    const result = await collectionOptIn(root, {
+      confirm: true,
+      scopes: [...METRICS_SCOPES],
+      collector: {
+        ensureRegistered: async () => ({ ok: true, installId: "id", state: "active" }),
+        optIn: async () => ({
+          ok: true,
+          state: "active",
+          scopes: [],
+          expiresAt: Date.now() + 86_400_000,
+          contactVerified: false,
+        }),
+        optOut: async () => ({ ok: true, state: "revoked" }),
+        status: async () => ({
+          ok: true,
+          state: "active",
+          scopes: [],
+          contactVerified: false,
+        }),
+        submit: async () => ({ ok: true, id: "n" }),
+      },
+    });
+    expect(result.code).toBe(1);
+    const signal = resolveConsentSignal(readCollectionFile(root));
+    expect(signal.metrics).toBe("revoked");
+    expect(signal.metricsMode).toBe("disallowed");
   });
 });
 

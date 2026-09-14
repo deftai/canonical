@@ -53,6 +53,7 @@ export async function run(argv: string[]): Promise<number> {
         "xbrief_inventory",
         1,
         xbriefInventoryDimensions(projectRoot),
+        { onLateEmit: () => markInventoryEmitted(projectRoot) },
       );
       if (emitted) {
         markInventoryEmitted(projectRoot);

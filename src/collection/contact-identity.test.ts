@@ -329,9 +329,24 @@ describe("PRIV-2 and feedback --as-anonymous", () => {
       },
     });
 
-    await submitFeedback(root, { kind: "bug", summary: "crash", collector });
-    await submitFeedback(root, { kind: "feature", summary: "dark mode", collector });
-    await submitFeedback(root, { kind: "feedback", message: "hi", collector });
+    await submitFeedback(root, {
+      kind: "bug",
+      summary: "crash",
+      disclosureAccepted: true,
+      collector,
+    });
+    await submitFeedback(root, {
+      kind: "feature",
+      summary: "dark mode",
+      disclosureAccepted: true,
+      collector,
+    });
+    await submitFeedback(root, {
+      kind: "feedback",
+      message: "hi",
+      disclosureAccepted: true,
+      collector,
+    });
     await emitUsage(root, "orient_ok", 1, { collector });
 
     expect(payloads.length).toBe(4);
@@ -377,6 +392,7 @@ describe("PRIV-2 and feedback --as-anonymous", () => {
     const result = await submitFeedback(root, {
       kind: "feedback",
       message: "anonymous note",
+      disclosureAccepted: true,
       asAnonymous: true,
       collector,
     });

@@ -164,8 +164,7 @@ export async function scopeComplete(
       return {
         ok: false,
         code: 1,
-        message:
-          "missing delivery evidence: --disposition is required to complete an implementable scope (kind: story)",
+        message: `missing delivery evidence: --disposition is required to complete an implementable scope (kind: ${kind ?? "story"})`,
       };
     }
   } else if (!isDeliveryDisposition(opts.disposition)) {
