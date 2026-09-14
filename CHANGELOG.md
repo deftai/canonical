@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.3.2] - 2026-09-14
+
+### Added
+- Deferred lifecycle for accepted-but-parked scopes (#15/#16): `approved` status in
+  `deferred/`, verbs `scope:defer` / `scope:stop --defer` / `triage accept --defer`,
+  reactivate via `scope:start` (WIP-capped; `--force` audited).
+- `milestone` and `release` `x-canonical/kind` values (#12/#17): required
+  `x-canonical/target` / `x-canonical/version`, roadmap Milestones/Releases sections,
+  non-implementable completion rules.
+- Enriched usage metrics (#9/#18): lifecycle dimensions, session counters,
+  coverage-aware check metrics, throttled `xbrief_inventory`, consent-gated
+  session state, separate inventory throttle file.
+
+### Fixed
+- Consent integrity and telemetry audit (#19): reject name-only attributed opt-in,
+  require per-filing disclosure confirmation, revoke stale metrics on rejected
+  re-opt-in, align defer/inventory/soft-emit with throttle semantics, drain late
+  soft-emits before process exit (500ms remaining grace).
+- `pnpm run promote -- X.Y.Z` ignores a literal `--` argv separator.
+
 ## [0.3.1] - 2026-09-10
 
 ### Added
