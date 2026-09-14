@@ -3,10 +3,16 @@ import { type EmitUsageOutcome, emitUsage, type UsageDimensions } from "./emit.j
 /** Soft-emit budget so a hung collector cannot stall host verbs. */
 export const SOFT_EMIT_TIMEOUT_MS = 2_500;
 
-/** Max wait for in-flight late emits before CLI exit. */
-export const LATE_EMIT_DRAIN_MS = SOFT_EMIT_TIMEOUT_MS;
+/** Extra budget after soft timeout for late success before CLI exit. */
+export const LATE_EMIT_GRACE_MS = 500;
 
-const pendingLateEmits = new Set<Promise<void>>();
+interface PendingLateEmit {
+  readonly promise: Promise<void>;
+  /** Absolute deadline (ms) — startedAt + SOFT_EMIT_TIMEOUT_MS + LATE_EMIT_GRACE_MS. */
+  readonly drainUntil: number;
+}
+
+const pendingLateEmits = new Set<PendingLateEmit>();
 
 export interface SoftEmitUsageOptions {
   /** Invoked when emit succeeds after the soft timeout (e.g. inventory throttle). */
@@ -14,12 +20,17 @@ export interface SoftEmitUsageOptions {
 }
 
 /** Await detached late emits (bounded) so CLI exit does not drop throttle hooks. */
-export async function drainSoftEmits(maxWaitMs: number = LATE_EMIT_DRAIN_MS): Promise<void> {
+export async function drainSoftEmits(): Promise<void> {
   if (pendingLateEmits.size === 0) {
     return;
   }
+  const now = Date.now();
+  const maxWaitMs = Math.max(0, ...[...pendingLateEmits].map((entry) => entry.drainUntil - now));
+  if (maxWaitMs === 0) {
+    return;
+  }
   await Promise.race([
-    Promise.allSettled([...pendingLateEmits]),
+    Promise.allSettled([...pendingLateEmits].map((entry) => entry.promise)),
     new Promise<void>((resolve) => {
       setTimeout(resolve, maxWaitMs);
     }),
@@ -40,6 +51,7 @@ export async function softEmitUsage(
   options: SoftEmitUsageOptions = {},
 ): Promise<boolean> {
   try {
+    const startedAt = Date.now();
     let settled = false;
     const emitTask = emitUsage(projectRoot, metric, value, {
       ...(dimensions !== undefined ? { dimensions } : {}),
@@ -76,9 +88,13 @@ export async function softEmitUsage(
       .catch(() => {
         // telemetry must never break the host verb
       });
-    pendingLateEmits.add(lateWork);
+    const pending: PendingLateEmit = {
+      promise: lateWork,
+      drainUntil: startedAt + SOFT_EMIT_TIMEOUT_MS + LATE_EMIT_GRACE_MS,
+    };
+    pendingLateEmits.add(pending);
     void lateWork.finally(() => {
-      pendingLateEmits.delete(lateWork);
+      pendingLateEmits.delete(pending);
     });
     return false;
   } catch {

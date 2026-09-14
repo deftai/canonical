@@ -3,6 +3,7 @@ import { cleanupTempDirs, tempDir } from "../test-support/index.js";
 import * as emit from "./emit.js";
 import {
   drainSoftEmits,
+  LATE_EMIT_GRACE_MS,
   resetPendingSoftEmitsForTests,
   SOFT_EMIT_TIMEOUT_MS,
   softEmitUsage,
@@ -105,5 +106,25 @@ describe("softEmitUsage", () => {
     await vi.advanceTimersByTimeAsync(200);
     await drain;
     expect(lateCalled).toBe(true);
+  });
+
+  it("drain waits at most LATE_EMIT_GRACE_MS after soft timeout (Greptile P1)", async () => {
+    vi.useFakeTimers();
+    const root = tempDir("canon-soft-emit-grace-");
+    vi.spyOn(emit, "emitUsage").mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          setTimeout(() => resolve({ emitted: true, id: "late-1" }), SOFT_EMIT_TIMEOUT_MS + 400);
+        }),
+    );
+
+    const promise = softEmitUsage(root, "xbrief_inventory");
+    await vi.advanceTimersByTimeAsync(SOFT_EMIT_TIMEOUT_MS);
+    expect(await promise).toBe(false);
+
+    const drain = drainSoftEmits();
+    await vi.advanceTimersByTimeAsync(LATE_EMIT_GRACE_MS);
+    await drain;
+    expect(vi.getTimerCount()).toBe(0);
   });
 });
