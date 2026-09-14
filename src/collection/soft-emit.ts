@@ -62,19 +62,23 @@ export async function softEmitUsage(
     });
 
     let softTimeoutId: ReturnType<typeof setTimeout> | undefined;
-    const outcome = await Promise.race([
-      emitTask,
-      new Promise<{ emitted: false; reason: "submit_failed" }>((resolve) => {
-        softTimeoutId = setTimeout(() => {
-          if (!settled) {
-            settled = true;
-            resolve({ emitted: false, reason: "submit_failed" });
-          }
-        }, SOFT_EMIT_TIMEOUT_MS);
-      }),
-    ]);
-    if (softTimeoutId !== undefined) {
-      clearTimeout(softTimeoutId);
+    let outcome: Awaited<typeof emitTask> | { emitted: false; reason: "submit_failed" };
+    try {
+      outcome = await Promise.race([
+        emitTask,
+        new Promise<{ emitted: false; reason: "submit_failed" }>((resolve) => {
+          softTimeoutId = setTimeout(() => {
+            if (!settled) {
+              settled = true;
+              resolve({ emitted: false, reason: "submit_failed" });
+            }
+          }, SOFT_EMIT_TIMEOUT_MS);
+        }),
+      ]);
+    } finally {
+      if (softTimeoutId !== undefined) {
+        clearTimeout(softTimeoutId);
+      }
     }
 
     if (outcome.emitted === true) {

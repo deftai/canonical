@@ -33,6 +33,15 @@ describe("softEmitUsage", () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
+  it("clears soft timeout when emit rejects before deadline (Greptile P2)", async () => {
+    vi.useFakeTimers();
+    const root = tempDir("canon-soft-emit-reject-");
+    vi.spyOn(emit, "emitUsage").mockRejectedValue(new Error("collector down"));
+
+    await expect(softEmitUsage(root, "orient_ok")).resolves.toBe(false);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   it("calls onLateEmit when emit succeeds after the soft timeout (#18)", async () => {
     vi.useFakeTimers();
     const root = tempDir("canon-soft-emit-late-");
