@@ -46,7 +46,31 @@ describe("submitFeedback", () => {
     expect(result.message.toLowerCase()).toMatch(/confirm|disclosure-accepted/);
   });
 
-  it("submits bug payload when submissions granted", async () => {
+  it("requires disclosure-accepted on every submission even after grant (#13)", async () => {
+    const root = tempDir("canon-fb-bypass-");
+    writeCollectionFile(root, {
+      installId: "id",
+      token: "tok",
+      submissions: {
+        granted: true,
+        scopes: [...SUBMISSION_SCOPES],
+        consentVersion: CONSENT_VERSION,
+        decidedAt: "2026-08-01T00:00:00.000Z",
+        expiresAt: Date.now() + 86_400_000,
+      },
+    });
+
+    const result = await submitFeedback(root, {
+      kind: "bug",
+      summary: "crash on orient",
+      collector: stubCollector(async () => ({ ok: true, id: "should-not" })),
+    });
+    expect(result.code).toBe(1);
+    expect(result.disclosureRequired).toBe(true);
+    expect(result.message.toLowerCase()).toMatch(/disclosure-accepted/);
+  });
+
+  it("submits bug payload when submissions granted and disclosure accepted", async () => {
     const root = tempDir("canon-fb-ok-");
     writeCollectionFile(root, {
       installId: "id",
@@ -69,6 +93,7 @@ describe("submitFeedback", () => {
     const result = await submitFeedback(root, {
       kind: "bug",
       summary: "crash on orient",
+      disclosureAccepted: true,
       collector,
     });
     expect(result.code).toBe(0);

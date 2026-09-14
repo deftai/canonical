@@ -129,19 +129,19 @@ export async function submitFeedback(
     };
   }
 
+  if (opts.disclosureAccepted !== true) {
+    const version = opts.version ?? "unknown";
+    return {
+      code: 1,
+      message: confirmRequiredMessage(built.scope, version),
+      disclosureRequired: true,
+      scope: built.scope,
+      payload: built.payload,
+    };
+  }
+
   let file = readCollectionFile(projectRoot);
   if (!hasSubmissionsGrant(file)) {
-    if (opts.disclosureAccepted !== true) {
-      const version = opts.version ?? "unknown";
-      return {
-        code: 1,
-        message: confirmRequiredMessage(built.scope, version),
-        disclosureRequired: true,
-        scope: built.scope,
-        payload: built.payload,
-      };
-    }
-
     // Silent internal grant after user confirm — works even when metrics disallowed.
     const granted = await grantSubmissions(projectRoot, {
       configDir: opts.configDir,

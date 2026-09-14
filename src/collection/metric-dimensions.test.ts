@@ -81,7 +81,14 @@ describe("metric-dimensions (#9)", () => {
       active: 2,
       completed: 0,
       cancelled: 0,
+      deferred: 0,
       blocked: 1,
     });
+  });
+
+  it("xbrief_inventory counts deferred/ folder (#16)", () => {
+    const root = tempGitRepo();
+    writeScopeFixture(root, "deferred", "2026-01-01-d.xbrief.json", { status: "approved" });
+    expect(xbriefInventoryDimensions(root)).toMatchObject({ deferred: 1 });
   });
 });
