@@ -1,0 +1,21 @@
+{
+  "plan": {
+    "created": "2026-10-05T19:12:03.234Z",
+    "items": [],
+    "narratives": {
+      "Description": ""
+    },
+    "references": [],
+    "status": "completed",
+    "title": "collection-refactor-wp5-final-validation-and-delivery",
+    "updated": "2026-10-05T19:17:24.415Z",
+    "x-canonical/delivery": {
+      "branch": "main",
+      "disposition": "accepted_not_delivered"
+    },
+    "x-canonical/kind": "story"
+  },
+  "xBRIEFInfo": {
+    "version": "0.8"
+  }
+}

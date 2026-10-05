@@ -1,0 +1,21 @@
+{
+  "plan": {
+    "created": "2026-10-05T16:53:08.620Z",
+    "items": [],
+    "narratives": {
+      "Description": ""
+    },
+    "references": [],
+    "status": "completed",
+    "title": "collection-refactor-wp1-harness-and-characterization",
+    "updated": "2026-10-05T17:35:09.717Z",
+    "x-canonical/delivery": {
+      "branch": "main",
+      "disposition": "accepted_not_delivered"
+    },
+    "x-canonical/kind": "story"
+  },
+  "xBRIEFInfo": {
+    "version": "0.8"
+  }
+}

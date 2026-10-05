@@ -1,0 +1,21 @@
+{
+  "plan": {
+    "created": "2026-10-05T17:35:09.857Z",
+    "items": [],
+    "narratives": {
+      "Description": ""
+    },
+    "references": [],
+    "status": "completed",
+    "title": "collection-refactor-wp2-opt-in-service",
+    "updated": "2026-10-05T18:03:31.340Z",
+    "x-canonical/delivery": {
+      "branch": "main",
+      "disposition": "accepted_not_delivered"
+    },
+    "x-canonical/kind": "story"
+  },
+  "xBRIEFInfo": {
+    "version": "0.8"
+  }
+}
