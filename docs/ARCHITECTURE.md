@@ -80,11 +80,23 @@ without go-task. The wiring in `tasks/`:
    skeleton (see [`content/state.md`](../content/state.md) for the state model).
 5. Deposits the git hooks to `.githooks/` and sets `core.hooksPath`.
 6. Appends a `.gitignore` baseline (`.canonical/core/`, `.canonical/cache/`,
-   `xbrief/*.lock`).
+   `xbrief/*.lock`, plus `.canonical/collection.json` /
+   `collection-session.json` / `collection-inventory.json`).
 
 All writes go through `src/fs/` contained-write helpers (atomic, root-jailed).
 `init` is idempotent — unchanged files report as skipped. `update` diffs against
 the live deposit and refreshes it.
+
+## Collection state
+
+Per-project collection credentials and consent live only in
+`.canonical/collection.json` (mode 0600, gitignored): `installId`, `token`,
+metrics/submissions records, and a boolean `attributed` ("contact on file").
+Name, email and mobile are never stored locally -- they are sent on opt-in /
+`collection:identity --update` and kept on the server. There is no
+machine-level identifier; each repository is identified only by its own
+`installId`. `collection:status` is local-only and appends
+`channel=staging|production` (bake-time collector host).
 
 ## Enforcement chain
 

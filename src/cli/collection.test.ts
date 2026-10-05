@@ -14,9 +14,17 @@ import { join } from "node:path";
 import { afterAll, describe, expect, it, vi } from "vitest";
 import { COLLECTION_BASE_URL, COLLECTION_ENV } from "../build-info.js";
 import {
+  CLI_FLAG_TABLE,
   canon,
   cleanupTempDirs,
+  extractAgentActionsSection,
+  extractCollectionFeedbackSection,
+  extractDocsCliUsage,
+  extractPhase8,
+  extractUnreleased,
+  extractUserDialogueSection,
   git,
+  hasForbiddenNameFlag,
   installCollectionHarness,
   installCollectionTestHooks,
   readCollectionState,
@@ -83,6 +91,63 @@ async function optInAnonymous(root: string) {
 }
 
 describe("FLOW / STO / SIG", () => {
+  it("FLOW-1: User dialogue section of content/feedback.md is byte-identical to the baseline pin", () => {
+    const text = readFileSync(join(process.cwd(), "content/feedback.md"), "utf8");
+    const section = extractUserDialogueSection(text);
+    const pin = readFileSync(
+      join(process.cwd(), "src/test-support/feedback-user-dialogue.fixture.txt"),
+      "utf8",
+    );
+    expect(section).toBe(pin);
+  });
+
+  it("FLOW-4: Agent actions and Collection & Feedback docs drop removed flags and correlator text", () => {
+    const feedback = readFileSync(join(process.cwd(), "content/feedback.md"), "utf8");
+    const tasks = readFileSync(join(process.cwd(), "content/canonical-tasks.md"), "utf8");
+    const agent = extractAgentActionsSection(feedback);
+    const collection = extractCollectionFeedbackSection(tasks);
+    // Header is also edited in WP4 G2; whole-file check matches EXECUTION §3.4.
+    for (const [label, text] of [
+      ["content/feedback.md", feedback],
+      ["Agent actions", agent],
+      ["Collection & Feedback", collection],
+    ] as const) {
+      expect(text, `${label} must not mention --live`).not.toMatch(/--live\b/);
+      expect(text, `${label} must not mention --scopes`).not.toMatch(/--scopes\b/);
+      expect(text, `${label} must not mention --consent-version`).not.toMatch(
+        /--consent-version\b/,
+      );
+      expect(text, `${label} must not mention correlator`).not.toMatch(/correlator/);
+      expect(text, `${label} must not mention userKey`).not.toMatch(/userKey/);
+      expect(text, `${label} must not mention ~/.config/canonical`).not.toMatch(
+        /~\/\.config\/canonical/,
+      );
+      expect(hasForbiddenNameFlag(text), `${label} must not mention --name flag`).toBe(false);
+    }
+    // Required post-refactor documentation (fails until implementor updates).
+    expect(agent).toMatch(/--disclosure-accepted(?!\])/);
+    expect(agent).toMatch(/channel=(staging|production)| channel=/);
+    expect(collection).toMatch(/--first-name/);
+    expect(collection).toMatch(/--last-name/);
+    expect(collection).toMatch(/--disclosure-accepted(?!\])/);
+    expect(collection).toMatch(/channel=(staging|production)| channel=/);
+  });
+
+  it("FLOW-5: every collection:* / feedback verb and flag in content/*.md is in the CLI tables", () => {
+    const { verbs, pairs } = extractDocsCliUsage();
+    expect(verbs.length).toBeGreaterThan(0);
+    for (const verb of verbs) {
+      expect(CLI_FLAG_TABLE, `unknown verb in docs: ${verb}`).toHaveProperty(verb);
+    }
+    const rejected = pairs.filter((p) => {
+      const table = CLI_FLAG_TABLE[p.verb];
+      return table === undefined || !table.has(p.flag);
+    });
+    expect(rejected, rejected.map((p) => `${p.file}: ${p.verb} --${p.flag}`).join("\n")).toEqual(
+      [],
+    );
+  });
+
   it("FLOW-6: content/feedback.md MUST NOT exceed 118 lines", () => {
     const text = readFileSync(join(process.cwd(), "content/feedback.md"), "utf8");
     // wc -l semantics: count newline characters.
@@ -93,6 +158,32 @@ describe("FLOW / STO / SIG", () => {
           ? text.split("\n").length - 1
           : text.split("\n").length;
     expect(lineCount).toBeLessThanOrEqual(118);
+  });
+
+  it("FLOW-7: Phase 8, ARCHITECTURE.md, and CHANGELOG [Unreleased] reflect the refactor", () => {
+    const manual = readFileSync(join(process.cwd(), "docs/manual-test-plan.md"), "utf8");
+    const architecture = readFileSync(join(process.cwd(), "docs/ARCHITECTURE.md"), "utf8");
+    const changelog = readFileSync(join(process.cwd(), "CHANGELOG.md"), "utf8");
+
+    const phase8 = extractPhase8(manual);
+    expect(phase8).not.toMatch(/--live\b/);
+    // Real captured output includes the channel= suffix (not ellipsis placeholders only).
+    expect(phase8).toMatch(/channel=(staging|production)/);
+
+    expect(architecture).toMatch(/\.canonical\/collection\.json/);
+    expect(architecture).not.toMatch(/correlator/);
+    expect(architecture).not.toMatch(/userKey/);
+
+    const unreleased = extractUnreleased(changelog);
+    expect(unreleased, "CHANGELOG.md must have an [Unreleased] section").not.toBeNull();
+    const body = unreleased ?? "";
+    expect(body.toLowerCase()).toMatch(
+      /contact.*(?:no longer|not) stored locally|not stored locally/,
+    );
+    expect(body).toMatch(/identity\.json/);
+    expect(body.toLowerCase()).toMatch(/machine-level|correlator|installId/);
+    expect(body).toMatch(/--live/);
+    expect(body).toMatch(/--scopes|--consent-version|--name/);
   });
 
   it("STO-1: collection.json is mode 0600; init keeps collection paths in .gitignore", async () => {

@@ -1,5 +1,24 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+- Collection tighten: contact (name/email/mobile) is no longer stored locally --
+  it is sent on opt-in / `collection:identity --update` and kept only on the
+  server; the client keeps a boolean `attributed` flag in
+  `.canonical/collection.json`.
+- Machine-level id removed: no SDK correlator and no
+  `~/.config/canonical/identity.json` (safe to delete the old file if present).
+  Each repository is identified only by its own `installId`.
+- Removed flags: `collection:status --live`, `collection:opt-in --scopes`,
+  `--consent-version`, and `--name`. Attributed opt-in uses
+  `--first-name` / `--last-name` / `--email` / `--mobile`.
+- `collection:identity --show` prints `identity=anonymous|identified` only
+  (mode; no fields). `--update` whole-replaces server contact; `--clear` (and
+  `collection:opt-out --identity`) sends an empty contact.
+- Every real `feedback` submit requires `--disclosure-accepted`.
+  `collection:status` always includes a `channel=staging|production` suffix.
+
 ## [0.3.2] - 2026-09-14
 
 ### Added

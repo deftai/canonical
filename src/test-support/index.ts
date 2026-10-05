@@ -16,6 +16,17 @@ export {
   type RecordedRequest,
 } from "./collector.js";
 export {
+  CLI_FLAG_TABLE,
+  type DocsCliPair,
+  extractAgentActionsSection,
+  extractCollectionFeedbackSection,
+  extractDocsCliUsage,
+  extractPhase8,
+  extractUnreleased,
+  extractUserDialogueSection,
+  hasForbiddenNameFlag,
+} from "./docs-cli.js";
+export {
   acceptanceItem,
   cleanupTempDirs,
   git,

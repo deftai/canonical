@@ -259,16 +259,23 @@ task -x state:validate && task -x render -- roadmap --check
 ## Phase 8 — Collection / feedback (optional, needs staging network)
 
 ```bash
-task -x orient -- --json                    # ▶ metrics=not_prompted submissions=not_granted identity=anonymous
-# Agent (or you) offers metrics consent per feedback.md, then:
-task -x collection:opt-in -- --confirm      # ▶ usage only (metrics); submissions still not_granted
+task -x orient -- --json
+# ▶ metricsMode=undecided metrics=not_prompted submissions=not_granted identity=anonymous channel=staging
+# Agent (or you) offers metrics consent per feedback.md, then anonymous or attributed:
+task -x collection:opt-in -- --confirm
+# ▶ collection: opted in scopes=[usage] metricsMode=anonymous
+# attributed: task -x collection:opt-in -- --confirm --first-name=Ada --last-name=Lovelace --email=ada@example.com
 # or: task -x collection:decline
 grep collection.json .gitignore             # ▶ .canonical/collection.json ignored
-# First submit requires disclosure; --disclosure-accepted grants submissions only:
+task -x collection:identity -- --show       # ▶ identity=anonymous  (mode only; no fields)
+# Every real submit requires --disclosure-accepted (grants submissions; does not enable metrics):
 task -x feedback -- --kind=feedback --message="manual test ping" --disclosure-accepted
-task -x collection:status -- --live         # ▶ metrics=… submissions=granted identity=anonymous
+task -x collection:status
+# ▶ metricsMode=anonymous metrics=active submissions=granted identity=anonymous channel=staging
 task -x collection:metric -- --metric=kickoff_done --value=1
-task -x collection:opt-out -- --confirm     # ▶ clears token; metrics revoked, submissions not_granted
+task -x collection:opt-out -- --confirm
+# ▶ collection: opted out metricsMode=disallowed (install rotated)
+# Re-opt-in after opt-out mints a new installId (old install stays revoked on the server).
 ```
 
 Cleanup when done: `npm rm -g @deftai/canonical`.
