@@ -23,17 +23,17 @@
 ## [0.3.1] - 2026-09-10
 
 ### Added
-- Enriched usage metrics (#9): optional `--dimensions` on lifecycle verbs — `xbrief_scope_created`, `xbrief_triage`, `xbrief_scope_start`, enriched `scope_complete`, `xbrief_scope_stop`, coverage-aware `check_pass`/`check_fail`, throttled `xbrief_inventory`, agent-emitted `session_summary` with auto-fill from `.canonical/collection-session.json`.
+- Enriched usage metrics (#9): optional `--dimensions` on lifecycle verbs -- `xbrief_scope_created`, `xbrief_triage`, `xbrief_scope_start`, enriched `scope_complete`, `xbrief_scope_stop`, coverage-aware `check_pass`/`check_fail`, throttled `xbrief_inventory`, agent-emitted `session_summary` with auto-fill from `.canonical/collection-session.json`.
 
 ### Changed
 - Build-time release channels: `CANONICAL_BUILD_CHANNEL=staging|production`
   bakes the collector host into the binary (`api.deft-staging.co` vs
   `api.deft.co`). Published builds are not customer-switchable via env vars.
   `canon --version` prints the channel; `collection:status` includes
-  `channel=…`. Local default bake is staging (`pnpm run build` /
+  `channel=...`. Local default bake is staging (`pnpm run build` /
   `pnpm run build:staging`; use `build:production` for prod-baked packs).
-- npm publish is channelled by git tag: `vX.Y.Z-staging.N` → `--tag staging`
-  (staging bake); plain `vX.Y.Z` → `--tag prod` (production bake). GA is a
+- npm publish is channelled by git tag: `vX.Y.Z-staging.N` -> `--tag staging`
+  (staging bake); plain `vX.Y.Z` -> `--tag prod` (production bake). GA is a
   separate promote of dist-tags `latest` + `stable` (`pnpm run promote`).
   Helpers: `pnpm run next-staging-version`, `pnpm run promote`.
 
@@ -48,7 +48,7 @@
   humans; per-submit feedback confirm (even when metrics disallowed); consent
   version `canonical-2026-09-b`. Persist `metricsMode`
   (`undecided|disallowed|anonymous|attributed`) in `.canonical/collection.json`;
-  orient/status print `metricsMode=… metrics=… submissions=… identity=…`.
+  orient/status print `metricsMode=... metrics=... submissions=... identity=...`.
   Feedback submit works when metrics are disallowed (agent-internal
   `--disclosure-accepted` after user confirm). Full opt-out rotates install
   credentials (`installId`/`token` cleared).
