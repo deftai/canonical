@@ -3,7 +3,7 @@
 ## [Unreleased]
 
 ### Changed
-- Collection tighten: contact (name/email/mobile) is no longer stored locally --
+- Collection tighten (#26): contact (name/email/mobile) is no longer stored locally --
   it is sent on opt-in / `collection:identity --update` and kept only on the
   server; the client keeps a boolean `attributed` flag in
   `.canonical/collection.json`.
