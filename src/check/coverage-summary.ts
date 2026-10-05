@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import type { UsageDimensions } from "../collection/emit.js";
+import type { UsageDimensions } from "../collection/index.js";
 
 export interface CoverageSummary {
   readonly linesPct?: number;

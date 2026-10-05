@@ -2,16 +2,10 @@ import type { ScopeDoc } from "../types/index.js";
 import { scopeDependencies, scopeKind } from "../types/index.js";
 import { listScopes, readScope } from "../xbrief/brief-io.js";
 import type { UsageDimensions } from "./emit.js";
-
-export type LifetimeHoursBucket = "<1" | "1-4" | "4-24" | "24+";
-export type AgentTurnsBucket = "1-5" | "6-15" | "16-40" | "40+";
-export type DurationBucket = LifetimeHoursBucket;
-
-/** Bucket scope age at completion (issue #9). */
 export function bucketLifetimeHours(
   createdIso: string,
   now: Date = new Date(),
-): LifetimeHoursBucket | undefined {
+): "<1" | "1-4" | "4-24" | "24+" | undefined {
   const created = Date.parse(createdIso);
   if (Number.isNaN(created)) {
     return undefined;
@@ -28,9 +22,7 @@ export function bucketLifetimeHours(
   }
   return "24+";
 }
-
-/** Bucket agent turn count for session_summary (issue #9). */
-export function bucketAgentTurns(turns: number): AgentTurnsBucket {
+export function bucketAgentTurns(turns: number): "1-5" | "6-15" | "16-40" | "40+" {
   if (turns <= 5) {
     return "1-5";
   }
@@ -42,53 +34,37 @@ export function bucketAgentTurns(turns: number): AgentTurnsBucket {
   }
   return "40+";
 }
-
-/** Bucket session duration from startedAt (issue #9). */
-export function bucketDurationHours(
-  startedAtIso: string,
-  now: Date = new Date(),
-): DurationBucket | undefined {
+export function bucketDurationHours(startedAtIso: string, now: Date = new Date()) {
   return bucketLifetimeHours(startedAtIso, now);
 }
-
-function cappedAcceptanceCount(count: number): number {
+function cap(count: number): number {
   return Math.min(Math.max(count, 0), 5);
 }
-
-/** Dimensions for xbrief_scope_created (scope:new). */
 export function scopeCreatedDimensions(scope: ScopeDoc): UsageDimensions {
-  const kind = scopeKind(scope) ?? "story";
-  const items = scope.plan.items ?? [];
   return {
-    kind,
-    has_acceptance_count: cappedAcceptanceCount(items.length),
+    kind: scopeKind(scope) ?? "story",
+    has_acceptance_count: cap((scope.plan.items ?? []).length),
     dependency_count: scopeDependencies(scope).length,
   };
 }
-
-/** Dimensions for xbrief_scope_start (scope:start). */
 export function scopeStartDimensions(scope: ScopeDoc): UsageDimensions {
-  const kind = scopeKind(scope) ?? "story";
-  const pending = (scope.plan.items ?? []).filter((i) => i.status === "pending").length;
   return {
-    kind,
-    acceptance_pending_count: cappedAcceptanceCount(pending),
+    kind: scopeKind(scope) ?? "story",
+    acceptance_pending_count: cap(
+      (scope.plan.items ?? []).filter((i) => i.status === "pending").length,
+    ),
   };
 }
-
-/** Dimensions for scope_complete (issue #9 enriched). */
 export function scopeCompleteDimensions(
   scope: ScopeDoc,
   opts: { disposition?: string; hadDeliveryPr?: boolean; now?: Date } = {},
 ): UsageDimensions {
-  const kind = scopeKind(scope) ?? "story";
   const items = scope.plan.items ?? [];
-  const total = cappedAcceptanceCount(items.length);
-  const completed = Math.min(items.filter((i) => i.status === "completed").length, total);
+  const total = cap(items.length);
   const dims: Record<string, string | number | boolean> = {
-    kind,
+    kind: scopeKind(scope) ?? "story",
     acceptance_total: total,
-    acceptance_completed: completed,
+    acceptance_completed: Math.min(items.filter((i) => i.status === "completed").length, total),
     dependency_count: scopeDependencies(scope).length,
   };
   if (opts.disposition !== undefined) {
@@ -103,8 +79,6 @@ export function scopeCompleteDimensions(
   }
   return dims;
 }
-
-/** Dimensions for xbrief_triage. */
 export function triageDimensions(
   decision: string,
   fromStatus: string,
@@ -112,13 +86,9 @@ export function triageDimensions(
 ): UsageDimensions {
   return { decision, from_status: fromStatus, to_status: toStatus };
 }
-
-/** Dimensions for xbrief_scope_stop. */
 export function scopeStopDimensions(action: string): UsageDimensions {
   return { action };
 }
-
-/** Integer counts by lifecycle folder + blocked status (issue #9). */
 export function xbriefInventoryDimensions(projectRoot: string): UsageDimensions {
   const counts: Record<string, number> = {
     proposed: 0,

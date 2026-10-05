@@ -1,5 +1,4 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import * as collection from "../collection/index.js";
 import { cleanupTempDirs, tempGitRepo, writeScopeFixture } from "../test-support/index.js";
 import { run } from "./scope-defer.js";
 
@@ -36,22 +35,7 @@ describe("canon scope:defer", () => {
     expect(parsed).toMatchObject({ ok: true, status: "approved" });
   });
 
-  it("emits xbrief_scope_stop telemetry with defer action (#16)", async () => {
-    const root = tempGitRepo();
-    writeScopeFixture(root, "pending", "2026-01-01-foo.json", statusPlan("pending"));
-    const emitSpy = vi.spyOn(collection, "softEmitUsage").mockResolvedValue(true);
-
-    const code = await run(["2026-01-01-foo.json", "--project-root", root]);
-
-    expect(code).toBe(0);
-    expect(emitSpy).toHaveBeenCalledWith(
-      root,
-      "xbrief_scope_stop",
-      1,
-      expect.objectContaining({ action: "defer" }),
-    );
-    emitSpy.mockRestore();
-  });
+  // Telemetry: MET-9 in collection.test.ts (fake collector; spy case retired at WP3 G1).
 
   it("missing scope argument is an arg error (exit 2)", async () => {
     const root = tempGitRepo();

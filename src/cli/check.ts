@@ -2,7 +2,7 @@
 import { parseArgs, renderJson } from "../args/index.js";
 import { coverageCheckDimensions } from "../check/coverage-summary.js";
 import { runCheck } from "../check/index.js";
-import { recordCheckRun, softEmitUsage } from "../collection/index.js";
+import { bump, softEmitUsage } from "../collection/index.js";
 import { dispatch } from "./dispatch.js";
 
 export async function run(argv: string[]): Promise<number> {
@@ -36,7 +36,7 @@ export async function run(argv: string[]): Promise<number> {
   }
 
   if (result.code === 0 || result.code === 1) {
-    recordCheckRun(projectRoot);
+    bump(projectRoot, "checksRun");
     const coverage = coverageCheckDimensions(projectRoot, { notBeforeMs: checkStartedMs });
     if (result.code === 0) {
       await softEmitUsage(projectRoot, "check_pass", 1, coverage);

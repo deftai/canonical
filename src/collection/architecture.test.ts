@@ -1,7 +1,5 @@
 /**
- * WP2 G1: ARC-2, ARC-3, ARC-4 (opt-in service bullets), ARC-6.
- * ARC-1 / ARC-5 / metrics-service ARC-4 bullets land at WP3 G1.
- * ARC-7 is validator-only (no test).
+ * ARC-1 to ARC-6 and ARC-8 (ARC-8 also in test-support). ARC-7 is validator-only.
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
@@ -10,6 +8,21 @@ import { describe, expect, it } from "vitest";
 const ROOT = process.cwd();
 const COLLECTION_DIR = join(ROOT, "src/collection");
 const CLI_DIR = join(ROOT, "src/cli");
+
+/** Exact ARC-1 non-test file set under src/collection/. */
+const ARC1_COLLECTION_FILES = [
+  "types.ts",
+  "storage.ts",
+  "client.ts",
+  "consent.ts",
+  "feedback.ts",
+  "emit.ts",
+  "session-state.ts",
+  "metric-dimensions.ts",
+  "index.ts",
+] as const;
+
+const OPT_IN_SPECS = new Set(["./types.js", "./storage.js", "./client.js", "./consent.js"]);
 
 function nonTestTsFiles(dir: string): string[] {
   return readdirSync(dir)
@@ -47,7 +60,48 @@ function projectImports(source: string): string[] {
   return out;
 }
 
-describe("ARC architecture (WP2)", () => {
+/** Named bindings imported from a project specifier (skips `import type`). */
+function valueNamedImports(source: string, spec: string): string[] {
+  const out: string[] = [];
+  const re = /import\s+(?!type\s)\{([^}]+)\}\s+from\s+["']([^"']+)["']/g;
+  for (const match of source.matchAll(re)) {
+    if (match[2] !== spec) {
+      continue;
+    }
+    const block = match[1];
+    if (block === undefined) {
+      continue;
+    }
+    for (const part of block.split(",")) {
+      const cleaned = part
+        .trim()
+        .replace(/^type\s+/, "")
+        .split(/\s+as\s+/)[0]
+        ?.trim();
+      if (cleaned !== undefined && cleaned.length > 0) {
+        out.push(cleaned);
+      }
+    }
+  }
+  return out;
+}
+
+/** wc -l semantics over UTF-8 text. */
+function lineCount(text: string): number {
+  if (text.length === 0) {
+    return 0;
+  }
+  return text.endsWith("\n") ? text.split("\n").length - 1 : text.split("\n").length;
+}
+
+describe("ARC architecture", () => {
+  it("ARC-1: non-test src/collection/ files are exactly the nine-module set (soft-emit.ts gone)", () => {
+    const names = readdirSync(COLLECTION_DIR)
+      .filter((name) => name.endsWith(".ts") && !name.endsWith(".test.ts"))
+      .sort();
+    expect(names).toEqual([...ARC1_COLLECTION_FILES].sort());
+  });
+
   it("ARC-2: collection CLI is src/cli/collection.ts + feedback.ts; no collection-*.ts; solo task names unchanged", () => {
     expect(existsSync(join(CLI_DIR, "collection.ts"))).toBe(true);
     expect(existsSync(join(CLI_DIR, "feedback.ts"))).toBe(true);
@@ -152,6 +206,42 @@ describe("ARC architecture (WP2)", () => {
         expect(imports, `${name} must not import ${bad}`).not.toContain(bad);
       }
     }
+  });
+
+  it("ARC-4: metrics service imports from opt-in only usageCollector and hasUsageConsent", () => {
+    const allowed = new Set(["usageCollector", "hasUsageConsent"]);
+    for (const name of ["emit.ts", "session-state.ts"]) {
+      const src = read(join(COLLECTION_DIR, name));
+      const specs = projectImports(src);
+      for (const spec of specs) {
+        if (OPT_IN_SPECS.has(spec)) {
+          const names = valueNamedImports(src, spec);
+          for (const binding of names) {
+            expect(
+              allowed.has(binding),
+              `${name} must not value-import ${binding} from ${spec}`,
+            ).toBe(true);
+          }
+        }
+      }
+      // session-state may import contained-write; emit must not pull other project files outside collection/.
+      const outside = specs.filter((s) => s.startsWith("../"));
+      if (name === "session-state.ts") {
+        expect(outside.every((s) => s === "../fs/contained-write.js")).toBe(true);
+      } else {
+        expect(outside, `${name} must not import outside src/collection/`).toEqual([]);
+      }
+    }
+  });
+
+  it("ARC-5: line budget ≤1500 over non-test collection + cli/collection.ts + cli/feedback.ts", () => {
+    const paths = [
+      ...nonTestTsFiles(COLLECTION_DIR),
+      join(CLI_DIR, "collection.ts"),
+      join(CLI_DIR, "feedback.ts"),
+    ].filter((p) => existsSync(p));
+    const total = paths.reduce((sum, path) => sum + lineCount(read(path)), 0);
+    expect(total).toBeLessThanOrEqual(1500);
   });
 
   it("ARC-6: no @deprecated in architecture files; every index export used outside the module", () => {

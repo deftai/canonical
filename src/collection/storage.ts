@@ -2,21 +2,9 @@ import { chmodSync, existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { CredentialStorage, StoredCredentials } from "@deft/collection-sdk";
 import { atomicWriteJson } from "../fs/contained-write.js";
-import {
-  COLLECTION_FILE_REL,
-  type CollectionFile,
-  type MetricsRecord,
-  normalize,
-  type SubmissionsRecord,
-  signal,
-} from "./types.js";
-
-export function collectionFilePath(projectRoot: string): string {
-  return join(projectRoot, COLLECTION_FILE_REL);
-}
-
+import { COLLECTION_FILE_REL, type CollectionFile, normalize } from "./types.js";
 export function readState(projectRoot: string): CollectionFile {
-  const path = collectionFilePath(projectRoot);
+  const path = join(projectRoot, COLLECTION_FILE_REL);
   if (!existsSync(path)) {
     return {};
   }
@@ -30,22 +18,16 @@ export function readState(projectRoot: string): CollectionFile {
   if (changed) {
     try {
       writeState(projectRoot, file);
-    } catch {
-      // best-effort persist; still return normalized view
-    }
+    } catch {}
   }
   return file;
 }
-
 export function writeState(projectRoot: string, file: CollectionFile): void {
   atomicWriteJson(projectRoot, COLLECTION_FILE_REL, file);
   try {
-    chmodSync(collectionFilePath(projectRoot), 0o600);
-  } catch {
-    // best-effort on platforms that ignore mode
-  }
+    chmodSync(join(projectRoot, COLLECTION_FILE_REL), 0o600);
+  } catch {}
 }
-
 export function updateState(
   projectRoot: string,
   fn: (file: CollectionFile) => CollectionFile,
@@ -54,19 +36,18 @@ export function updateState(
   writeState(projectRoot, next);
   return next;
 }
-
-/** CredentialStorage adapter — save/clear keep all consent fields (STO-5). */
 export function credentialStorage(projectRoot: string): CredentialStorage {
   return {
     async load(): Promise<StoredCredentials | null> {
       const file = readState(projectRoot);
+      const { installId, token } = file;
       if (
-        typeof file.installId === "string" &&
-        file.installId.length > 0 &&
-        typeof file.token === "string" &&
-        file.token.length > 0
+        typeof installId === "string" &&
+        installId.length > 0 &&
+        typeof token === "string" &&
+        token.length > 0
       ) {
-        return { installId: file.installId, token: file.token };
+        return { installId, token };
       }
       return null;
     },
@@ -78,50 +59,11 @@ export function credentialStorage(projectRoot: string): CredentialStorage {
       }));
     },
     async clear(): Promise<void> {
-      updateState(projectRoot, (existing) => {
-        const next: CollectionFile = {
-          ...(existing.metrics !== undefined ? { metrics: existing.metrics } : {}),
-          ...(existing.submissions !== undefined ? { submissions: existing.submissions } : {}),
-          ...(existing.attributed !== undefined ? { attributed: existing.attributed } : {}),
-        };
-        return next;
-      });
+      updateState(projectRoot, ({ metrics, submissions, attributed }) => ({
+        ...(metrics !== undefined ? { metrics } : {}),
+        ...(submissions !== undefined ? { submissions } : {}),
+        ...(attributed !== undefined ? { attributed } : {}),
+      }));
     },
   };
 }
-
-/** @internal test helper — accepts legacy shapes and normalizes on write. */
-export function writeCollectionFile(projectRoot: string, file: CollectionFile): void {
-  writeState(projectRoot, normalize(file).file);
-}
-
-/** @internal test helper — write a metrics record (strips legacy scopes). */
-export function writeMetricsMirror(projectRoot: string, metrics: MetricsRecord): void {
-  const lean: MetricsRecord = {
-    decision: metrics.decision,
-    consentVersion: metrics.consentVersion,
-    decidedAt: metrics.decidedAt,
-    ...(typeof metrics.expiresAt === "number" ? { expiresAt: metrics.expiresAt } : {}),
-  };
-  updateState(projectRoot, (existing) => ({ ...existing, metrics: lean }));
-}
-
-export function hasSubmissionsGrant(file: CollectionFile, nowMs: number = Date.now()): boolean {
-  return signal(file, nowMs).submissions === "granted";
-}
-
-export function hasScopeConsent(
-  file: CollectionFile,
-  scope: string,
-  nowMs: number = Date.now(),
-): boolean {
-  if (scope === "usage") {
-    return signal(file, nowMs).metrics === "active";
-  }
-  if (!hasSubmissionsGrant(file, nowMs)) {
-    return false;
-  }
-  return (["feedback", "bug", "feature"] as readonly string[]).includes(scope);
-}
-
-export type { SubmissionsRecord };

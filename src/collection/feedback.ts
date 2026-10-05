@@ -1,11 +1,16 @@
 import { platform as osPlatform, release as osRelease } from "node:os";
-import type { Collector } from "@deft/collection-sdk";
 import { collector } from "./client.js";
 import { grantSubmissions } from "./consent.js";
-import { hasScopeConsent, hasSubmissionsGrant, readState } from "./storage.js";
+import { readState } from "./storage.js";
+import { signal } from "./types.js";
 
+function granted(file: ReturnType<typeof readState>): boolean {
+  return signal(file).submissions === "granted";
+}
+function scopeOk(file: ReturnType<typeof readState>, scope: string): boolean {
+  return granted(file) && (["feedback", "bug", "feature"] as readonly string[]).includes(scope);
+}
 export type FeedbackKind = "bug" | "feature" | "feedback";
-
 export interface SubmitFeedbackOptions {
   readonly kind: FeedbackKind;
   readonly message?: string;
@@ -16,13 +21,11 @@ export interface SubmitFeedbackOptions {
   readonly stack?: string;
   readonly logs?: string;
   readonly os?: string;
-  readonly collector?: Collector;
   readonly dryRun?: boolean;
   readonly disclosureAccepted?: boolean;
   readonly asAnonymous?: boolean;
   readonly version?: string;
 }
-
 export interface SubmitFeedbackResult {
   readonly code: 0 | 1 | 2;
   readonly message: string;
@@ -32,7 +35,6 @@ export interface SubmitFeedbackResult {
   readonly payload?: Record<string, unknown>;
   readonly disclosureRequired?: boolean;
 }
-
 type KindSpec = {
   required: "message" | "summary";
   fallback: "summary" | "message";
@@ -40,7 +42,6 @@ type KindSpec = {
   defaults?: () => Record<string, string>;
   optional: ReadonlyArray<{ key: string; from: keyof SubmitFeedbackOptions; max: number }>;
 };
-
 const KIND_TABLE: Record<FeedbackKind, KindSpec> = {
   feedback: {
     required: "message",
@@ -68,7 +69,6 @@ const KIND_TABLE: Record<FeedbackKind, KindSpec> = {
     ],
   },
 };
-
 function buildPayload(
   opts: SubmitFeedbackOptions,
 ):
@@ -104,48 +104,50 @@ function buildPayload(
   }
   return { ok: true, scope: opts.kind, payload };
 }
-
-function confirmRequiredMessage(kind: FeedbackKind, version: string): string {
-  return (
-    `feedback: user confirm required -- will send: canonical version (${version}), ` +
-    `installId, and ${kind} fields. After the user confirms the filing ` +
-    `in plain English, re-run with --disclosure-accepted (agent-internal; does not ` +
-    `enable metrics). Load feedback.md for the dialogue.`
-  );
+function disclosurePending(
+  scope: FeedbackKind,
+  payload: Record<string, unknown>,
+  version: string,
+): SubmitFeedbackResult {
+  return {
+    code: 1,
+    message:
+      `feedback: user confirm required -- will send: canonical version (${version}), ` +
+      `installId, and ${scope} fields. After the user confirms the filing ` +
+      `in plain English, re-run with --disclosure-accepted (agent-internal; does not ` +
+      `enable metrics). Load feedback.md for the dialogue.`,
+    disclosureRequired: true,
+    scope,
+    payload,
+  };
 }
-
-async function sendFeedback(
+async function submitBuilt(
   projectRoot: string,
-  opts: SubmitFeedbackOptions,
-  built: { scope: FeedbackKind; payload: Record<string, unknown> },
+  scope: FeedbackKind,
+  payload: Record<string, unknown>,
+  asAnonymous: boolean,
 ): Promise<SubmitFeedbackResult> {
   let file = readState(projectRoot);
-  if (!hasSubmissionsGrant(file)) {
-    const granted = await grantSubmissions(projectRoot);
-    if (granted.code !== 0) {
-      return { code: granted.code, message: granted.message };
-    }
+  if (!granted(file)) {
+    const grant = await grantSubmissions(projectRoot);
+    if (grant.code !== 0) return { code: grant.code, message: grant.message };
     file = readState(projectRoot);
   }
-  if (!hasScopeConsent(file, built.scope)) {
+  if (!scopeOk(file, scope)) {
     return {
       code: 1,
-      message: `feedback: not opted in for scope '${built.scope}' (load feedback.md; pass --disclosure-accepted after user confirm)`,
+      message: `feedback: not opted in for scope '${scope}' (load feedback.md; pass --disclosure-accepted after user confirm)`,
     };
   }
   try {
-    const col = opts.collector ?? collector(projectRoot);
-    const result = await col.submit(built.scope, built.payload);
-    if (!result.ok) {
-      return { code: 1, message: `feedback: submit rejected -- ${result.code}` };
-    }
-    const anonNote = opts.asAnonymous === true ? " (as-anonymous)" : "";
+    const result = await collector(projectRoot).submit(scope, payload);
+    if (!result.ok) return { code: 1, message: `feedback: submit rejected -- ${result.code}` };
     return {
       code: 0,
-      message: `feedback: submitted ${built.scope} id=${result.id}${anonNote}`,
+      message: `feedback: submitted ${scope} id=${result.id}${asAnonymous ? " (as-anonymous)" : ""}`,
       id: result.id,
-      scope: built.scope,
-      payload: built.payload,
+      scope,
+      payload,
     };
   } catch (err) {
     return {
@@ -154,15 +156,12 @@ async function sendFeedback(
     };
   }
 }
-
 export async function submitFeedback(
   projectRoot: string,
   opts: SubmitFeedbackOptions,
 ): Promise<SubmitFeedbackResult> {
   const built = buildPayload(opts);
-  if (!built.ok) {
-    return { code: 2, message: built.message };
-  }
+  if (!built.ok) return { code: 2, message: built.message };
   if (opts.dryRun === true) {
     return {
       code: 0,
@@ -173,13 +172,7 @@ export async function submitFeedback(
     };
   }
   if (opts.disclosureAccepted !== true) {
-    return {
-      code: 1,
-      message: confirmRequiredMessage(built.scope, opts.version ?? "unknown"),
-      disclosureRequired: true,
-      scope: built.scope,
-      payload: built.payload,
-    };
+    return disclosurePending(built.scope, built.payload, opts.version ?? "unknown");
   }
-  return sendFeedback(projectRoot, opts, built);
+  return submitBuilt(projectRoot, built.scope, built.payload, opts.asAnonymous === true);
 }

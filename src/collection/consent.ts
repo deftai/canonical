@@ -4,30 +4,22 @@ import { readState, updateState, writeState } from "./storage.js";
 import {
   CONSENT_VERSION,
   type CollectionFile,
-  type CollectionPromptState,
   type ConsentSignal,
   type Contact,
   formatSignal,
   type IdentityState,
   type MetricsMode,
-  type MetricsState,
   parseContact,
   type Result,
   type SdkContact,
-  type SubmissionsState,
   scopesFor,
   signal,
 } from "./types.js";
 
 export type { ConsentSignal, Result };
 
-type Change = {
-  usage?: true;
-  submissions?: true;
-  /** Supplied contact ({} clears). Omitted keeps server contact. */
-  contact?: SdkContact;
-};
-
+type Change = { usage?: true; submissions?: true; contact?: SdkContact };
+type ApplyOk = Result & { scopes: string[] };
 async function guard(label: string, fn: () => Promise<Result>): Promise<Result> {
   try {
     return await fn();
@@ -38,41 +30,25 @@ async function guard(label: string, fn: () => Promise<Result>): Promise<Result> 
     };
   }
 }
-
-type ApplyOk = Result & { scopes: string[] };
-
 function rejectPrefix(label: string): string {
   if (label.startsWith("feedback")) {
     return "feedback: submissions opt-in";
   }
-  if (label.startsWith("collection:identity")) {
-    return "collection:identity";
-  }
-  return "collection:opt-in";
+  return label.startsWith("collection:identity") ? "collection:identity" : "collection:opt-in";
 }
-
 function persistChange(root: string, change: Change, expiresAt: number, decidedAt: string): void {
   updateState(root, (prior) => {
     let next: CollectionFile = { ...prior };
     if (change.usage === true) {
       next = {
         ...next,
-        metrics: {
-          decision: "active",
-          consentVersion: CONSENT_VERSION,
-          decidedAt,
-          expiresAt,
-        },
+        metrics: { decision: "active", consentVersion: CONSENT_VERSION, decidedAt, expiresAt },
       };
     }
     if (change.submissions === true) {
       next = {
         ...next,
-        submissions: {
-          consentVersion: CONSENT_VERSION,
-          decidedAt,
-          expiresAt,
-        },
+        submissions: { consentVersion: CONSENT_VERSION, decidedAt, expiresAt },
       };
     }
     if (change.contact !== undefined) {
@@ -81,27 +57,6 @@ function persistChange(root: string, change: Change, expiresAt: number, decidedA
     return next;
   });
 }
-
-function revokeUsageOnMissingScope(root: string, decidedAt: string): Result {
-  updateState(root, (prior) => {
-    if (prior.metrics?.decision !== "active") {
-      return prior;
-    }
-    return {
-      ...prior,
-      metrics: {
-        decision: "revoked",
-        consentVersion: CONSENT_VERSION,
-        decidedAt,
-      },
-    };
-  });
-  return {
-    code: 1,
-    message: "collection:opt-in rejected -- server did not grant usage scope",
-  };
-}
-
 /** Single sync primitive: register once, one optIn, one state update (ARC-3). */
 async function apply(root: string, change: Change, label: string): Promise<ApplyOk | Result> {
   return guard(label, async () => {
@@ -114,12 +69,11 @@ async function apply(root: string, change: Change, label: string): Promise<Apply
         message: `${prefix} register failed -- ${registered.code}`,
       };
     }
-    const scopes = scopesFor(readState(root), Date.now(), {
-      usage: change.usage,
-      submissions: change.submissions,
-    });
     const result = await col.optIn({
-      scopes,
+      scopes: scopesFor(readState(root), Date.now(), {
+        usage: change.usage,
+        submissions: change.submissions,
+      }),
       consentVersion: CONSENT_VERSION,
       ...(change.contact !== undefined ? { contact: change.contact } : {}),
     });
@@ -128,17 +82,23 @@ async function apply(root: string, change: Change, label: string): Promise<Apply
     }
     const decidedAt = new Date().toISOString();
     if (change.usage === true && !result.scopes.includes("usage")) {
-      return revokeUsageOnMissingScope(root, decidedAt);
+      updateState(root, (prior) =>
+        prior.metrics?.decision !== "active"
+          ? prior
+          : {
+              ...prior,
+              metrics: { decision: "revoked", consentVersion: CONSENT_VERSION, decidedAt },
+            },
+      );
+      return {
+        code: 1,
+        message: "collection:opt-in rejected -- server did not grant usage scope",
+      };
     }
     persistChange(root, change, result.expiresAt, decidedAt);
-    return {
-      code: 0,
-      message: "ok",
-      scopes: result.scopes.filter((s) => s === "usage"),
-    };
+    return { code: 0, message: "ok", scopes: result.scopes.filter((s) => s === "usage") };
   });
 }
-
 export async function optIn(
   root: string,
   contact: SdkContact,
@@ -160,7 +120,6 @@ export async function optIn(
     metricsMode: mode,
   };
 }
-
 export async function grantSubmissions(
   root: string,
 ): Promise<Result & { scopes?: readonly string[] }> {
@@ -174,21 +133,18 @@ export async function grantSubmissions(
     scopes: ["feedback", "bug", "feature"],
   };
 }
-
-function hasCredentials(file: CollectionFile): boolean {
-  return (
+function ready(file: CollectionFile): boolean {
+  const creds =
     typeof file.installId === "string" &&
     file.installId.length > 0 &&
     typeof file.token === "string" &&
-    file.token.length > 0
-  );
-}
-
-function hasActiveTrack(file: CollectionFile, nowMs: number = Date.now()): boolean {
-  const sig = signal(file, nowMs);
+    file.token.length > 0;
+  if (!creds) {
+    return false;
+  }
+  const sig = signal(file);
   return sig.metrics === "active" || sig.submissions === "granted";
 }
-
 export async function contactUpdate(
   root: string,
   fields: Contact,
@@ -205,7 +161,7 @@ export async function contactUpdate(
     };
   }
   const state = readState(root);
-  if (!hasCredentials(state) || !hasActiveTrack(state)) {
+  if (!ready(state)) {
     return {
       code: 1,
       mode: signal(state).identity,
@@ -214,33 +170,21 @@ export async function contactUpdate(
   }
   const applied = await apply(root, { contact: parsed.sdk }, "collection:identity");
   const mode = signal(readState(root)).identity;
-  if (applied.code !== 0) {
-    return { code: applied.code, mode, message: applied.message };
-  }
-  return { code: 0, mode, message: `collection:identity updated identity=${mode}` };
+  return applied.code !== 0
+    ? { code: applied.code, mode, message: applied.message }
+    : { code: 0, mode, message: `collection:identity updated identity=${mode}` };
 }
-
 export async function contactClear(root: string): Promise<Result & { mode: IdentityState }> {
-  const state = readState(root);
-  if (hasCredentials(state) && hasActiveTrack(state)) {
+  if (ready(readState(root))) {
     const applied = await apply(root, { contact: {} }, "collection:identity");
     if (applied.code !== 0) {
       return { code: applied.code, mode: "anonymous", message: applied.message };
     }
-    return {
-      code: 0,
-      mode: "anonymous",
-      message: "collection:identity cleared identity=anonymous",
-    };
+  } else {
+    updateState(root, (prior) => ({ ...prior, attributed: false }));
   }
-  updateState(root, (prior) => ({ ...prior, attributed: false }));
-  return {
-    code: 0,
-    mode: "anonymous",
-    message: "collection:identity cleared identity=anonymous",
-  };
+  return { code: 0, mode: "anonymous", message: "collection:identity cleared identity=anonymous" };
 }
-
 export function decline(root: string): Result {
   try {
     updateState(root, (existing) => ({
@@ -262,7 +206,6 @@ export function decline(root: string): Result {
     };
   }
 }
-
 export async function optOut(
   root: string,
   opts: { confirm?: boolean; identity?: boolean } = {},
@@ -278,19 +221,21 @@ export async function optOut(
   if (opts.confirm !== true) {
     return { code: 1, message: "collection:opt-out requires --confirm" };
   }
-
   const file = readState(root);
   const revoked = {
     decision: "revoked" as const,
     consentVersion: file.metrics?.consentVersion ?? CONSENT_VERSION,
     decidedAt: new Date().toISOString(),
   };
-
-  if (!hasCredentials(file)) {
+  const creds =
+    typeof file.installId === "string" &&
+    file.installId.length > 0 &&
+    typeof file.token === "string" &&
+    file.token.length > 0;
+  if (!creds) {
     writeState(root, { metrics: revoked });
     return { code: 0, message: "collection: opted out (local only) metricsMode=disallowed" };
   }
-
   return guard("collection:opt-out", async () => {
     const result = await collector(root).optOut();
     if (!result.ok) {
@@ -300,54 +245,40 @@ export async function optOut(
     return { code: 0, message: "collection: opted out metricsMode=disallowed (install rotated)" };
   });
 }
-
-export interface CollectionStatus {
-  readonly promptState: CollectionPromptState;
-  readonly metrics: MetricsState;
-  readonly metricsMode: MetricsMode;
-  readonly submissions: SubmissionsState;
-  readonly identity: IdentityState;
-  readonly identityMode: IdentityState;
-  readonly scopes: readonly string[];
-  readonly consentVersion?: string;
-  readonly expiresAt?: number;
-  readonly installId?: string;
-}
-
 export function status(root: string): {
   readonly code: 0 | 1;
-  readonly status: CollectionStatus;
   readonly message: string;
+  readonly json: Record<string, unknown>;
 } {
   const file = readState(root);
   const sig = signal(file);
-  const st: CollectionStatus = {
-    promptState: sig.metrics,
-    metrics: sig.metrics,
-    metricsMode: sig.metricsMode,
-    submissions: sig.submissions,
-    identity: sig.identity,
-    identityMode: sig.identityMode,
-    scopes: scopesFor(file, Date.now()),
-    consentVersion: file.metrics?.consentVersion ?? file.submissions?.consentVersion,
-    expiresAt: file.metrics?.expiresAt ?? file.submissions?.expiresAt,
-    installId: file.installId,
-  };
+  const message = formatSignal(sig);
   const code: 0 | 1 = sig.metrics === "active" || sig.submissions === "granted" ? 0 : 1;
-  return { code, status: st, message: formatSignal(sig) };
+  return {
+    code,
+    message,
+    json: {
+      code,
+      consent_version: file.metrics?.consentVersion ?? file.submissions?.consentVersion ?? null,
+      expires_at: file.metrics?.expiresAt ?? file.submissions?.expiresAt ?? null,
+      identity: sig.identity,
+      identity_mode: sig.identityMode,
+      install_id: file.installId ?? null,
+      message,
+      metrics: sig.metrics,
+      metrics_mode: sig.metricsMode,
+      prompt_state: sig.metrics,
+      scopes: scopesFor(file, Date.now()),
+      submissions: sig.submissions,
+    },
+  };
 }
-
 export function hasUsageConsent(root: string, nowMs: number = Date.now()): boolean {
   return signal(readState(root), nowMs).metrics === "active";
 }
-
 export function usageCollector(root: string): Collector | undefined {
-  if (!hasUsageConsent(root)) {
-    return undefined;
-  }
-  return collector(root);
+  return hasUsageConsent(root) ? collector(root) : undefined;
 }
-
 export function contactShow(root: string): {
   readonly code: 0;
   readonly mode: IdentityState;

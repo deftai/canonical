@@ -1,10 +1,6 @@
 /** `canon scope:complete` -- content/canonical-tasks.md #scope:complete. */
 import { parseArgs, renderJson } from "../args/index.js";
-import {
-  recordScopeCompleted,
-  scopeCompleteDimensions,
-  softEmitUsage,
-} from "../collection/index.js";
+import { bump, scopeCompleteDimensions, softEmitUsage } from "../collection/index.js";
 import { scopeComplete } from "../scope/index.js";
 import { findScope, readScope } from "../xbrief/brief-io.js";
 
@@ -53,7 +49,7 @@ export async function run(argv: string[]): Promise<number> {
     process.stdout.write(`${result.scope}: completed\n`);
   }
   if (scopeBefore?.ok === true) {
-    recordScopeCompleted(projectRoot);
+    bump(projectRoot, "scopesCompleted");
     await softEmitUsage(
       projectRoot,
       "scope_complete",

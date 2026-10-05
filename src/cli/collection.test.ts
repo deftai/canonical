@@ -1,7 +1,15 @@
 /**
  * WP1 characterization: [P] requirements at the CLI / disk / fake-collector boundary.
  */
-import { chmodSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  statSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { afterAll, describe, expect, it, vi } from "vitest";
 import { COLLECTION_BASE_URL, COLLECTION_ENV } from "../build-info.js";
@@ -988,6 +996,22 @@ describe("MET metrics", () => {
     expect(dims).toHaveProperty("duration_bucket");
   });
 
+  it("MET-7: session_summary no longer sends consent_prompts", async () => {
+    const { root, fake } = installCollectionHarness();
+    await optInAnonymous(root);
+    await canon(["collection:metric", "--metric=agent_turn", "--value=1"], { cwd: root });
+    await canon(["scope:new", "MET-7 scope"], { cwd: root });
+
+    const result = await canon(["collection:metric", "--metric=session_summary", "--value=1"], {
+      cwd: root,
+    });
+    expect(result.code).toBe(0);
+    const summary = usagePayloads(fake).find((p) => p.metric === "session_summary");
+    expect(summary).toBeDefined();
+    const dims = summary?.dimensions as Record<string, unknown>;
+    expect(dims).not.toHaveProperty("consent_prompts");
+  });
+
   it("MET-8: xbrief_inventory at most once per 24h; throttle advances only after success", async () => {
     const { root, fake } = installCollectionHarness();
     await optInAnonymous(root);
@@ -1034,6 +1058,30 @@ describe("MET metrics", () => {
     expect(orient.code).toBe(0);
     expect(existsSync(inventoryPath)).toBe(false);
     expect(usagePayloads(fake).filter((p) => p.metric === "xbrief_inventory")).toEqual([]);
+  });
+
+  it("MET-8: inventory throttle survives session_summary clear", async () => {
+    const { root, fake } = installCollectionHarness();
+    await optInAnonymous(root);
+    await canon(["orient", "--allow-dirty"], { cwd: root });
+    const inventoryPath = join(root, ".canonical", "collection-inventory.json");
+    expect(existsSync(inventoryPath)).toBe(true);
+    const firstAt = (
+      JSON.parse(readFileSync(inventoryPath, "utf8")) as { lastInventoryEmittedAt: number }
+    ).lastInventoryEmittedAt;
+
+    await canon(["collection:metric", "--metric=agent_turn", "--value=1"], { cwd: root });
+    await canon(["collection:metric", "--metric=session_summary", "--value=1"], { cwd: root });
+    expect(existsSync(join(root, ".canonical", "collection-session.json"))).toBe(false);
+    expect(existsSync(inventoryPath)).toBe(true);
+    expect(
+      (JSON.parse(readFileSync(inventoryPath, "utf8")) as { lastInventoryEmittedAt: number })
+        .lastInventoryEmittedAt,
+    ).toBe(firstAt);
+
+    const before = usagePayloads(fake).filter((p) => p.metric === "xbrief_inventory").length;
+    await canon(["orient", "--allow-dirty"], { cwd: root });
+    expect(usagePayloads(fake).filter((p) => p.metric === "xbrief_inventory").length).toBe(before);
   });
 
   it("MET-9: orient, scope:new, triage, scope:start/stop/defer/complete emit documented metrics", async () => {
@@ -1083,18 +1131,43 @@ describe("MET metrics", () => {
     const completeRel = writeScopeFixture(root, "active", "2026-01-02-complete-me.json", {
       title: "Complete me",
       status: "running",
+      created: "2026-01-01T00:00:00.000Z",
       "x-canonical/kind": "epic",
       items: [{ id: "ac1", title: "done", status: "completed" }],
+      "x-canonical/dependencies": ["dep"],
     });
-    const completed = await canon(["scope:complete", completeRel], { cwd: root });
+    const completed = await canon(
+      [
+        "scope:complete",
+        completeRel,
+        "--disposition=delivered",
+        "--pr=https://github.com/org/repo/pull/1",
+      ],
+      { cwd: root },
+    );
     expect(completed.code).toBe(0);
     const completeMetric = usagePayloads(fake).find((p) => p.metric === "scope_complete");
     expect(completeMetric?.dimensions).toMatchObject({
-      kind: expect.any(String),
-      acceptance_total: expect.any(Number),
-      acceptance_completed: expect.any(Number),
-      dependency_count: expect.any(Number),
+      kind: "epic",
+      acceptance_total: 1,
+      acceptance_completed: 1,
+      dependency_count: 1,
+      disposition: "delivered",
+      had_delivery_pr: true,
+      lifetime_hours: expect.any(String),
     });
+
+    const noPrRel = writeScopeFixture(root, "active", "2026-01-02-complete-nopr.json", {
+      title: "Complete no pr",
+      status: "running",
+      "x-canonical/kind": "epic",
+    });
+    const completedNoPr = await canon(["scope:complete", noPrRel], { cwd: root });
+    expect(completedNoPr.code).toBe(0);
+    const noPrMetric = usagePayloads(fake)
+      .filter((p) => p.metric === "scope_complete")
+      .at(-1);
+    expect(noPrMetric?.dimensions).not.toHaveProperty("had_delivery_pr");
 
     const stopRel = writeScopeFixture(root, "pending", "2026-01-02-stop-me.json", {
       title: "Stop me",
@@ -1146,9 +1219,23 @@ describe("MET metrics", () => {
         2,
       )}\n`,
     );
+    mkdirSync(join(root, "coverage"), { recursive: true });
+    const coveragePath = join(root, "coverage", "coverage-summary.json");
+    writeFileSync(
+      coveragePath,
+      `${JSON.stringify({ total: { lines: { pct: 88 }, branches: { pct: 80 } } })}\n`,
+    );
+    // Artifact must look like it was produced during this check (mtime >= check start).
+    const fresh = (Date.now() + 60_000) / 1000;
+    utimesSync(coveragePath, fresh, fresh);
+
     const checkPass = await canon(["check"], { cwd: root });
     expect(checkPass.code).toBe(0);
-    expect(usagePayloads(fake).some((p) => p.metric === "check_pass")).toBe(true);
+    const passMetric = usagePayloads(fake).find((p) => p.metric === "check_pass");
+    expect(passMetric?.dimensions).toMatchObject({
+      coverage_lines_pct: 88,
+      coverage_branches_pct: 80,
+    });
 
     mkdirSync(join(root, "xbrief", "active"), { recursive: true });
     writeFileSync(join(root, "xbrief", "active", "not-a-valid-name.json"), "{}\n");

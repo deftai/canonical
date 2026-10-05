@@ -48,6 +48,11 @@ export interface FakeCollector {
   advance(ms: number): void;
   /** Next matching route returns `{error: code}` with the table status. */
   failNext(route: CollectorRoute, code: keyof typeof ERROR_CODES): void;
+  /**
+   * Next matching route waits `ms` (via setTimeout) before handling.
+   * Works with vitest fake timers for MET-10 soft-emit budgets.
+   */
+  hangNext(route: CollectorRoute, ms: number): void;
   /** Current fake server time in epoch ms. */
   now(): number;
 }
@@ -157,6 +162,7 @@ export function fakeCollector(opts: { baseUrl?: string } = {}): FakeCollector {
   const requests: RecordedRequest[] = [];
   let nowMs = Date.now();
   const failQueue: Array<{ route: CollectorRoute; code: keyof typeof ERROR_CODES }> = [];
+  const hangQueue: Array<{ route: CollectorRoute; ms: number }> = [];
 
   function takeFail(route: CollectorRoute): keyof typeof ERROR_CODES | undefined {
     const idx = failQueue.findIndex((f) => f.route === route);
@@ -165,6 +171,19 @@ export function fakeCollector(opts: { baseUrl?: string } = {}): FakeCollector {
     }
     const [entry] = failQueue.splice(idx, 1);
     return entry?.code;
+  }
+
+  async function takeHang(route: CollectorRoute): Promise<void> {
+    const idx = hangQueue.findIndex((h) => h.route === route);
+    if (idx < 0) {
+      return;
+    }
+    const ms = hangQueue.splice(idx, 1)[0]?.ms ?? 0;
+    if (ms > 0) {
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, ms);
+      });
+    }
   }
 
   function requireBearer(
@@ -210,6 +229,8 @@ export function fakeCollector(opts: { baseUrl?: string } = {}): FakeCollector {
     if (route === null) {
       return errorResponse("not_found");
     }
+
+    await takeHang(route);
 
     const forced = takeFail(route);
     if (forced !== undefined) {
@@ -455,6 +476,9 @@ export function fakeCollector(opts: { baseUrl?: string } = {}): FakeCollector {
     },
     failNext(route: CollectorRoute, code: keyof typeof ERROR_CODES) {
       failQueue.push({ route, code });
+    },
+    hangNext(route: CollectorRoute, ms: number) {
+      hangQueue.push({ route, ms });
     },
     now() {
       return nowMs;
