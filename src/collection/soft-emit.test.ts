@@ -1,15 +1,13 @@
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 import { cleanupTempDirs, tempDir } from "../test-support/index.js";
 import * as emit from "./emit.js";
-import {
-  drainSoftEmits,
-  LATE_EMIT_GRACE_MS,
-  resetPendingSoftEmitsForTests,
-  SOFT_EMIT_TIMEOUT_MS,
-  softEmitUsage,
-} from "./soft-emit.js";
+import { drainSoftEmits, resetPendingSoftEmitsForTests, softEmitUsage } from "./soft-emit.js";
 
 afterAll(() => cleanupTempDirs());
+
+/** MET-10 budgets — hardcoded so mutating SOFT_EMIT_TIMEOUT_MS / LATE_EMIT_GRACE_MS breaks these. */
+const SOFT_BUDGET_MS = 2_500;
+const DRAIN_GRACE_MS = 500;
 
 describe("softEmitUsage", () => {
   afterEach(() => {
@@ -42,13 +40,29 @@ describe("softEmitUsage", () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
-  it("calls onLateEmit when emit succeeds after the soft timeout (#18)", async () => {
+  it("MET-10: soft emit times out after 2500ms (hardcoded budget)", async () => {
+    vi.useFakeTimers();
+    const root = tempDir("canon-soft-emit-budget-");
+    vi.spyOn(emit, "emitUsage").mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          // Completes well after the required 2.5s soft budget.
+          setTimeout(() => resolve({ emitted: true, id: "late-1" }), SOFT_BUDGET_MS + 10_000);
+        }),
+    );
+
+    const promise = softEmitUsage(root, "orient_ok");
+    await vi.advanceTimersByTimeAsync(SOFT_BUDGET_MS);
+    expect(await promise).toBe(false);
+  });
+
+  it("MET-10: calls onLateEmit when emit succeeds after the 2500ms soft timeout", async () => {
     vi.useFakeTimers();
     const root = tempDir("canon-soft-emit-late-");
     vi.spyOn(emit, "emitUsage").mockImplementation(
       () =>
         new Promise((resolve) => {
-          setTimeout(() => resolve({ emitted: true, id: "late-1" }), SOFT_EMIT_TIMEOUT_MS + 100);
+          setTimeout(() => resolve({ emitted: true, id: "late-1" }), SOFT_BUDGET_MS + 100);
         }),
     );
 
@@ -59,7 +73,7 @@ describe("softEmitUsage", () => {
       },
     });
 
-    await vi.advanceTimersByTimeAsync(SOFT_EMIT_TIMEOUT_MS);
+    await vi.advanceTimersByTimeAsync(SOFT_BUDGET_MS);
     expect(await promise).toBe(false);
     expect(lateCalled).toBe(false);
 
@@ -74,7 +88,7 @@ describe("softEmitUsage", () => {
     vi.spyOn(emit, "emitUsage").mockImplementation(
       () =>
         new Promise((resolve) => {
-          setTimeout(() => resolve({ emitted: true, id: "late-1" }), SOFT_EMIT_TIMEOUT_MS + 100);
+          setTimeout(() => resolve({ emitted: true, id: "late-1" }), SOFT_BUDGET_MS + 100);
         }),
     );
 
@@ -90,7 +104,7 @@ describe("softEmitUsage", () => {
       },
     });
 
-    await vi.advanceTimersByTimeAsync(SOFT_EMIT_TIMEOUT_MS);
+    await vi.advanceTimersByTimeAsync(SOFT_BUDGET_MS);
     expect(await promise).toBe(false);
 
     await vi.advanceTimersByTimeAsync(200);
@@ -99,40 +113,42 @@ describe("softEmitUsage", () => {
     expect(unhandled).toEqual([]);
   });
 
-  it("drainSoftEmits waits for late success before CLI would exit (Greptile P2)", async () => {
+  it("MET-10: drainSoftEmits waits at most 500ms beyond the 2500ms soft timeout", async () => {
     vi.useFakeTimers();
-    const root = tempDir("canon-soft-emit-drain-");
+    const root = tempDir("canon-soft-emit-grace-");
+    let settled = false;
     vi.spyOn(emit, "emitUsage").mockImplementation(
       () =>
         new Promise((resolve) => {
-          setTimeout(() => resolve({ emitted: true, id: "late-1" }), SOFT_EMIT_TIMEOUT_MS + 100);
+          // Settles after soft timeout + grace — drain must not wait for it.
+          setTimeout(
+            () => {
+              settled = true;
+              resolve({ emitted: true, id: "late-1" });
+            },
+            SOFT_BUDGET_MS + DRAIN_GRACE_MS + 5_000,
+          );
         }),
     );
 
-    let lateCalled = false;
-    const promise = softEmitUsage(root, "xbrief_inventory", 1, undefined, {
-      onLateEmit: () => {
-        lateCalled = true;
-      },
-    });
-
-    await vi.advanceTimersByTimeAsync(SOFT_EMIT_TIMEOUT_MS);
+    const promise = softEmitUsage(root, "xbrief_inventory");
+    await vi.advanceTimersByTimeAsync(SOFT_BUDGET_MS);
     expect(await promise).toBe(false);
-    expect(lateCalled).toBe(false);
 
     const drain = drainSoftEmits();
-    await vi.advanceTimersByTimeAsync(200);
+    await vi.advanceTimersByTimeAsync(DRAIN_GRACE_MS);
     await drain;
-    expect(lateCalled).toBe(true);
+    // Drain returned at the 500ms grace bound; the late emit has not settled yet.
+    expect(settled).toBe(false);
   });
 
-  it("clears drain fallback timer when late emits settle early (Greptile P2)", async () => {
+  it("MET-10: drain clears fallback timer when late emits settle within 500ms grace", async () => {
     vi.useFakeTimers();
     const root = tempDir("canon-soft-emit-drain-early-");
     vi.spyOn(emit, "emitUsage").mockImplementation(
       () =>
         new Promise((resolve) => {
-          setTimeout(() => resolve({ emitted: true, id: "late-1" }), SOFT_EMIT_TIMEOUT_MS + 100);
+          setTimeout(() => resolve({ emitted: true, id: "late-1" }), SOFT_BUDGET_MS + 100);
         }),
     );
 
@@ -143,33 +159,13 @@ describe("softEmitUsage", () => {
       },
     });
 
-    await vi.advanceTimersByTimeAsync(SOFT_EMIT_TIMEOUT_MS);
+    await vi.advanceTimersByTimeAsync(SOFT_BUDGET_MS);
     expect(await promise).toBe(false);
 
     const drain = drainSoftEmits();
     await vi.advanceTimersByTimeAsync(200);
     await drain;
     expect(lateCalled).toBe(true);
-    expect(vi.getTimerCount()).toBe(0);
-  });
-
-  it("drain waits at most LATE_EMIT_GRACE_MS after soft timeout (Greptile P1)", async () => {
-    vi.useFakeTimers();
-    const root = tempDir("canon-soft-emit-grace-");
-    vi.spyOn(emit, "emitUsage").mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          setTimeout(() => resolve({ emitted: true, id: "late-1" }), SOFT_EMIT_TIMEOUT_MS + 400);
-        }),
-    );
-
-    const promise = softEmitUsage(root, "xbrief_inventory");
-    await vi.advanceTimersByTimeAsync(SOFT_EMIT_TIMEOUT_MS);
-    expect(await promise).toBe(false);
-
-    const drain = drainSoftEmits();
-    await vi.advanceTimersByTimeAsync(LATE_EMIT_GRACE_MS);
-    await drain;
     expect(vi.getTimerCount()).toBe(0);
   });
 });
