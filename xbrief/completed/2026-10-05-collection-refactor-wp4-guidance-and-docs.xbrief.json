@@ -1,0 +1,21 @@
+{
+  "plan": {
+    "created": "2026-10-05T18:57:41.646Z",
+    "items": [],
+    "narratives": {
+      "Description": ""
+    },
+    "references": [],
+    "status": "completed",
+    "title": "collection-refactor-wp4-guidance-and-docs",
+    "updated": "2026-10-05T19:12:03.103Z",
+    "x-canonical/delivery": {
+      "branch": "main",
+      "disposition": "accepted_not_delivered"
+    },
+    "x-canonical/kind": "story"
+  },
+  "xBRIEFInfo": {
+    "version": "0.8"
+  }
+}

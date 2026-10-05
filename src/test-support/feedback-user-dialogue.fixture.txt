@@ -1,0 +1,44 @@
+## User dialogue (say this to the human)
+
+⊗ Never read task verb names, flags, or shell recipes aloud. Speak plain English. User-facing language for later changes is always “ask me to …”.
+
+### First-session metrics (when `orient` shows not prompted / not decided)
+
+1. ! Thank them for using Canonical. Say we'd like usage metrics to improve the product. State clearly: **by default we collect nothing, even anonymously.**
+2. ! Offer three choices (numbered menu; **Discuss** and **Back** last where menus apply):
+   1. **Disallow** — no usage metrics
+   2. **Anonymous metrics** — coarse usage counters only; no name, email, or mobile
+   3. **Attributed metrics** — same counters, plus optional Name, Email, and Mobile so we can follow up
+3. ! Branch by choice — **do not** insert an extra approve/deny step before collecting attributed contact:
+
+   **Disallow or Anonymous**
+   - ! Get one durable affirmative (`yes` / `confirmed` / `approve`) for that choice. Prefer the Recommended option to be **Approve**.
+   - ! Then save (agent actions below). ⊗ Register or opt in without that affirmative.
+
+   **Attributed** (order is load-bearing)
+   1. ! As soon as they pick Attributed, **collect contact next** — do **not** ask them to approve “Attributed” alone first.
+   2. ! Ask for **Name**, **Email**, and **Mobile**, each optional (they may skip any field). Prefer free-text / “provide the value” as the primary path — ⊗ do not make them dig through a menu whose default is “skip” or “disapprove” before they can type.
+   3. ! Read back the mode (**Attributed**) plus whatever fields they gave (note skips). Get **one** durable affirmative for the whole package (`yes` / `confirmed` / `approve`). Prefer Recommended = **Approve / save**.
+   4. ! Only then save (single attributed opt-in verb with contact flags — see Agent actions). If they skipped **all** contact fields, save as **Anonymous metrics** instead and say so briefly.
+
+4. ⊗ Re-prompt every session after decline; only re-offer when state is `expired` / `revoked`, or the user asks.
+5. ! After the choice is saved, tell them (plain English, not another approve gate):
+   - They can later ask you to file a bug, feature request, or general feedback.
+   - **IFF attributed:** contact on file will be associated (via this install — **not** placed in the report body) with those filings.
+   - They can opt out anytime by asking you to opt out of Canonical collection.
+   - Opt-out stops **future** collection; past filings may still be associated until they ask to delete personal data.
+
+### Per-submit feedback (even if metrics are disallowed)
+
+Works whether metrics were disallowed, anonymous, or attributed. No separate durable “submissions disclosure” ceremony in user speech.
+
+1. ! Classify with a numbered menu: (1) bug (2) feature request (3) general feedback, then Discuss, Back.
+2. ! Gather the fields for that kind. Ask before attaching logs or stack dumps. ⊗ Put secrets, tokens, or full source dumps in without asking.
+3. ! Confirm the contents back to the user. State clearly whether this filing is **anonymous** or **associated with the contact on file** (association is via install, never contact text inside the report).
+4. ! Only after they confirm, file it. Report success with the submission id — or the real failure. ⊗ Claim it was sent when it was not.
+
+### Opt-out / opt-in later
+
+- Opt out: user asks you to opt out of Canonical collection → confirm, then run agent opt-out.
+- Opt in / change mode later: user asks you to turn on Canonical metrics (anonymous or attributed) or to update contact → use the same plain-English choices and confirms as first-session.
+- Clear or change contact only: user asks you to update or clear Canonical contact on file.

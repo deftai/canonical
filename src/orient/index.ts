@@ -1,10 +1,5 @@
 import { spawnSync } from "node:child_process";
-import {
-  type ConsentSignal,
-  formatConsentSignal,
-  readCollectionFile,
-  resolveConsentSignal,
-} from "../collection/index.js";
+import { type ConsentSignal, formatSignal, readState, signal } from "../collection/index.js";
 import { currentBranch, type GitRunner, isDirty, isGitRepo } from "../git/index.js";
 import type { GateResult } from "../types/index.js";
 import { xbriefExist } from "../xbrief/index.js";
@@ -72,9 +67,9 @@ export interface OrientSnapshot extends GateResult {
 export function orient(projectRoot: string, opts: OrientOptions = {}): OrientSnapshot {
   const probeTool = opts.probeTool ?? defaultProbeTool;
   const tools = REQUIRED_TOOLS.map((bin) => probeTool(bin));
-  const collectionFile = readCollectionFile(projectRoot);
-  const consent = resolveConsentSignal(collectionFile);
-  const consentLine = formatConsentSignal(collectionFile);
+  const collectionFile = readState(projectRoot);
+  const consent = signal(collectionFile);
+  const consentLine = formatSignal(consent);
   const broken = tools.filter((t) => !t.ok);
   if (broken.length > 0) {
     return {

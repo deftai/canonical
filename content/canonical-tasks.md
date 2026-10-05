@@ -104,28 +104,28 @@ The `-x` flag makes go-task propagate the verb's exact exit code; without it eve
 
 ## Collection & Feedback
 
-Anonymous collection via `@deft/collection-sdk`. Credentials: `.canonical/collection.json` (gitignored). Correlator: `~/.config/canonical/identity.json` `userKey` → SDK `correlator` (never `deployment.customer`). Collector host is bake-time (`CANONICAL_BUILD_CHANNEL=staging|production` → `api.deft-staging.co` / `api.deft.co`); not overridden by env at runtime. Metrics soft-fail — host verb exit codes unchanged.
+Anonymous collection via `@deft/collection-sdk`. Credentials: `.canonical/collection.json` (gitignored; mode 0600). Contact is server-only (local `attributed` boolean only — never name/email/mobile on disk). Collector host is bake-time (`CANONICAL_BUILD_CHANNEL=staging|production` → `api.deft-staging.co` / `api.deft.co`); not overridden by env at runtime. Metrics soft-fail — host verb exit codes unchanged.
 
-Two tracks: **metrics** (usage; plain-English Disallow / Anonymous / Attributed → `collection:decline` / `collection:opt-in` / opt-in + `collection:identity`) and **submissions** (feedback/bug/feature; per-submit user confirm in dialogue — agent may still pass internal disclosure flags). Orient/status print `metricsMode=… metrics=… submissions=… identity=…` (`metricsMode` ∈ `undecided|disallowed|anonymous|attributed`; `identity` ∈ `anonymous|identified`). Consent version: `canonical-2026-09-b`. Contact identity is local + opt-in reconfirm only — ⊗ never in event payloads (PRIV-2). Opt-out rotates install credentials after server opt-out.
+Two tracks: **metrics** (usage; Disallow / Anonymous / Attributed → `collection:decline` / `collection:opt-in`, preferred attributed path = opt-in with `--first-name --last-name --email --mobile`) and **submissions** (feedback/bug/feature; per-submit user confirm — agent always passes `--disclosure-accepted`). Orient/status print `metricsMode=… metrics=… submissions=… identity=… channel=staging|production` (`metricsMode` ∈ `undecided|disallowed|anonymous|attributed`; `identity` ∈ `anonymous|identified`). Consent version: `canonical-2026-09-b` (baked; no flag). ⊗ Contact never in event payloads (PRIV-2). Opt-out rotates install credentials after server opt-out.
 
 ### `collection:status`
-**Does:** Print machine-parseable `metricsMode=… metrics=… submissions=… identity=…` (metricsMode ∈ `undecided|disallowed|anonymous|attributed`; metrics ∈ `not_prompted|declined|active|revoked|expired`; submissions ∈ `not_granted|granted`; identity ∈ `anonymous|identified`). `--live` refreshes from the server when credentials exist.
+**Does:** Print machine-parseable `metricsMode=… metrics=… submissions=… identity=… channel=staging|production` (metricsMode ∈ `undecided|disallowed|anonymous|attributed`; metrics ∈ `not_prompted|declined|active|revoked|expired`; submissions ∈ `not_granted|granted`; identity ∈ `anonymous|identified`). Local state only — no network.
 **Exit:** `0` when metrics active or submissions granted · `1` otherwise · `2` error.
 
 ### `collection:identity`
-**Does:** `--show` | `--clear` | `--update [--first-name=…] [--last-name=…] [--email=…] [--mobile=…]`. Stores identity in `.canonical/collection.json` (0600). `identified` requires email or mobile; otherwise `anonymous`. When credentials exist, `--update` / `--clear` reconfirm via SDK opt-in contact `{ name, email, sms }` (`name` ← `"firstName lastName".trim()`, `sms` ← mobile). `--show` prints fields; other modes avoid logging PII.
-**Exit:** `0` · `1` server sync rejected · `2` bad args / validation.
+**Does:** Exactly one of `--show` | `--clear` | `--update [--first-name=…] [--last-name=…] [--email=…] [--mobile=…]`. `--show` prints `identity=anonymous|identified` only (no fields). `--update` whole-replaces server contact (needs metrics active or submissions granted; name alone is enough for `identified`). `--clear` (same as `collection:opt-out --identity`) sends empty contact; metrics/submissions/`installId` unchanged. Contact values never printed; never stored locally.
+**Exit:** `0` · `1` server sync rejected / opt in first · `2` bad args / validation.
 
 ### `collection:opt-in`
-**Does:** Register (once) + activate **metrics** scopes. Default scopes = `usage` only. `-- --confirm [--scopes=usage] [--consent-version=canonical-2026-09-b] [--email=…] [--name=…]`. Requires `--confirm`. Does not grant submissions. Prefer `collection:identity --update` for attributed / reply-channel contact.
+**Does:** Register (once) + activate **metrics** (`usage` only). `-- --confirm [--first-name=…] [--last-name=…] [--email=…] [--mobile=…]`. Requires `--confirm`. Preferred path for Attributed: pass contact flags here (server-only contact; sets local `attributed`). Does not grant submissions.
 **Exit:** `0` · `1` refused/rejected · `2` error.
 
 ### `collection:decline`
-**Does:** Record local **metrics** decline without registering. Does not revoke an existing submissions grant. Preserves local identity. No network.
+**Does:** Record local **metrics** decline without registering. Does not revoke an existing submissions grant. No network.
 **Exit:** `0` · `2` error.
 
 ### `collection:opt-out`
-**Does:** `-- --confirm` revoke server consent (when credentials exist), clear local token / rotate install credentials; marks metrics revoked, submissions not granted, identity cleared. Past filings may remain associated until the user asks to delete personal data. `-- --identity` clears local identity + server contact only (metrics/submissions unchanged).
+**Does:** `-- --confirm` revoke server consent (when credentials exist), clear local token / rotate install credentials; marks metrics revoked, submissions not granted, `attributed` cleared. Past filings may remain associated until the user asks to delete personal data. `-- --identity` clears server contact / local `attributed` only (metrics/submissions unchanged; same as `collection:identity --clear`).
 **Exit:** `0` · `1` refused/rejected · `2` error.
 
 ### `collection:metric`
@@ -133,7 +133,7 @@ Two tracks: **metrics** (usage; plain-English Disallow / Anonymous / Attributed 
 **Exit:** `0` · `2` bad args only (including invalid/oversized `--dimensions`).
 
 ### `feedback`
-**Does:** Submit `--kind=bug|feature|feedback` with kind-specific fields (`--summary`/`--message`, optional `--details`, `--context`, `--rating`, `--stack`, `--logs`, `--os`). File flags `--summary-file`, `--message-file`, `--details-file`, `--context-file`, `--stack-file`, `--logs-file` read the corresponding field (inline+file conflict → exit 2). `--dry-run` validates without submitting. `--disclosure-accepted` is agent-internal (grants submission scopes after the user confirmed the filing in plain English; does not enable metrics). `--as-anonymous` skips contact sync for that submit (PRIV-2: payloads never carry identity). `--help` prints flags + multiline guidance. Exit 1 with disclosure required when `submissions=not_granted` and flag omitted. Allowed even when metrics were declined.
+**Does:** Submit `--kind=bug|feature|feedback` with kind-specific fields (`--summary`/`--message`, optional `--details`, `--context`, `--rating`, `--stack`, `--logs`, `--os`). File flags `--summary-file`, `--message-file`, `--details-file`, `--context-file`, `--stack-file`, `--logs-file` read the corresponding field (inline+file conflict → exit 2). `--dry-run` validates without submitting. `--disclosure-accepted` is **required** on every real submit (agent-internal after the user confirmed the filing in plain English; grants submission scopes; does not enable metrics). `--as-anonymous` skips association for that submit (PRIV-2: payloads never carry identity). `--help` prints flags + multiline guidance. Exit 1 with disclosure required when flag omitted. Allowed even when metrics were declined.
 **Exit:** `0` submitted (or dry-run ok) · `1` disclosure required / rejected · `2` bad args.
 **Multiline:** free-text with newlines/spaces/quotes MUST use `--*-file` (temp file outside the worktree; same pattern as scm.md `--body-file`), not inline strings through `task`.
 

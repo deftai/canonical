@@ -1,0 +1,21 @@
+{
+  "plan": {
+    "created": "2026-10-05T16:35:02.643Z",
+    "items": [],
+    "narratives": {
+      "Description": ""
+    },
+    "references": [],
+    "status": "completed",
+    "title": "collection-refactor-wp0-setup",
+    "updated": "2026-10-05T16:53:08.473Z",
+    "x-canonical/delivery": {
+      "branch": "main",
+      "disposition": "accepted_not_delivered"
+    },
+    "x-canonical/kind": "story"
+  },
+  "xBRIEFInfo": {
+    "version": "0.8"
+  }
+}

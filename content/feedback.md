@@ -4,9 +4,9 @@ Load when: the user asks to send feedback, report a bug, or request a feature; `
 
 Legend: `!` MUST · `~` SHOULD · `≉` SHOULD NOT · `⊗` MUST NOT · `?` MAY
 
-**Consent version:** `canonical-2026-09-b` (pass unchanged to opt-in / identity / feedback verbs).
+**Consent version:** `canonical-2026-09-b` (baked into opt-in / feedback; do not pass a version flag).
 
-Credentials live in `.canonical/collection.json` (gitignored). Correlator (`userKey`) under `~/.config/canonical/identity.json` → SDK `correlator` (never `deployment.customer`). Orient / status are machine-parseable: `metricsMode=… metrics=… submissions=… identity=…` (`metricsMode` ∈ `undecided|disallowed|anonymous|attributed`; `identity` ∈ `anonymous|identified`; identified requires email or mobile).
+Credentials live in `.canonical/collection.json` (gitignored; mode 0600). Contact is server-only — local state keeps a boolean `attributed` flag, never name/email/mobile. Orient / status print `metricsMode=… metrics=… submissions=… identity=… channel=staging|production` (`metricsMode` ∈ `undecided|disallowed|anonymous|attributed`; `identity` ∈ `anonymous|identified` when attributed).
 
 ---
 
@@ -67,14 +67,14 @@ Map user choices to verbs. Internal flags are fine; humans never hear them.
 |---|---|
 | Disallow | `task -x collection:decline` |
 | Anonymous metrics | `task -x collection:opt-in -- --confirm` (usage only; consent version `canonical-2026-09-b`) |
-| Attributed metrics | **One shot after the single package approve:** `task -x collection:opt-in -- --confirm [--first-name=…] [--last-name=…] [--email=…] [--mobile=…]` (sets attributed + stores/syncs contact). Prefer this over a separate identity update. Fallback: `collection:identity -- --update …` only if opt-in already succeeded without contact. |
+| Attributed metrics | **Preferred one shot after package approve:** `task -x collection:opt-in -- --confirm [--first-name=…] [--last-name=…] [--email=…] [--mobile=…]` (sends contact to server; sets local `attributed`). Fallback: `collection:identity -- --update …` only if opt-in already succeeded without contact. |
 | Opt out | `task -x collection:opt-out -- --confirm` — server opt-out, then **rotate install** (clear local credentials / new install on next register). Stops future collection; past association may remain until they ask to delete personal data. |
-| Clear contact only | `task -x collection:opt-out -- --identity` (or `collection:identity -- --clear`) |
-| Show contact | `task -x collection:identity -- --show` |
-| Status | `task -x collection:status` (`--live` when credentials exist) |
+| Clear contact only | `task -x collection:identity -- --clear` (or `collection:opt-out -- --identity`) — empty contact to server; metrics/submissions unchanged |
+| Show contact | `task -x collection:identity -- --show` — prints `identity=anonymous|identified` only (no fields) |
+| Update contact | `task -x collection:identity -- --update [--first-name=…] [--last-name=…] [--email=…] [--mobile=…]` — whole replace; needs active consent |
+| Status | `task -x collection:status` — ends with ` channel=staging|production` |
 
-- ! If `collection:identity` / contact flags are missing from the installed CLI, say so honestly and still complete anonymous metrics if that part succeeded — then tell them to update Canon. Prefer the one-shot `collection:opt-in` with contact flags so attributed does not depend on a second verb.
-- ⊗ Contact (name/email/mobile) is never placed in event or submission payloads (PRIV-2). Identity syncs via attributed `collection:opt-in` / `collection:identity` reconfirm (`name` ← `"firstName lastName".trim()`, `email`, `sms` ← mobile).
+- ⊗ Contact (name/email/mobile) is never stored locally and never placed in event or submission payloads (PRIV-2). Sent only via attributed `collection:opt-in` / `collection:identity --update` (`name` ← `"firstName lastName".trim()`, `email`, `sms` ← mobile).
 - Metrics opt-in does not silently mean every future filing is attributed; attributed association is “contact on file + install”, stated per submit when relevant.
 - Consent expires after ~1 year; re-offer when `expired` / `revoked`, or when the user asks.
 
@@ -82,11 +82,11 @@ Map user choices to verbs. Internal flags are fine; humans never hear them.
 
 | Kind | Command |
 |---|---|
-| bug | `task -x feedback -- --kind=bug --summary="…" [--stack-file=…] [--logs-file=…] [--disclosure-accepted]` |
-| feature | `task -x feedback -- --kind=feature --summary="…" [--details-file=…] [--context-file=…] [--disclosure-accepted]` |
-| feedback | `task -x feedback -- --kind=feedback --message="…" [--rating=1..5] [--disclosure-accepted] [--as-anonymous]` |
+| bug | `task -x feedback -- --kind=bug --summary="…" --disclosure-accepted [--stack-file=…] [--logs-file=…]` |
+| feature | `task -x feedback -- --kind=feature --summary="…" --disclosure-accepted [--details-file=…] [--context-file=…]` |
+| feedback | `task -x feedback -- --kind=feedback --message="…" --disclosure-accepted [--rating=1..5] [--as-anonymous]` |
 
-- `--disclosure-accepted` and `--as-anonymous` are **agent-internal**. Use them as the verb requires; do not narrate them. Prefer `--as-anonymous` when the user confirmed an anonymous filing (or no contact on file).
+- `--disclosure-accepted` is **required** on every real submit (agent-internal; do not narrate). Prefer `--as-anonymous` when the user confirmed an anonymous filing (or no contact on file).
 - Short single-line values MAY use inline `--summary=` / `--message=`. Multiline / spaces / quotes → temp file **outside the worktree** + matching `--*-file` (same rule as [scm.md](./scm.md) `--body-file`):
 
 | Field | File flag |
@@ -106,7 +106,7 @@ Map user choices to verbs. Internal flags are fine; humans never hear them.
 
 | Scope | Track | What is sent |
 |---|---|---|
-| `usage` | Metrics | Structured counters + optional `--dimensions` JSON (≤2KiB): lifecycle verbs (`xbrief_scope_created`, `xbrief_triage`, `xbrief_scope_start`, `scope_complete`, `xbrief_scope_stop`), quality gate (`check_pass`/`check_fail` + coverage pct when tooling produced it), session shape (`session_summary`, `xbrief_inventory`), plus agent-emitted `kickoff_done` — no source, no chat |
+| `usage` | Metrics | Structured counters + optional `--dimensions` JSON (≤2KiB): lifecycle verbs, quality gate, session shape, agent-emitted `kickoff_done` — no source, no chat |
 | `feedback` | Submissions | Free-text message + optional 1–5 rating |
 | `bug` | Submissions | Summary, OS, optional stack/logs |
 | `feature` | Submissions | Summary + optional details/context |

@@ -1,0 +1,21 @@
+{
+  "plan": {
+    "created": "2026-10-05T18:03:31.476Z",
+    "items": [],
+    "narratives": {
+      "Description": ""
+    },
+    "references": [],
+    "status": "completed",
+    "title": "collection-refactor-wp3-metrics-service",
+    "updated": "2026-10-05T18:57:41.508Z",
+    "x-canonical/delivery": {
+      "branch": "main",
+      "disposition": "accepted_not_delivered"
+    },
+    "x-canonical/kind": "story"
+  },
+  "xBRIEFInfo": {
+    "version": "0.8"
+  }
+}

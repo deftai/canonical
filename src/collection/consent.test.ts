@@ -1,125 +1,185 @@
+/**
+ * WP2 G1 [C]: CON-4, CON-5, CON-6; SIG-3, SIG-5 at the CLI / disk / fake-collector boundary.
+ */
+import { mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
-import { cleanupTempDirs, tempDir } from "../test-support/index.js";
-import { createCanonicalCollector } from "./client.js";
 import {
-  collectionDecline,
-  collectionOptIn,
-  collectionOptOut,
-  collectionStatus,
-} from "./consent.js";
-import { readCollectionFile } from "./storage.js";
-import { CONSENT_VERSION } from "./types.js";
+  canon,
+  cleanupTempDirs,
+  installCollectionHarness,
+  installCollectionTestHooks,
+  readCollectionState,
+} from "../test-support/index.js";
 
+installCollectionTestHooks();
 afterAll(() => cleanupTempDirs());
 
-function jsonResponse(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "content-type": "application/json" },
-  });
+const CONSENT_VERSION = "canonical-2026-09-b";
+
+function writeState(root: string, state: Record<string, unknown>): void {
+  const dir = join(root, ".canonical");
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, "collection.json"), `${JSON.stringify(state, null, 2)}\n`);
 }
 
-function mockCollectorFetch(): typeof fetch {
-  return (async (input: RequestInfo | URL, init?: RequestInit) => {
-    const url = String(input);
-    const method = (init?.method ?? "GET").toUpperCase();
-    if (method === "POST" && url.endsWith("/v1/registrations")) {
-      return jsonResponse(200, {
-        install_id: "11111111-1111-4111-8111-111111111111",
-        install_token: "tok-test",
-        state: "pending",
-      });
-    }
-    if (method === "POST" && url.includes("/optin")) {
-      let scopes = ["usage"];
-      if (typeof init?.body === "string") {
-        const body = JSON.parse(init.body) as { scopes?: string[] };
-        if (Array.isArray(body.scopes)) {
-          scopes = body.scopes;
-        }
-      }
-      return jsonResponse(200, {
-        state: "active",
-        scopes,
-        expires_at: Date.now() + 86_400_000,
-        contact_verified: false,
-      });
-    }
-    if (method === "POST" && url.includes("/optout")) {
-      return jsonResponse(200, { state: "revoked" });
-    }
-    if (method === "GET" && url.includes("/status")) {
-      return jsonResponse(200, {
-        state: "active",
-        scopes: ["usage"],
-        expires_at: Date.now() + 86_400_000,
-        consent_version: CONSENT_VERSION,
-        contact_verified: false,
-      });
-    }
-    return jsonResponse(404, { error: "not_found" });
-  }) as typeof fetch;
-}
+describe("CON consent + SIG (WP2)", () => {
+  it("CON-4: opt-in sends usage (+ submissions when granted); --scopes/--consent-version/--name unknown", async () => {
+    const { root, fake } = installCollectionHarness();
 
-describe("collection consent flows", () => {
-  it("reports not_prompted with exit 1 before any decision", async () => {
-    const root = tempDir("canon-consent-");
-    const result = await collectionStatus(root);
-    expect(result.code).toBe(1);
-    expect(result.status.promptState).toBe("not_prompted");
-    expect(result.status.metrics).toBe("not_prompted");
-    expect(result.status.submissions).toBe("not_granted");
-    expect(result.message).toContain("metrics=not_prompted");
-  });
+    for (const flag of ["--scopes=usage", "--consent-version=other", "--name=Ada"]) {
+      const bad = await canon(["collection:opt-in", "--confirm", flag], { cwd: root });
+      expect(bad.code, flag).toBe(2);
+      expect(bad.err, flag).toMatch(/unknown flag/);
+      expect(fake.requests).toEqual([]);
+    }
 
-  it("decline writes local metrics mirror without network", () => {
-    const root = tempDir("canon-decline-");
-    const result = collectionDecline(root, { now: new Date("2026-08-01T00:00:00.000Z") });
-    expect(result.code).toBe(0);
-    const file = readCollectionFile(root);
-    expect(file.metrics?.decision).toBe("declined");
-    expect(file.installId).toBeUndefined();
-  });
-
-  it("opt-in requires --confirm and persists active metrics mirror (usage default)", async () => {
-    const root = tempDir("canon-optin-");
-    const configDir = tempDir("canon-optin-cfg-");
-    const refused = await collectionOptIn(root, { confirm: false, configDir });
-    expect(refused.code).toBe(1);
-
-    const fetchImpl = mockCollectorFetch();
-    const collector = createCanonicalCollector(root, {
-      configDir,
-      fetch: fetchImpl,
-      autoRegister: false,
+    writeState(root, {
+      submissions: {
+        granted: true,
+        scopes: ["bug", "feedback", "feature"],
+        consentVersion: CONSENT_VERSION,
+        decidedAt: "2026-01-01T00:00:00.000Z",
+        expiresAt: Date.now() + 86_400_000,
+      },
     });
-    const ok = await collectionOptIn(root, {
-      confirm: true,
-      configDir,
-      collector,
-    });
+    const ok = await canon(["collection:opt-in", "--confirm"], { cwd: root });
     expect(ok.code).toBe(0);
-    const file = readCollectionFile(root);
-    expect(file.metrics?.decision).toBe("active");
-    expect(file.installId).toBe("11111111-1111-4111-8111-111111111111");
-    expect(file.token).toBe("tok-test");
-    expect(file.metrics?.scopes).toEqual(["usage"]);
-    expect(file.submissions?.granted).not.toBe(true);
+    const optins = fake.requests.filter((r) => r.path.includes("/optin"));
+    expect(optins).toHaveLength(1);
+    const body = optins[0]?.body as {
+      scopes: string[];
+      consent_version?: string;
+      consentVersion?: string;
+    };
+    expect([...body.scopes].sort()).toEqual(["bug", "feature", "feedback", "usage"].sort());
+    const version = body.consent_version ?? body.consentVersion;
+    expect(version).toBe(CONSENT_VERSION);
   });
 
-  it("opt-out clears credentials and marks revoked", async () => {
-    const root = tempDir("canon-optout-");
-    const configDir = tempDir("canon-optout-cfg-");
-    const fetchImpl = mockCollectorFetch();
-    const collector = createCanonicalCollector(root, { configDir, fetch: fetchImpl });
-    await collectionOptIn(root, { confirm: true, configDir, collector });
+  it("CON-5: anonymous opt-in sends contact:{} and stores attributed:false even when contact was on file", async () => {
+    const { root, fake } = installCollectionHarness();
 
-    const out = await collectionOptOut(root, { confirm: true, configDir, collector });
-    expect(out.code).toBe(0);
-    const file = readCollectionFile(root);
-    expect(file.installId).toBeUndefined();
-    expect(file.token).toBeUndefined();
-    expect(file.metrics?.decision).toBe("revoked");
-    expect(file.submissions?.granted).toBe(false);
+    const first = await canon(
+      ["collection:opt-in", "--confirm", "--email=ada@example.com", "--first-name=Ada"],
+      { cwd: root },
+    );
+    expect(first.code).toBe(0);
+
+    fake.requests.length = 0;
+    const anon = await canon(["collection:opt-in", "--confirm"], { cwd: root });
+    expect(anon.code).toBe(0);
+    const optins = fake.requests.filter((r) => r.path.includes("/optin"));
+    expect(optins).toHaveLength(1);
+    const body = optins[0]?.body as { contact?: unknown };
+    expect(body).toHaveProperty("contact");
+    expect(body.contact).toEqual({});
+    const state = readCollectionState(root);
+    expect(state.attributed).toBe(false);
+    expect(state).not.toHaveProperty("identity");
+  });
+
+  it("CON-6: attributed opt-in with any non-empty contact (name alone ok) sends mapped contact once", async () => {
+    const { root, fake } = installCollectionHarness();
+
+    const nameOnly = await canon(
+      ["collection:opt-in", "--confirm", "--first-name=Ada", "--last-name=Lovelace"],
+      { cwd: root },
+    );
+    expect(nameOnly.code).toBe(0);
+    expect(nameOnly.out).toMatch(/metricsMode=attributed/);
+    let optins = fake.requests.filter((r) => r.path.includes("/optin"));
+    expect(optins).toHaveLength(1);
+    let body = optins[0]?.body as { contact: Record<string, string> };
+    expect(body.contact).toEqual({ name: "Ada Lovelace" });
+    expect(readCollectionState(root).attributed).toBe(true);
+
+    await canon(["collection:opt-out", "--confirm"], { cwd: root });
+    fake.requests.length = 0;
+
+    const full = await canon(
+      [
+        "collection:opt-in",
+        "--confirm",
+        "--first-name=Ada",
+        "--email=ada@example.com",
+        "--mobile=+15551234567",
+      ],
+      { cwd: root },
+    );
+    expect(full.code).toBe(0);
+    optins = fake.requests.filter((r) => r.path.includes("/optin"));
+    expect(optins).toHaveLength(1);
+    body = optins[0]?.body as { contact: Record<string, string> };
+    expect(body.contact).toEqual({
+      name: "Ada",
+      email: "ada@example.com",
+      sms: "+15551234567",
+    });
+    expect(Object.keys(body.contact).sort()).toEqual(["email", "name", "sms"]);
+    expect(readCollectionState(root).attributed).toBe(true);
+  });
+
+  it("SIG-3: identity is identified iff attributed === true", async () => {
+    const { root } = installCollectionHarness();
+
+    writeState(root, {
+      metrics: {
+        decision: "active",
+        consentVersion: CONSENT_VERSION,
+        decidedAt: "2026-01-01T00:00:00.000Z",
+        expiresAt: Date.now() + 86_400_000,
+      },
+      attributed: true,
+    });
+    let r = await canon(["collection:status"], { cwd: root });
+    expect(r.out).toMatch(/identity=identified/);
+    expect(r.out).toMatch(/metricsMode=attributed/);
+
+    writeState(root, {
+      metrics: {
+        decision: "active",
+        consentVersion: CONSENT_VERSION,
+        decidedAt: "2026-01-01T00:00:00.000Z",
+        expiresAt: Date.now() + 86_400_000,
+      },
+      attributed: false,
+    });
+    r = await canon(["collection:status"], { cwd: root });
+    expect(r.out + r.err).toMatch(/identity=anonymous/);
+    expect(r.out + r.err).toMatch(/metricsMode=anonymous/);
+
+    // Legacy identity object alone must not leave identified after normalize without attributed.
+    writeState(root, {
+      metrics: {
+        decision: "active",
+        consentVersion: CONSENT_VERSION,
+        decidedAt: "2026-01-01T00:00:00.000Z",
+        expiresAt: Date.now() + 86_400_000,
+      },
+      identity: { email: "ada@example.com" },
+    });
+    r = await canon(["collection:status"], { cwd: root });
+    // STO-4 sets attributed from identity, then SIG-3 reads attributed.
+    expect(r.out).toMatch(/identity=identified/);
+    expect(readCollectionState(root).attributed).toBe(true);
+    expect(readCollectionState(root)).not.toHaveProperty("identity");
+  });
+
+  it("SIG-5: collection:status never networks; --live is unknown; live_state absent from JSON", async () => {
+    const { root, fake } = installCollectionHarness();
+    await canon(["collection:opt-in", "--confirm"], { cwd: root });
+    fake.requests.length = 0;
+
+    const status = await canon(["collection:status", "--json"], { cwd: root });
+    expect(status.code).toBe(0);
+    expect(fake.requests).toEqual([]);
+    const body = JSON.parse(status.out) as Record<string, unknown>;
+    expect(body).not.toHaveProperty("live_state");
+
+    const live = await canon(["collection:status", "--live"], { cwd: root });
+    expect(live.code).toBe(2);
+    expect(live.err).toMatch(/unknown flag/);
+    expect(fake.requests).toEqual([]);
   });
 });

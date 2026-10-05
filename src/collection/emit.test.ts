@@ -1,139 +1,196 @@
-import type { Collector } from "@deft/collection-sdk";
-import { afterAll, describe, expect, it } from "vitest";
-import { cleanupTempDirs, tempDir } from "../test-support/index.js";
-import { emitUsage } from "./emit.js";
-import { writeCollectionFile } from "./storage.js";
-import { CONSENT_VERSION } from "./types.js";
+/**
+ * MET-10 soft-emit / drain budgets against the fake collector (no emit mocks).
+ * softEmitUsage + drainSoftEmits come from the barrel so they survive soft-emit.ts → emit.ts.
+ * MET-8 late-success inventory throttle is re-proved here (orient wires the same onLateEmit).
+ */
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { afterAll, describe, expect, it, vi } from "vitest";
+import {
+  canon,
+  cleanupTempDirs,
+  installCollectionHarness,
+  installCollectionTestHooks,
+} from "../test-support/index.js";
+import {
+  drainSoftEmits,
+  markInventoryEmitted,
+  resetPendingSoftEmitsForTests,
+  softEmitUsage,
+} from "./index.js";
 
+installCollectionTestHooks();
 afterAll(() => cleanupTempDirs());
 
-function stubCollector(submit: Collector["submit"]): Collector {
-  return {
-    ensureRegistered: async () => ({ ok: true, installId: "x", state: "active" }),
-    optIn: async () => ({
-      ok: true,
-      state: "active",
-      scopes: ["usage"],
-      expiresAt: 1,
-      contactVerified: false,
-    }),
-    optOut: async () => ({ ok: true, state: "revoked" }),
-    status: async () => ({
-      ok: true,
-      state: "active",
-      scopes: ["usage"],
-      contactVerified: false,
-    }),
-    submit,
-  };
+/** Hardcoded so mutating SOFT_EMIT_TIMEOUT_MS / LATE_EMIT_GRACE_MS breaks these. */
+const SOFT_BUDGET_MS = 2_500;
+const DRAIN_GRACE_MS = 500;
+
+async function optInAnonymous(root: string): Promise<void> {
+  const result = await canon(["collection:opt-in", "--confirm"], { cwd: root });
+  expect(result.code).toBe(0);
 }
 
-describe("emitUsage", () => {
-  it("no-ops when usage is not consented", async () => {
-    const root = tempDir("canon-emit-");
-    const outcome = await emitUsage(root, "orient_ok", 1);
-    expect(outcome).toEqual({ emitted: false, reason: "no_consent" });
+describe("MET-10 soft emit (fake collector)", () => {
+  it("MET-10: soft emit returns true when the collector answers within 2500ms", async () => {
+    const { root } = installCollectionHarness();
+    await optInAnonymous(root);
+    vi.useFakeTimers();
+    const done = softEmitUsage(root, "orient_ok");
+    await vi.advanceTimersByTimeAsync(0);
+    await expect(done).resolves.toBe(true);
+    expect(vi.getTimerCount()).toBe(0);
   });
 
-  it("submits when usage is active and never throws on transport failure", async () => {
-    const root = tempDir("canon-emit-ok-");
-    writeCollectionFile(root, {
-      installId: "11111111-1111-4111-8111-111111111111",
-      token: "tok",
-      metrics: {
-        decision: "active",
-        scopes: ["usage"],
-        consentVersion: CONSENT_VERSION,
-        decidedAt: "2026-08-01T00:00:00.000Z",
-        expiresAt: Date.now() + 86_400_000,
-      },
-    });
-
-    const ok = await emitUsage(root, "scope_complete", 1, {
-      collector: stubCollector(async () => ({ ok: true, id: "evt-1" })),
-    });
-    expect(ok).toEqual({ emitted: true, id: "evt-1" });
-
-    const failed = await emitUsage(root, "scope_complete", 1, {
-      collector: stubCollector(async () => ({
-        ok: false,
-        code: "transport_error",
-        retryable: true,
-      })),
-    });
-    expect(failed.emitted).toBe(false);
-    if (failed.emitted === false) {
-      expect(failed.reason).toBe("submit_failed");
-    }
+  it("MET-10: soft emit clears its timer when emit rejects before the deadline", async () => {
+    const { root, fake } = installCollectionHarness();
+    await optInAnonymous(root);
+    vi.useFakeTimers();
+    fake.failNext("challenge", "internal_error");
+    const done = softEmitUsage(root, "orient_ok");
+    await vi.advanceTimersByTimeAsync(0);
+    await expect(done).resolves.toBe(false);
+    expect(vi.getTimerCount()).toBe(0);
   });
 
-  it("SUB-5a / #9: includes dimensions on the usage payload when consented", async () => {
-    const root = tempDir("canon-emit-dim-");
-    writeCollectionFile(root, {
-      installId: "11111111-1111-4111-8111-111111111111",
-      token: "tok",
-      metrics: {
-        decision: "active",
-        scopes: ["usage"],
-        consentVersion: CONSENT_VERSION,
-        decidedAt: "2026-08-01T00:00:00.000Z",
-        expiresAt: Date.now() + 86_400_000,
-      },
-    });
+  it("MET-8: inventory throttle advances when soft emit succeeds after the soft timeout", async () => {
+    const { root, fake } = installCollectionHarness();
+    await optInAnonymous(root);
+    const inventoryPath = join(root, ".canonical", "collection-inventory.json");
+    expect(existsSync(inventoryPath)).toBe(false);
 
-    let captured: unknown;
-    const ok = await emitUsage(root, "scope_complete", 1, {
-      dimensions: {
-        disposition: "accepted_not_delivered",
-        kind: "story",
-        had_delivery_pr: false,
-        acceptance_total: 3,
-      },
-      collector: stubCollector(async (_scope, payload) => {
-        captured = payload;
-        return { ok: true, id: "evt-dim" };
-      }),
+    vi.useFakeTimers();
+    fake.hangNext("submissions", SOFT_BUDGET_MS + 100);
+
+    const promise = softEmitUsage(root, "xbrief_inventory", 1, undefined, {
+      onLateEmit: () => markInventoryEmitted(root),
     });
-    expect(ok).toEqual({ emitted: true, id: "evt-dim" });
-    expect(captured).toEqual({
-      metric: "scope_complete",
-      value: 1,
-      dimensions: {
-        disposition: "accepted_not_delivered",
-        kind: "story",
-        had_delivery_pr: false,
-        acceptance_total: 3,
-      },
-    });
+    await vi.advanceTimersByTimeAsync(SOFT_BUDGET_MS);
+    expect(await promise).toBe(false);
+    expect(existsSync(inventoryPath)).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(200);
+    await drainSoftEmits();
+    expect(existsSync(inventoryPath)).toBe(true);
+    expect(
+      (JSON.parse(readFileSync(inventoryPath, "utf8")) as { lastInventoryEmittedAt: number })
+        .lastInventoryEmittedAt,
+    ).toBeGreaterThan(0);
   });
 
-  it("#9: rejects oversized dimensions without submitting", async () => {
-    const root = tempDir("canon-emit-oversize-");
-    writeCollectionFile(root, {
-      installId: "11111111-1111-4111-8111-111111111111",
-      token: "tok",
-      metrics: {
-        decision: "active",
-        scopes: ["usage"],
-        consentVersion: CONSENT_VERSION,
-        decidedAt: "2026-08-01T00:00:00.000Z",
-        expiresAt: Date.now() + 86_400_000,
+  it("MET-10: soft emit times out after 2500ms (hardcoded budget)", async () => {
+    const { root, fake } = installCollectionHarness();
+    await optInAnonymous(root);
+
+    vi.useFakeTimers();
+    fake.hangNext("submissions", SOFT_BUDGET_MS + 10_000);
+
+    const promise = softEmitUsage(root, "orient_ok");
+    await vi.advanceTimersByTimeAsync(SOFT_BUDGET_MS);
+    expect(await promise).toBe(false);
+    resetPendingSoftEmitsForTests();
+  });
+
+  it("MET-10: calls onLateEmit when emit succeeds after the 2500ms soft timeout", async () => {
+    const { root, fake } = installCollectionHarness();
+    await optInAnonymous(root);
+
+    vi.useFakeTimers();
+    fake.hangNext("submissions", SOFT_BUDGET_MS + 100);
+
+    let lateCalled = false;
+    const promise = softEmitUsage(root, "xbrief_inventory", 1, undefined, {
+      onLateEmit: () => {
+        lateCalled = true;
       },
     });
-    let submitted = false;
-    const big = { pad: "x".repeat(3000) };
-    const outcome = await emitUsage(root, "orient_ok", 1, {
-      dimensions: big,
-      collector: stubCollector(async () => {
-        submitted = true;
-        return { ok: true, id: "nope" };
-      }),
+
+    await vi.advanceTimersByTimeAsync(SOFT_BUDGET_MS);
+    expect(await promise).toBe(false);
+    expect(lateCalled).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(200);
+    await drainSoftEmits();
+    expect(lateCalled).toBe(true);
+  });
+
+  it("MET-10: swallows onLateEmit throws (never leaves an unhandled rejection)", async () => {
+    const { root, fake } = installCollectionHarness();
+    await optInAnonymous(root);
+
+    vi.useFakeTimers();
+    fake.hangNext("submissions", SOFT_BUDGET_MS + 100);
+
+    const unhandled: unknown[] = [];
+    const onUnhandled = (reason: unknown) => {
+      unhandled.push(reason);
+    };
+    process.on("unhandledRejection", onUnhandled);
+
+    const promise = softEmitUsage(root, "xbrief_inventory", 1, undefined, {
+      onLateEmit: () => {
+        throw new Error("disk full");
+      },
     });
-    expect(submitted).toBe(false);
-    expect(outcome).toEqual({
-      emitted: false,
-      reason: "submit_failed",
-      code: "dimensions_too_large",
+
+    await vi.advanceTimersByTimeAsync(SOFT_BUDGET_MS);
+    expect(await promise).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(200);
+    await drainSoftEmits();
+    process.off("unhandledRejection", onUnhandled);
+    expect(unhandled).toEqual([]);
+  });
+
+  it("MET-10: drainSoftEmits waits at most 500ms beyond the 2500ms soft timeout", async () => {
+    const { root, fake } = installCollectionHarness();
+    await optInAnonymous(root);
+
+    vi.useFakeTimers();
+    fake.hangNext("submissions", SOFT_BUDGET_MS + DRAIN_GRACE_MS + 5_000);
+
+    const promise = softEmitUsage(root, "xbrief_inventory");
+    await vi.advanceTimersByTimeAsync(SOFT_BUDGET_MS);
+    expect(await promise).toBe(false);
+
+    let drainDone = false;
+    const drain = drainSoftEmits().then(() => {
+      drainDone = true;
     });
+    await vi.advanceTimersByTimeAsync(DRAIN_GRACE_MS);
+    await drain;
+    expect(drainDone).toBe(true);
+    resetPendingSoftEmitsForTests();
+  });
+
+  it("MET-10: drain clears fallback timer when late emits settle within 500ms grace", async () => {
+    const { root, fake } = installCollectionHarness();
+    await optInAnonymous(root);
+
+    vi.useFakeTimers();
+    fake.hangNext("submissions", SOFT_BUDGET_MS + 100);
+
+    let lateCalled = false;
+    const promise = softEmitUsage(root, "xbrief_inventory", 1, undefined, {
+      onLateEmit: () => {
+        lateCalled = true;
+      },
+    });
+
+    await vi.advanceTimersByTimeAsync(SOFT_BUDGET_MS);
+    expect(await promise).toBe(false);
+
+    const drain = drainSoftEmits();
+    await vi.advanceTimersByTimeAsync(200);
+    await drain;
+    expect(lateCalled).toBe(true);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("MET-10: soft emit returns false on transport failure without throwing", async () => {
+    const { root, fake } = installCollectionHarness();
+    await optInAnonymous(root);
+    fake.failNext("challenge", "internal_error");
+    await expect(softEmitUsage(root, "orient_ok")).resolves.toBe(false);
   });
 });

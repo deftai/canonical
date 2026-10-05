@@ -1,65 +1,53 @@
-import type { Collector } from "@deft/collection-sdk";
-import { type CreateCanonicalCollectorOptions, createCanonicalCollector } from "./client.js";
-import { hasUsageConsent, readCollectionFile } from "./storage.js";
-
-/**
- * Fire-and-forget usage metrics. Never throws; never affects host verb exit codes.
- */
-
-/** Optional structured dimensions on usage events (SUB-5a / Canonical #9). */
+import { usageCollector } from "./consent.js";
 export type UsageDimensions = Readonly<Record<string, string | number | boolean>>;
-
-/** Soft client-side cap so we fail closed before the wire (issue #9: ≤2 KiB). */
-export const USAGE_DIMENSIONS_MAX_JSON_BYTES = 2048;
-
-export interface EmitUsageOptions extends CreateCanonicalCollectorOptions {
+const USAGE_DIMENSIONS_MAX_JSON_BYTES = 2048;
+const SOFT_EMIT_TIMEOUT_MS = 2_500;
+const LATE_EMIT_GRACE_MS = 500; // soft + grace budgets (MET-10)
+interface EmitUsageOptions {
   readonly period?: string;
   readonly dimensions?: UsageDimensions;
-  /** Injected collector (tests). */
-  readonly collector?: Collector;
-  /** When true, write soft-failure detail to stderr. */
   readonly debug?: boolean;
 }
-
-export type EmitUsageOutcome =
+type EmitUsageOutcome =
   | { readonly emitted: true; readonly id: string }
   | {
       readonly emitted: false;
       readonly reason: "no_consent" | "submit_failed";
       readonly code?: string;
     };
-
-export function dimensionsJsonByteLength(dimensions: UsageDimensions): number {
+interface SoftEmitUsageOptions {
+  readonly onLateEmit?: () => void;
+}
+interface PendingLateEmit {
+  readonly promise: Promise<void>;
+  readonly drainUntil: number;
+}
+const pendingLateEmits = new Set<PendingLateEmit>();
+function dimensionsJsonByteLength(dimensions: UsageDimensions): number {
   return Buffer.byteLength(JSON.stringify(dimensions), "utf8");
 }
-
+function debugLine(detail: string, debug?: boolean): void {
+  if (debug === true || process.env.CANONICAL_COLLECTION_DEBUG === "1") {
+    process.stderr.write(`canon: collection metric ${detail}\n`);
+  }
+}
 export async function emitUsage(
   projectRoot: string,
   metric: string,
   value: number,
   opts: EmitUsageOptions = {},
 ): Promise<EmitUsageOutcome> {
-  const file = readCollectionFile(projectRoot);
-  if (!hasUsageConsent(file)) {
+  const col = usageCollector(projectRoot);
+  if (col === undefined) {
     return { emitted: false, reason: "no_consent" };
   }
-
-  if (opts.dimensions !== undefined) {
-    if (dimensionsJsonByteLength(opts.dimensions) > USAGE_DIMENSIONS_MAX_JSON_BYTES) {
-      return { emitted: false, reason: "submit_failed", code: "dimensions_too_large" };
-    }
+  if (
+    opts.dimensions !== undefined &&
+    dimensionsJsonByteLength(opts.dimensions) > USAGE_DIMENSIONS_MAX_JSON_BYTES
+  ) {
+    return { emitted: false, reason: "submit_failed", code: "dimensions_too_large" };
   }
-
   try {
-    const collector =
-      opts.collector ??
-      createCanonicalCollector(projectRoot, {
-        configDir: opts.configDir,
-        baseUrl: opts.baseUrl,
-        environment: opts.environment,
-        version: opts.version,
-        fetch: opts.fetch,
-      });
     const payload: {
       metric: string;
       value: number;
@@ -72,22 +60,95 @@ export async function emitUsage(
     if (opts.dimensions !== undefined) {
       payload.dimensions = opts.dimensions;
     }
-    const result = await collector.submit("usage", payload);
+    const result = await col.submit("usage", payload);
     if (!result.ok) {
-      if (opts.debug === true || process.env.CANONICAL_COLLECTION_DEBUG === "1") {
-        process.stderr.write(
-          `canon: collection metric skipped -- ${result.code} (retryable=${result.retryable})\n`,
-        );
-      }
+      debugLine(`skipped -- ${result.code} (retryable=${result.retryable})`, opts.debug);
       return { emitted: false, reason: "submit_failed", code: result.code };
     }
     return { emitted: true, id: result.id };
   } catch (err) {
-    if (opts.debug === true || process.env.CANONICAL_COLLECTION_DEBUG === "1") {
-      process.stderr.write(
-        `canon: collection metric error -- ${err instanceof Error ? err.message : String(err)}\n`,
-      );
-    }
+    debugLine(`error -- ${err instanceof Error ? err.message : String(err)}`, opts.debug);
     return { emitted: false, reason: "submit_failed", code: "transport_error" };
+  }
+}
+export async function drainSoftEmits(): Promise<void> {
+  if (pendingLateEmits.size === 0) {
+    return;
+  }
+  const now = Date.now();
+  const maxWaitMs = Math.max(0, ...[...pendingLateEmits].map((e) => e.drainUntil - now));
+  if (maxWaitMs === 0) {
+    return;
+  }
+  await new Promise<void>((resolve) => {
+    let fallbackTimer: ReturnType<typeof setTimeout> | undefined;
+    void Promise.allSettled([...pendingLateEmits].map((e) => e.promise)).then(() => {
+      if (fallbackTimer !== undefined) {
+        clearTimeout(fallbackTimer);
+      }
+      resolve();
+    });
+    fallbackTimer = setTimeout(resolve, maxWaitMs);
+  });
+}
+export function resetPendingSoftEmitsForTests(): void {
+  pendingLateEmits.clear();
+}
+export async function softEmitUsage(
+  projectRoot: string,
+  metric: string,
+  value: number = 1,
+  dimensions?: UsageDimensions,
+  options: SoftEmitUsageOptions = {},
+): Promise<boolean> {
+  try {
+    const startedAt = Date.now();
+    let settled = false;
+    const emitTask = emitUsage(projectRoot, metric, value, {
+      ...(dimensions !== undefined ? { dimensions } : {}),
+    });
+    let softTimeoutId: ReturnType<typeof setTimeout> | undefined;
+    let outcome: Awaited<typeof emitTask> | { emitted: false; reason: "submit_failed" };
+    try {
+      outcome = await Promise.race([
+        emitTask,
+        new Promise<{ emitted: false; reason: "submit_failed" }>((resolve) => {
+          softTimeoutId = setTimeout(() => {
+            if (!settled) {
+              settled = true;
+              resolve({ emitted: false, reason: "submit_failed" });
+            }
+          }, SOFT_EMIT_TIMEOUT_MS);
+        }),
+      ]);
+    } finally {
+      if (softTimeoutId !== undefined) {
+        clearTimeout(softTimeoutId);
+      }
+    }
+    if (outcome.emitted === true) {
+      settled = true;
+      return true;
+    }
+    const lateWork = emitTask
+      .then((late: EmitUsageOutcome) => {
+        if (late.emitted === true) {
+          try {
+            options.onLateEmit?.();
+          } catch {}
+        }
+      })
+      .catch(() => undefined);
+    const pending: PendingLateEmit = {
+      promise: lateWork,
+      drainUntil: startedAt + SOFT_EMIT_TIMEOUT_MS + LATE_EMIT_GRACE_MS,
+    };
+    pendingLateEmits.add(pending);
+    void lateWork.finally(() => {
+      pendingLateEmits.delete(pending);
+    });
+    return false;
+  } catch {
+    return false;
   }
 }
