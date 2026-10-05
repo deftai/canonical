@@ -24,6 +24,24 @@ describe("softEmitUsage", () => {
     await expect(softEmitUsage(root, "orient_ok")).resolves.toBe(true);
   });
 
+  it("clears soft timeout when emit completes quickly (Greptile P2)", async () => {
+    vi.useFakeTimers();
+    const root = tempDir("canon-soft-emit-fast-");
+    vi.spyOn(emit, "emitUsage").mockResolvedValue({ emitted: true, id: "m-1" });
+
+    await expect(softEmitUsage(root, "orient_ok")).resolves.toBe(true);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("clears soft timeout when emit rejects before deadline (Greptile P2)", async () => {
+    vi.useFakeTimers();
+    const root = tempDir("canon-soft-emit-reject-");
+    vi.spyOn(emit, "emitUsage").mockRejectedValue(new Error("collector down"));
+
+    await expect(softEmitUsage(root, "orient_ok")).resolves.toBe(false);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   it("calls onLateEmit when emit succeeds after the soft timeout (#18)", async () => {
     vi.useFakeTimers();
     const root = tempDir("canon-soft-emit-late-");
@@ -106,6 +124,33 @@ describe("softEmitUsage", () => {
     await vi.advanceTimersByTimeAsync(200);
     await drain;
     expect(lateCalled).toBe(true);
+  });
+
+  it("clears drain fallback timer when late emits settle early (Greptile P2)", async () => {
+    vi.useFakeTimers();
+    const root = tempDir("canon-soft-emit-drain-early-");
+    vi.spyOn(emit, "emitUsage").mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          setTimeout(() => resolve({ emitted: true, id: "late-1" }), SOFT_EMIT_TIMEOUT_MS + 100);
+        }),
+    );
+
+    let lateCalled = false;
+    const promise = softEmitUsage(root, "xbrief_inventory", 1, undefined, {
+      onLateEmit: () => {
+        lateCalled = true;
+      },
+    });
+
+    await vi.advanceTimersByTimeAsync(SOFT_EMIT_TIMEOUT_MS);
+    expect(await promise).toBe(false);
+
+    const drain = drainSoftEmits();
+    await vi.advanceTimersByTimeAsync(200);
+    await drain;
+    expect(lateCalled).toBe(true);
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it("drain waits at most LATE_EMIT_GRACE_MS after soft timeout (Greptile P1)", async () => {

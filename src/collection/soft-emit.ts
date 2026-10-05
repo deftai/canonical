@@ -29,12 +29,16 @@ export async function drainSoftEmits(): Promise<void> {
   if (maxWaitMs === 0) {
     return;
   }
-  await Promise.race([
-    Promise.allSettled([...pendingLateEmits].map((entry) => entry.promise)),
-    new Promise<void>((resolve) => {
-      setTimeout(resolve, maxWaitMs);
-    }),
-  ]);
+  await new Promise<void>((resolve) => {
+    let fallbackTimer: ReturnType<typeof setTimeout> | undefined;
+    void Promise.allSettled([...pendingLateEmits].map((entry) => entry.promise)).then(() => {
+      if (fallbackTimer !== undefined) {
+        clearTimeout(fallbackTimer);
+      }
+      resolve();
+    });
+    fallbackTimer = setTimeout(resolve, maxWaitMs);
+  });
 }
 
 /** Test-only reset of in-flight late emit tracking. */
@@ -57,17 +61,25 @@ export async function softEmitUsage(
       ...(dimensions !== undefined ? { dimensions } : {}),
     });
 
-    const outcome = await Promise.race([
-      emitTask,
-      new Promise<{ emitted: false; reason: "submit_failed" }>((resolve) => {
-        setTimeout(() => {
-          if (!settled) {
-            settled = true;
-            resolve({ emitted: false, reason: "submit_failed" });
-          }
-        }, SOFT_EMIT_TIMEOUT_MS);
-      }),
-    ]);
+    let softTimeoutId: ReturnType<typeof setTimeout> | undefined;
+    let outcome: Awaited<typeof emitTask> | { emitted: false; reason: "submit_failed" };
+    try {
+      outcome = await Promise.race([
+        emitTask,
+        new Promise<{ emitted: false; reason: "submit_failed" }>((resolve) => {
+          softTimeoutId = setTimeout(() => {
+            if (!settled) {
+              settled = true;
+              resolve({ emitted: false, reason: "submit_failed" });
+            }
+          }, SOFT_EMIT_TIMEOUT_MS);
+        }),
+      ]);
+    } finally {
+      if (softTimeoutId !== undefined) {
+        clearTimeout(softTimeoutId);
+      }
+    }
 
     if (outcome.emitted === true) {
       settled = true;
