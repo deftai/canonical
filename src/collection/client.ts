@@ -1,28 +1,12 @@
 import { createRequire } from "node:module";
 import { type Collector, type CollectorConfig, createCollector } from "@deft/collection-sdk";
 import { BUILD_CHANNEL, COLLECTION_BASE_URL, COLLECTION_ENV } from "../build-info.js";
-import { ensureUserKey, type IdentityOptions } from "./identity.js";
-import { projectCredentialStorage } from "./storage.js";
+import { credentialStorage } from "./storage.js";
 
 /**
- * Build a Collector bound to this project's storage and the anonymous correlator
- * (X-Deft-Correlator / body correlator — never folded into deployment.customer).
- *
- * Collector host + deployment environment are bake-time constants from
- * `CANONICAL_BUILD_CHANNEL` (see scripts/write-build-info.mjs). They are not
- * overridden by process env — published builds are channel-hardcoded.
+ * Single Collector factory for this project (ARC-3). Host + environment are
+ * bake-time constants; no correlator; autoRegister is always false.
  */
-
-export interface CreateCanonicalCollectorOptions extends IdentityOptions {
-  /** Test-only override. Production CLI never passes this. */
-  readonly baseUrl?: string;
-  /** Test-only override. Production CLI never passes this. */
-  readonly environment?: string;
-  readonly version?: string;
-  readonly fetch?: typeof fetch;
-  /** Defaults to false — register only after explicit opt-in. */
-  readonly autoRegister?: boolean;
-}
 
 function packageVersion(): string {
   try {
@@ -34,12 +18,10 @@ function packageVersion(): string {
   }
 }
 
-/** Baked collector base URL for this build channel (explicit opts for tests only). */
 export function resolveCollectionBaseUrl(explicit?: string): string {
   return explicit ?? COLLECTION_BASE_URL;
 }
 
-/** Baked deployment environment segment for this build channel. */
 export function resolveCollectionEnv(explicit?: string): string {
   return explicit ?? COLLECTION_ENV;
 }
@@ -48,23 +30,18 @@ export function buildChannel(): typeof BUILD_CHANNEL {
   return BUILD_CHANNEL;
 }
 
-export function createCanonicalCollector(
-  projectRoot: string,
-  opts: CreateCanonicalCollectorOptions = {},
-): Collector {
-  const correlator = ensureUserKey({ configDir: opts.configDir });
+/** The only createCollector call site. */
+export function collector(projectRoot: string): Collector {
   const config: CollectorConfig = {
-    baseUrl: resolveCollectionBaseUrl(opts.baseUrl),
+    baseUrl: resolveCollectionBaseUrl(),
     deployment: {
       product: "canonical",
       platform: "cli",
-      environment: resolveCollectionEnv(opts.environment),
-      version: opts.version ?? packageVersion(),
+      environment: resolveCollectionEnv(),
+      version: packageVersion(),
     },
-    correlator,
-    storage: projectCredentialStorage(projectRoot),
-    autoRegister: opts.autoRegister ?? false,
-    ...(opts.fetch !== undefined ? { fetch: opts.fetch } : {}),
+    storage: credentialStorage(projectRoot),
+    autoRegister: false,
   };
   return createCollector(config);
 }

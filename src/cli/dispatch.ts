@@ -7,6 +7,8 @@
  *  - VERB_ALIASES: task-style names (colon form) -> canonical stems.
  *  - Space-separated forms route by colon-joining the first two tokens
  *    (`canon scope new` -> `scope:new`).
+ *  - `collection:<action>` / `collection <action>` resolve to `collection`
+ *    with the action as the first argument (IMPL §5.3).
  *
  * Exit codes: 0 ok, 1 rejected/not-ready, 2 misconfig/usage (incl. unknown verb).
  * Handlers never call process.exit(); only bin.ts exits.
@@ -15,14 +17,18 @@
 import { createRequire } from "node:module";
 import { BUILD_CHANNEL } from "../build-info.js";
 
+const COLLECTION_ACTIONS = [
+  "status",
+  "opt-in",
+  "decline",
+  "opt-out",
+  "identity",
+  "metric",
+] as const;
+
 export const CLI_MODULE_VERBS = [
   "check",
-  "collection-decline",
-  "collection-identity",
-  "collection-metric",
-  "collection-opt-in",
-  "collection-opt-out",
-  "collection-status",
+  "collection",
   "feedback",
   "init",
   "issue-sync",
@@ -49,12 +55,12 @@ export const CLI_MODULE_VERBS = [
 ] as const;
 
 export const VERB_ALIASES: Readonly<Record<string, string>> = {
-  "collection:decline": "collection-decline",
-  "collection:identity": "collection-identity",
-  "collection:metric": "collection-metric",
-  "collection:opt-in": "collection-opt-in",
-  "collection:opt-out": "collection-opt-out",
-  "collection:status": "collection-status",
+  "collection:decline": "collection",
+  "collection:identity": "collection",
+  "collection:metric": "collection",
+  "collection:opt-in": "collection",
+  "collection:opt-out": "collection",
+  "collection:status": "collection",
   "issue:sync": "issue-sync",
   "pr:finish": "pr-finish",
   "pr:watch": "pr-watch",
@@ -98,7 +104,11 @@ export function resolveCanonicalVerb(verb: string): string | null {
 }
 
 export function registeredVerbs(): readonly string[] {
-  const all = new Set<string>([...CLI_MODULE_VERBS, ...Object.keys(VERB_ALIASES)]);
+  // List the six collection:* verbs; omit the bare module stem (IMPL §5.3).
+  const all = new Set<string>([
+    ...CLI_MODULE_VERBS.filter((v) => v !== "collection"),
+    ...Object.keys(VERB_ALIASES),
+  ]);
   return [...all].sort();
 }
 
@@ -124,8 +134,6 @@ function loadHandler(canonical: string): Promise<CommandHandler> {
 }
 
 function versionBanner(): string {
-  // Read the real version from this package's manifest -- dist/cli/ and
-  // src/cli/ both sit two levels below the package root. Channel is bake-time.
   try {
     const require = createRequire(import.meta.url);
     const pkg = require("../../package.json") as { version?: string };
@@ -144,6 +152,14 @@ function printHelp(io: DispatchIo): void {
   io.writeOut("\nExit codes: 0 ok, 1 rejected/not ready, 2 misconfig/error\n");
 }
 
+function collectionActionFromVerb(verb: string): string | null {
+  if (!verb.startsWith("collection:")) {
+    return null;
+  }
+  const action = verb.slice("collection:".length);
+  return (COLLECTION_ACTIONS as readonly string[]).includes(action) ? action : null;
+}
+
 export async function dispatch(argv: string[], io: DispatchIo = defaultIo()): Promise<number> {
   const first = argv[0];
   if (first === "--version" || first === "-V") {
@@ -155,17 +171,34 @@ export async function dispatch(argv: string[], io: DispatchIo = defaultIo()): Pr
     return 0;
   }
 
-  let canonical = resolveCanonicalVerb(first);
-  let rest = argv.slice(1);
+  let canonical: string | null = null;
+  let rest: string[] = argv.slice(1);
 
-  // Space-separated form: `canon scope new ...` -> scope:new
-  if (canonical === null && argv.length >= 2) {
-    const second = argv[1];
-    if (second !== undefined && !second.startsWith("-")) {
-      const joined = resolveCanonicalVerb(`${first}:${second}`);
-      if (joined !== null) {
-        canonical = joined;
-        rest = argv.slice(2);
+  const collAction = collectionActionFromVerb(first);
+  if (collAction !== null) {
+    canonical = "collection";
+    rest = [collAction, ...argv.slice(1)];
+  } else if (first === "collection") {
+    canonical = "collection";
+    // `canon collection <action> ...` — action already at rest[0]
+  } else {
+    canonical = resolveCanonicalVerb(first);
+    // Space-separated form: `canon scope new ...` -> scope:new
+    if (canonical === null && argv.length >= 2) {
+      const second = argv[1];
+      if (second !== undefined && !second.startsWith("-")) {
+        const joinedVerb = `${first}:${second}`;
+        const joinedAction = collectionActionFromVerb(joinedVerb);
+        if (joinedAction !== null) {
+          canonical = "collection";
+          rest = [joinedAction, ...argv.slice(2)];
+        } else {
+          const joined = resolveCanonicalVerb(joinedVerb);
+          if (joined !== null) {
+            canonical = joined;
+            rest = argv.slice(2);
+          }
+        }
       }
     }
   }

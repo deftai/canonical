@@ -2,9 +2,9 @@ import { randomUUID } from "node:crypto";
 import { existsSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { atomicWriteJson } from "../fs/contained-write.js";
+import { hasUsageConsent } from "./consent.js";
 import type { UsageDimensions } from "./emit.js";
 import { bucketAgentTurns, bucketDurationHours } from "./metric-dimensions.js";
-import { hasUsageConsent, readCollectionFile } from "./storage.js";
 
 /** Gitignored session counters for agent_turns_bucket / session_summary (#9). */
 export const SESSION_FILE_REL = ".canonical/collection-session.json";
@@ -88,7 +88,7 @@ function mutateSession(
 ): CollectionSession | undefined {
   // Do not persist activity while metrics are declined/undecided — otherwise a
   // later opt-in session_summary would ship pre-consent counters.
-  if (!hasUsageConsent(readCollectionFile(projectRoot))) {
+  if (!hasUsageConsent(projectRoot)) {
     return undefined;
   }
   const session = ensureSession(projectRoot);

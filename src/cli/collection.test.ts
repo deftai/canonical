@@ -316,7 +316,8 @@ describe("CON consent verbs", () => {
     expect(state.installId).toBe("keep-id");
     expect(state.token).toBe("keep-tok");
     expect((state.metrics as { decision: string }).decision).toBe("declined");
-    expect((state.submissions as { granted: boolean }).granted).toBe(true);
+    // D4/STO-3: presence of submissions means granted (no `granted` boolean in the new shape).
+    expect(state.submissions).toBeDefined();
   });
 
   it("CON-3: opt-in without --confirm exits 1, no network, no state change", async () => {
@@ -703,7 +704,8 @@ describe("FB feedback", () => {
     expect(result.code).toBe(0);
     const state = readCollectionState(root);
     expect((state.metrics as { decision: string }).decision).toBe("declined");
-    expect((state.submissions as { granted: boolean }).granted).toBe(true);
+    // D4/STO-3: presence of submissions means granted (no `granted` boolean in the new shape).
+    expect(state.submissions).toBeDefined();
     const optins = fake.requests.filter((r) => r.path.includes("/optin"));
     expect(optins.length).toBe(1);
     const body = optins[0]?.body as { scopes: string[]; contact?: unknown };
@@ -825,7 +827,10 @@ describe("PRIV / ARC", () => {
   it("ARC-8: harness stubs HOME; fake throws on foreign hosts; real home untouched", async () => {
     const { root, home, fake } = installCollectionHarness();
     await optInAnonymous(root);
-    expect(existsSync(join(home, ".config", "canonical", "identity.json"))).toBe(true);
+    // D3: correlator / ~/.config/canonical/identity.json removed — HOME stub still
+    // isolates any residual writes; STO-2 asserts the project-only boundary.
+    expect(home).not.toBe("");
+    expect(existsSync(home)).toBe(true);
     await expect(
       fake.fetch("https://evil.example/collector/v1/registrations" as unknown as RequestInfo),
     ).rejects.toThrow(/refused URL outside baked collector base/);
@@ -834,6 +839,7 @@ describe("PRIV / ARC", () => {
       expect(req.path.startsWith("/v1/")).toBe(true);
     }
     expect(COLLECTION_BASE_URL).toMatch(/^https:\/\//);
+    expect(root.startsWith(home) || existsSync(join(root, ".canonical"))).toBe(true);
   });
 });
 

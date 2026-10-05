@@ -68,7 +68,7 @@ export interface CollectionHarness {
 
 /**
  * Temp git project + stubbed HOME/USERPROFILE + fake collector as global fetch.
- * WP1: baseline still writes ~/.config/canonical/identity.json (ARC-8).
+ * HOME stub keeps tests hermetic (ARC-8); STO-2 forbids writes outside the project.
  */
 export function installCollectionHarness(opts: { withBriefs?: boolean } = {}): CollectionHarness {
   const home = tempDir("canon-home-");

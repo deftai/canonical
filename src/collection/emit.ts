@@ -1,23 +1,19 @@
 import type { Collector } from "@deft/collection-sdk";
-import { type CreateCanonicalCollectorOptions, createCanonicalCollector } from "./client.js";
-import { hasUsageConsent, readCollectionFile } from "./storage.js";
+import { collector } from "./client.js";
+import { hasUsageConsent } from "./consent.js";
 
 /**
  * Fire-and-forget usage metrics. Never throws; never affects host verb exit codes.
  */
 
-/** Optional structured dimensions on usage events (SUB-5a / Canonical #9). */
 export type UsageDimensions = Readonly<Record<string, string | number | boolean>>;
 
-/** Soft client-side cap so we fail closed before the wire (issue #9: ≤2 KiB). */
 export const USAGE_DIMENSIONS_MAX_JSON_BYTES = 2048;
 
-export interface EmitUsageOptions extends CreateCanonicalCollectorOptions {
+export interface EmitUsageOptions {
   readonly period?: string;
   readonly dimensions?: UsageDimensions;
-  /** Injected collector (tests). */
   readonly collector?: Collector;
-  /** When true, write soft-failure detail to stderr. */
   readonly debug?: boolean;
 }
 
@@ -39,8 +35,7 @@ export async function emitUsage(
   value: number,
   opts: EmitUsageOptions = {},
 ): Promise<EmitUsageOutcome> {
-  const file = readCollectionFile(projectRoot);
-  if (!hasUsageConsent(file)) {
+  if (!hasUsageConsent(projectRoot)) {
     return { emitted: false, reason: "no_consent" };
   }
 
@@ -51,15 +46,7 @@ export async function emitUsage(
   }
 
   try {
-    const collector =
-      opts.collector ??
-      createCanonicalCollector(projectRoot, {
-        configDir: opts.configDir,
-        baseUrl: opts.baseUrl,
-        environment: opts.environment,
-        version: opts.version,
-        fetch: opts.fetch,
-      });
+    const col = opts.collector ?? collector(projectRoot);
     const payload: {
       metric: string;
       value: number;
@@ -72,7 +59,7 @@ export async function emitUsage(
     if (opts.dimensions !== undefined) {
       payload.dimensions = opts.dimensions;
     }
-    const result = await collector.submit("usage", payload);
+    const result = await col.submit("usage", payload);
     if (!result.ok) {
       if (opts.debug === true || process.env.CANONICAL_COLLECTION_DEBUG === "1") {
         process.stderr.write(
